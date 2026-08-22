@@ -109,13 +109,56 @@ function renderShop(){
     const card=document.createElement('article'); card.className='shop-product';
     card.innerHTML=`<div class="shop-product-media">${p.imageData?`<img src="${p.imageData}" alt="${esc(p.name)}">`:'<span class="shop-product-placeholder">🦆</span>'}</div><div class="shop-product-body"><h3>${esc(p.name||'Snazzle')}</h3><p>${esc(p.description||'Een bijzondere Snazzle.')}</p><div class="shop-price">${euro(p.priceCents)}</div><button type="button" data-shop-product="${esc(p.id)}">Bestellen / reserveren 🦆</button></div>`;
     box.appendChild(card);
+    const media=card.querySelector('.shop-product-media');
+    if(media){
+      let lastZoom=0;
+      const zoom=e=>{
+        const img=media.querySelector('img');
+        if(!img || !img.src) return;
+        if(e) e.preventDefault();
+        const now=Date.now(); if(now-lastZoom<450) return; lastZoom=now;
+        openShopImageViewer(img.src,img.alt||'Snazzle product');
+      };
+      media.onclick=zoom;
+      media.onpointerup=zoom;
+      media.ontouchend=zoom;
+    }
   });
-  $$('[data-shop-product]',box).forEach(b=>b.onclick=()=>openCheckout(b.dataset.shopProduct));
+  $$('[data-shop-product]',box).forEach(b=>{
+    let lastOpen=0;
+    const activate=e=>{
+      if(e) e.preventDefault();
+      const now=Date.now();
+      if(now-lastOpen<450) return;
+      lastOpen=now;
+      openCheckout(b.dataset.shopProduct);
+    };
+    b.onclick=activate;
+    b.onpointerup=activate;
+    b.ontouchend=activate;
+  });
 }
 function selectedProduct(){ return shopProducts.find(p=>p.id===selectedProductId) || null; }
 function openCheckout(productId){
-  const p=shopProducts.find(x=>x.id===productId && x.active!==false); if(!p) return showToast('Dit product is niet meer beschikbaar');
-  selectedProductId=p.id; selectedQuantity=1; renderCheckout(); $('#shopBrowse').style.display='none'; $('#shopSuccess').classList.remove('show'); $('#shopCheckout').classList.add('show'); setTimeout(()=>$('#shopCheckout')?.scrollIntoView({behavior:'smooth',block:'start'}),40);
+  try{
+    const p=shopProducts.find(x=>x.id===productId && x.active!==false);
+    if(!p) return showToast('Dit product is niet meer beschikbaar');
+    selectedProductId=p.id;
+    selectedQuantity=1;
+    renderCheckout();
+    const browse=$('#shopBrowse'), success=$('#shopSuccess'), checkout=$('#shopCheckout');
+    if(browse) browse.style.setProperty('display','none','important');
+    if(success) success.classList.remove('show');
+    if(!checkout) return showToast('Bestelformulier kon niet worden geopend');
+    checkout.classList.add('show');
+    checkout.style.setProperty('display','block','important');
+    checkout.style.setProperty('visibility','visible','important');
+    checkout.style.setProperty('opacity','1','important');
+    setTimeout(()=>checkout.scrollIntoView({behavior:'smooth',block:'start'}),20);
+  }catch(e){
+    console.error('openCheckout',e);
+    showToast('Bestelformulier kon niet openen. Probeer opnieuw.');
+  }
 }
 function renderCheckout(){
   const p=selectedProduct(), box=$('#shopCheckout'); if(!box || !p) return;
