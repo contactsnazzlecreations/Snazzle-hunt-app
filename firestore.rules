@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function adminExists() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid));
+    }
+
+    function isSuperAdmin() {
+      return adminExists() &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == "superadmin";
+    }
+
+    function isVillageAdmin(village) {
+      return adminExists() &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == "village_admin" &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.village == village;
+    }
+
+    function validFinderClose(huntId) {
+      return signedIn() &&
+        resource.data.found != true &&
+        request.resource.data.found == true &&
+        request.resource.data.foundByUserId == request.auth.uid &&
+        request.resource.data.village == resource.data.village &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["found", "foundAt", "foundByUserId", "foundByNickname"]) &&
+        getAfter(/databases/$(database)/documents/findings/$(huntId)).data.userId == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/findings/$(huntId)).data.huntId == huntId;
+    }
+
+    match /adminUsers/{uid} {
+      allow read: if isSuperAdmin() ||
+        (signedIn() && request.auth.uid == uid);
+      allow write: if isSuperAdmin();
+    }
+
+    match /villages/{villageId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /hunts/{huntId} {
+      allow read: if signedIn();
+
+      allow create, delete: if isSuperAdmin();
+
+      allow update: if isSuperAdmin() ||
+        (
+          isVillageAdmin(resource.data.village) &&
+          request.resource.data.village == resource.data.village &&
+          request.resource.data.diff(resource.data)
+            .affectedKeys()
+            .hasOnly(["imageUrl", "hint", "foundMessage"])
+        ) ||
+        validFinderClose(huntId);
+    }
+
+    match /findings/{findingId} {
+      allow create: if signedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.huntId == findingId;
+
+      allow read: if isSuperAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid) ||
+        isVillageAdmin(resource.data.village);
+
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /users/{uid} {
+      allow create, read, update: if signedIn() &&
+        request.auth.uid == uid;
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // Publieke vriendenlijst: uitsluitend nickname + laatst actief.
+    // Geen e-mail, locatie, huntdeelname of andere persoonsgegevens.
+    match /publicProfiles/{uid} {
+      allow read: if signedIn();
+
+      allow create, update: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(["nickname", "lastSeen"]) &&
+        request.resource.data.nickname is string &&
+        request.resource.data.nickname.size() >= 2 &&
+        request.resource.data.nickname.size() <= 20 &&
+        request.resource.data.lastSeen is string;
+
+      allow delete: if isSuperAdmin() ||
+        (signedIn() && request.auth.uid == uid);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
