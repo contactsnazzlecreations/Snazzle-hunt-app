@@ -30,6 +30,7 @@ let localSettings = loadLocalSettings();
 let villages = [...fallbackVillages];
 let hunts = [];
 let findings = [];
+let publicProfiles = [];
 let selectedVillage = localStorage.getItem('snazzleVillage') || 'Montfort';
 let proofPhoto = '';
 let currentUser = null;
@@ -50,7 +51,7 @@ function loadLegacyHunts(){
   catch { return []; }
 }
 function userName(){ return (localStorage.getItem('snazzleName') || '').trim(); }
-function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c])); }
 function slug(s){ return String(s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(window.__toast); window.__toast=setTimeout(()=>t.classList.remove('show'),2600); }
 function openSheet(id){ $('#'+id)?.classList.add('show'); }
@@ -176,12 +177,71 @@ function renderFindings(){
     list.appendChild(d);
   });
 }
-function renderHome(){ applyName(); renderLocalImages(); renderVillages(); renderActive(); renderFindings(); renderAdmin(); }
+function ensureFriendsUI(){
+  const panel=$('#friendsSheet .panel');
+  if(!panel || $('#friendsList')) return;
+  const intro=panel.querySelector('p');
+  if(intro) intro.textContent='Hier zie je alleen Snazzlers die kort geleden actief waren. We tonen uitsluitend hun voornaam of nickname — nooit adres of exacte locatie.';
+  const summary=document.createElement('div'); summary.id='friendsSummary'; summary.className='friends-summary';
+  const list=document.createElement('div'); list.id='friendsList'; list.className='friends-list';
+  panel.append(summary,list);
+  if(!$('#friendsStyles')){
+    const style=document.createElement('style'); style.id='friendsStyles'; style.textContent=`
+      .friends-summary{margin:14px 0;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,#dff59c,#bfe56d);border:2px solid #8fbd42;color:#27421d;font-weight:950;display:flex;align-items:center;gap:9px}
+      .friends-summary .dot{width:11px;height:11px;border-radius:50%;background:#42a62d;box-shadow:0 0 0 5px rgba(66,166,45,.16);animation:friendPulse 1.8s ease-in-out infinite}
+      .friends-list{display:grid;gap:10px;margin-top:10px}
+      .friend-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:17px;background:#fff8e3;border:2px solid #c4a66f;box-shadow:0 4px 0 #aa8550;color:#322318}
+      .friend-avatar{width:48px;height:48px;flex:0 0 48px;border-radius:50%;display:grid;place-items:center;font-size:25px;background:linear-gradient(145deg,#70d7ef,#8e6de4);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.18)}
+      .friend-name{font-weight:1000;font-size:17px;line-height:1.15}.friend-me{font-size:11px;font-weight:950;color:#7651ad;margin-left:6px}
+      .friend-status{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:12px;font-weight:850;color:#4b6e37}.friend-status i{display:block;width:9px;height:9px;border-radius:50%;background:#4eb632}
+      .friend-empty{padding:20px 14px;border-radius:17px;background:#fff8e3;border:2px dashed #c4a66f;text-align:center;font-weight:850;color:#604828;line-height:1.5}
+      @keyframes friendPulse{50%{transform:scale(1.25);opacity:.72}}
+      @media(prefers-reduced-motion:reduce){.friends-summary .dot{animation:none}}
+    `; document.head.appendChild(style);
+  }
+}
+function avatarFor(name){
+  const icons=['🦆','🧭','🌿','⭐','🦋','🐸','🌈','🏆'];
+  let n=0; for(const ch of String(name||'')) n=(n+ch.codePointAt(0))%icons.length;
+  return icons[n];
+}
+function isRecentlyActive(p){
+  const t=Date.parse(p.lastSeen||'');
+  return Number.isFinite(t) && Date.now()-t < 10*60*1000;
+}
+function renderFriends(){
+  ensureFriendsUI();
+  const list=$('#friendsList'), summary=$('#friendsSummary');
+  if(!list || !summary) return;
+  const active=publicProfiles.filter(p=>p.nickname && isRecentlyActive(p)).sort((a,b)=>String(a.nickname).localeCompare(String(b.nickname),'nl'));
+  summary.innerHTML=`<span class="dot"></span><span>${active.length} Snazzler${active.length===1?'':'s'} nu actief</span>`;
+  list.innerHTML='';
+  if(!active.length){
+    list.innerHTML='<div class="friend-empty">🌿 Er is op dit moment nog niemand zichtbaar als actief.<br>Kom straks nog eens kijken!</div>';
+    return;
+  }
+  active.forEach(p=>{
+    const card=document.createElement('div'); card.className='friend-card';
+    const isMe=currentUser && p.id===currentUser.uid;
+    card.innerHTML=`<div class="friend-avatar" aria-hidden="true">${avatarFor(p.nickname)}</div><div><div class="friend-name">${esc(p.nickname)}${isMe?'<span class="friend-me">JIJ</span>':''}</div><div class="friend-status"><i></i> Nu actief</div></div>`;
+    list.appendChild(card);
+  });
+}
+function renderHome(){ applyName(); renderLocalImages(); renderVillages(); renderActive(); renderFindings(); renderFriends(); renderAdmin(); }
 function renderAll(){ renderHome(); }
 
 async function syncNickname(){
   if(!currentUser || !userName() || adminProfile) return;
-  try { await setDoc(doc(db,'users',currentUser.uid),{nickname:userName(),updatedAt:new Date().toISOString()},{merge:true}); } catch(e){ console.warn(e); }
+  const now=new Date().toISOString();
+  try {
+    await setDoc(doc(db,'users',currentUser.uid),{nickname:userName(),updatedAt:now},{merge:true});
+    await setDoc(doc(db,'publicProfiles',currentUser.uid),{nickname:userName(),lastSeen:now},{merge:true});
+  } catch(e){ console.warn('nickname/profile sync',e); }
+}
+async function touchPublicProfile(){
+  if(!currentUser || !userName() || adminProfile) return;
+  try { await setDoc(doc(db,'publicProfiles',currentUser.uid),{nickname:userName(),lastSeen:new Date().toISOString()},{merge:true}); }
+  catch(e){ console.warn('public profile presence',e); }
 }
 async function loadUserParticipation(){
   joinedHunts=[]; seenFoundHunts=[];
@@ -266,6 +326,16 @@ function startCentralListeners(){
     hunts=nextHunts;
     centralReady=true; renderAll();
   },e=>console.warn('hunts listener',e));
+  onSnapshot(collection(db,'publicProfiles'),snap=>{
+    publicProfiles=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderFriends();
+  },e=>{
+    console.warn('friends listener',e);
+    ensureFriendsUI();
+    const summary=$('#friendsSummary'), list=$('#friendsList');
+    if(summary) summary.innerHTML='<span>👥 Vriendenlijst nog niet gekoppeld</span>';
+    if(list) list.innerHTML='<div class="friend-empty">De app is klaar, maar Firebase moet de vriendenlijst nog toestemming geven.</div>';
+  });
 }
 async function ensureAuth(){
   onAuthStateChanged(auth,async user=>{
@@ -276,6 +346,7 @@ async function ensureAuth(){
     await loadUserParticipation();
     startCentralListeners();
     await loadOwnFindings();
+    await touchPublicProfile();
     checkOnboarding();
     renderAll();
   });
@@ -441,11 +512,12 @@ async function markFound(){
 
 // UI bindings
 $$('[data-close]').forEach(b=>b.onclick=()=>closeSheet(b.dataset.close));
-$('#finishOnboarding').onclick=async()=>{ const n=$('#firstNameInput').value.trim().slice(0,20); if(n.length<2) return toast('Vul een voornaam of nickname in'); localStorage.setItem('snazzleName',n); $('#onboarding').classList.remove('show'); applyName(); await syncNickname(); };
+$('#finishOnboarding').onclick=async()=>{ const n=$('#firstNameInput').value.trim().slice(0,20); if(n.length<2) return toast('Vul een voornaam of nickname in'); localStorage.setItem('snazzleName',n); $('#onboarding').classList.remove('show'); applyName(); await syncNickname(); renderFriends(); };
 $('#saveName').onclick=async()=>{ const n=$('#nameInput').value.trim().slice(0,20); if(n.length<2) return toast('Vul minimaal 2 tekens in'); localStorage.setItem('snazzleName',n); await syncNickname(); closeSheet('profileSheet'); renderAll(); };
 $('#profileBtn').onclick=$('#navProfile').onclick=()=>openSheet('profileSheet');
 $('#findsBtn').onclick=()=>{ renderFindings(); openSheet('findsSheet'); };
-$('#navFriends').onclick=()=>openSheet('friendsSheet'); $('#navShop').onclick=()=>openSheet('shopSheet');
+$('#navFriends').onclick=async()=>{ await touchPublicProfile(); renderFriends(); openSheet('friendsSheet'); };
+$('#navShop').onclick=()=>openSheet('shopSheet');
 $('#bigStart').onclick=$('#navHunt').onclick=()=>{ if(activeHunt()) openSheet('huntSheet'); else { renderVillagePage(selectedVillage); openSheet('villageSheet'); } };
 $('#startBtn').onclick=joinActiveHunt;
 $('#proofBtn').onclick=()=>$('#proofInput').click();
@@ -462,6 +534,8 @@ $('#saveVillageLimitedBtn').onclick=saveVillageLimited;
 $$('[data-remove-local-image]').forEach(b=>b.onclick=()=>{ localSettings[b.dataset.removeLocalImage]=''; localStorage.setItem('snazzleSettings',JSON.stringify(localSettings)); renderLocalImages(); toast('Afbeelding verwijderd'); });
 $$('[data-tab]').forEach(b=>b.onclick=()=>{ $$('[data-tab]').forEach(x=>x.classList.remove('on')); $$('.admin-section').forEach(x=>x.classList.remove('on')); b.classList.add('on'); $('#'+b.dataset.tab).classList.add('on'); });
 
-setInterval(()=>{ renderActive(); },30000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') touchPublicProfile(); });
+setInterval(()=>{ renderActive(); renderFriends(); },30000);
+setInterval(()=>{ if(document.visibilityState==='visible') touchPublicProfile(); },180000);
 renderAll();
 ensureAuth();
