@@ -1,0 +1,44 @@
+name: Bump Snazzle kids fun cache
+
+on:
+  push:
+    paths:
+      - '.github/workflows/bump-kids-fun-cache.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Bump app module version
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          import re
+          s2 = re.sub(r'\.\/app\.js\?v=\d+', './app.js?v=9', s)
+          if s2 == s:
+              print('No cache string changed')
+          else:
+              p.write_text(s2, encoding='utf-8')
+              print('Updated index.html to app.js?v=9')
+          PY
+
+      - name: Commit cache bump
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Load Snazzle kids fun v9"
+          git push
