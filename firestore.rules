@@ -50,9 +50,7 @@ service cloud.firestore {
 
     match /hunts/{huntId} {
       allow read: if signedIn();
-
       allow create, delete: if isSuperAdmin();
-
       allow update: if isSuperAdmin() ||
         (
           isVillageAdmin(resource.data.village) &&
@@ -68,26 +66,19 @@ service cloud.firestore {
       allow create: if signedIn() &&
         request.resource.data.userId == request.auth.uid &&
         request.resource.data.huntId == findingId;
-
       allow read: if isSuperAdmin() ||
         (signedIn() && resource.data.userId == request.auth.uid) ||
         isVillageAdmin(resource.data.village);
-
       allow update, delete: if isSuperAdmin();
     }
 
     match /users/{uid} {
-      allow create, read, update: if signedIn() &&
-        request.auth.uid == uid;
-
+      allow create, read, update: if signedIn() && request.auth.uid == uid;
       allow delete: if isSuperAdmin();
     }
 
-    // Publieke vriendenlijst: uitsluitend nickname + laatst actief.
-    // Geen e-mail, locatie, huntdeelname of andere persoonsgegevens.
     match /publicProfiles/{uid} {
       allow read: if signedIn();
-
       allow create, update: if signedIn() &&
         request.auth.uid == uid &&
         request.resource.data.keys().hasOnly(["nickname", "lastSeen"]) &&
@@ -95,9 +86,65 @@ service cloud.firestore {
         request.resource.data.nickname.size() >= 2 &&
         request.resource.data.nickname.size() <= 20 &&
         request.resource.data.lastSeen is string;
+      allow delete: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
+    }
 
-      allow delete: if isSuperAdmin() ||
-        (signedIn() && request.auth.uid == uid);
+    match /shopProducts/{productId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /shopOrders/{orderId} {
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly([
+          "userId", "orderNo", "productId", "productName", "unitPriceCents",
+          "quantity", "productTotalCents", "fulfillment", "contactName", "email",
+          "phone", "street", "houseNumber", "postalCode", "city",
+          "adultConfirmed", "privacyAcknowledged", "status", "createdAt"
+        ]) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.orderNo is string &&
+        request.resource.data.productId is string &&
+        request.resource.data.productName is string &&
+        request.resource.data.unitPriceCents is int &&
+        request.resource.data.quantity is int &&
+        request.resource.data.quantity >= 1 &&
+        request.resource.data.quantity <= 10 &&
+        request.resource.data.productTotalCents is int &&
+        request.resource.data.fulfillment in ["pickup", "shipping"] &&
+        request.resource.data.contactName is string &&
+        request.resource.data.contactName.size() >= 2 &&
+        request.resource.data.contactName.size() <= 60 &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() >= 5 &&
+        request.resource.data.email.size() <= 120 &&
+        request.resource.data.phone is string &&
+        request.resource.data.phone.size() <= 30 &&
+        request.resource.data.street is string &&
+        request.resource.data.houseNumber is string &&
+        request.resource.data.postalCode is string &&
+        request.resource.data.city is string &&
+        request.resource.data.adultConfirmed == true &&
+        request.resource.data.privacyAcknowledged == true &&
+        request.resource.data.status == "new" &&
+        request.resource.data.createdAt is string &&
+        get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.active != false &&
+        request.resource.data.productName == get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.name &&
+        request.resource.data.unitPriceCents == get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.priceCents &&
+        request.resource.data.productTotalCents == request.resource.data.unitPriceCents * request.resource.data.quantity &&
+        (
+          request.resource.data.fulfillment == "pickup" ||
+          (
+            request.resource.data.street.size() >= 2 &&
+            request.resource.data.houseNumber.size() >= 1 &&
+            request.resource.data.postalCode.size() >= 4 &&
+            request.resource.data.city.size() >= 2
+          )
+        );
+
+      allow read: if isSuperAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isSuperAdmin();
     }
 
     match /{document=**} {
