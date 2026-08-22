@@ -1,0 +1,31 @@
+name: Fix shop checkout mobile v3
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-shop-checkout-mobile-v3.yml'
+      - '.github/scripts/fix_shop_checkout_mobile_v3.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Patch shop checkout
+        run: python .github/scripts/fix_shop_checkout_mobile_v3.py
+      - name: Commit fix
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add shop.js
+          git commit -m "Make shop checkout and product zoom reliable on mobile"
+          git push
