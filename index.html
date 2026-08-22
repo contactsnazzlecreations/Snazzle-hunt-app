@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#6c4cff" />
+  <title>Snazzle Hunt</title>
+  <style>
+    :root{
+      --purple:#6c4cff;
+      --purple-dark:#472bcf;
+      --pink:#ff4fa3;
+      --yellow:#ffd93d;
+      --green:#27d980;
+      --blue:#43b8ff;
+      --orange:#ff8a3d;
+      --ink:#1f2240;
+      --muted:#6d7291;
+      --card:#ffffff;
+      --bg:#f6f7ff;
+      --shadow:0 14px 34px rgba(52,46,120,.16);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,ui-rounded,"Nunito",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 8% 0%,rgba(255,79,163,.18),transparent 29%),
+        radial-gradient(circle at 92% 8%,rgba(67,184,255,.22),transparent 32%),
+        linear-gradient(180deg,#fff 0%,var(--bg) 62%,#eef0ff 100%);
+      min-height:100vh;
+    }
+    button{font:inherit}
+    .app{max-width:520px;margin:0 auto;min-height:100vh;padding:18px 18px 106px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px}
+    .brand-mark{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;font-size:25px;background:linear-gradient(145deg,var(--yellow),#ffef8b);box-shadow:0 8px 20px rgba(255,185,32,.25)}
+    .avatar{width:44px;height:44px;border:0;border-radius:50%;background:linear-gradient(145deg,var(--purple),var(--pink));color:#fff;font-weight:900;box-shadow:var(--shadow)}
+    .hero{position:relative;overflow:hidden;border-radius:28px;padding:24px 22px;background:linear-gradient(135deg,var(--purple) 0%,#7f58ff 48%,var(--pink) 100%);color:#fff;box-shadow:0 18px 42px rgba(92,62,219,.28)}
+    .hero:before,.hero:after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.13)}
+    .hero:before{width:150px;height:150px;right:-45px;top:-58px}
+    .hero:after{width:92px;height:92px;right:65px;bottom:-52px}
+    .eyebrow{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+    h1{font-size:31px;line-height:1.05;margin:8px 0 10px}
+    .hero p{margin:0;max-width:330px;line-height:1.45;font-weight:600;color:rgba(255,255,255,.9)}
+    .hero-duck{position:absolute;right:18px;bottom:16px;font-size:58px;filter:drop-shadow(0 7px 8px rgba(44,17,113,.23));transform:rotate(-7deg)}
+    .section-title{display:flex;justify-content:space-between;align-items:center;margin:24px 2px 12px}
+    .section-title h2{font-size:18px;margin:0}.section-title span{font-size:12px;color:var(--muted);font-weight:700}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .action{border:0;border-radius:23px;padding:17px;text-align:left;min-height:128px;color:var(--ink);box-shadow:var(--shadow);position:relative;overflow:hidden;cursor:pointer;transition:.18s transform}
+    .action:active{transform:scale(.98)}
+    .action strong{display:block;font-size:17px;margin-top:34px}.action small{display:block;margin-top:4px;color:rgba(31,34,64,.67);font-weight:650;line-height:1.3}
+    .action-icon{position:absolute;top:14px;left:15px;width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.76);font-size:20px}
+    .new-hunt{background:linear-gradient(145deg,#ffe86a,var(--yellow))}.villages{background:linear-gradient(145deg,#93eaff,var(--blue))}.finds{background:linear-gradient(145deg,#9af1bf,var(--green))}.profile{background:linear-gradient(145deg,#ffb4d7,#ff7dbb)}
+    .hunt-card{background:var(--card);border-radius:25px;padding:15px;box-shadow:var(--shadow);display:grid;grid-template-columns:94px 1fr;gap:14px;align-items:center}
+    .hunt-image{height:94px;border-radius:20px;background:linear-gradient(145deg,#fff4a3,#ffd439);display:grid;place-items:center;font-size:52px;position:relative}
+    .live{position:absolute;left:8px;top:8px;background:#fff;color:#ea376f;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:900;letter-spacing:.05em}
+    .hunt-card h3{margin:0 0 5px;font-size:17px}.hunt-card p{margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.4;font-weight:600}
+    .pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;background:#f0edff;color:var(--purple-dark);padding:6px 9px;font-size:11px;font-weight:800}
+    .bottomnav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(520px,100%);padding:10px 18px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-top:1px solid rgba(80,77,140,.08);display:grid;grid-template-columns:repeat(4,1fr);z-index:10}
+    .navbtn{border:0;background:none;color:#898da6;display:grid;justify-items:center;gap:3px;font-size:10px;font-weight:800;padding:6px}.navbtn span{font-size:20px}.navbtn.active{color:var(--purple)}
+    .sheet{position:fixed;inset:0;background:rgba(27,24,64,.42);display:none;align-items:flex-end;z-index:20}.sheet.show{display:flex}
+    .panel{width:min(520px,100%);margin:0 auto;background:#fff;border-radius:30px 30px 0 0;padding:18px 20px 30px;max-height:82vh;overflow:auto}
+    .handle{width:46px;height:5px;border-radius:99px;background:#d9dbea;margin:0 auto 18px}.panel h2{margin:0 0 5px}.panel p{color:var(--muted);font-weight:600;line-height:1.45}
+    .snazzle-preview{height:210px;border-radius:25px;background:linear-gradient(145deg,#6ad4ff,#c58cff 52%,#ff94c4);display:grid;place-items:center;font-size:100px;margin:16px 0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+    .primary{width:100%;border:0;border-radius:18px;padding:15px 17px;background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff;font-weight:900;font-size:16px;box-shadow:0 10px 24px rgba(104,70,235,.26)}
+    .namebox{display:flex;gap:8px;margin-top:12px}.namebox input{flex:1;border:2px solid #ececff;border-radius:16px;padding:13px 14px;font:inherit;font-weight:700;outline:none}.namebox input:focus{border-color:#b7a9ff}.namebox button{border:0;border-radius:16px;background:var(--yellow);padding:0 16px;font-weight:900;color:var(--ink)}
+    .toast{position:fixed;left:50%;bottom:98px;transform:translate(-50%,16px);background:#252744;color:#fff;padding:11px 16px;border-radius:999px;font-size:13px;font-weight:800;opacity:0;pointer-events:none;transition:.22s;z-index:30;white-space:nowrap}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:370px){h1{font-size:27px}.hero-duck{font-size:48px}.action{min-height:120px;padding:14px}.action strong{font-size:15px}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark">🦆</div><span>Snazzle Hunt</span></div>
+      <button class="avatar" id="avatarBtn" aria-label="Profiel">S</button>
+    </div>
+
+    <section class="hero">
+      <div class="eyebrow">Samen naar buiten</div>
+      <h1 id="welcome">Welkom!</h1>
+      <p>Er ligt weer avontuur op je te wachten. Kies een hunt, ga naar buiten en vind jouw Snazzle.</p>
+      <div class="hero-duck">🦆</div>
+    </section>
+
+    <div class="section-title"><h2>Wat wil je doen?</h2><span>Kies je avontuur</span></div>
+    <section class="actions">
+      <button class="action new-hunt" data-open="hunt"><span class="action-icon">✨</span><strong>Nieuwe Hunt</strong><small>Bekijk welke Snazzle je kunt zoeken</small></button>
+      <button class="action villages" data-toast="Dorpen worden als volgende stap toegevoegd"><span class="action-icon">📍</span><strong>Dorpen</strong><small>Kies jouw dorp en ontdek hunts in de buurt</small></button>
+      <button class="action finds" data-toast="Je vondstenpagina komt eraan"><span class="action-icon">🏆</span><strong>Mijn vondsten</strong><small>Bewaar je gevonden Snazzles</small></button>
+      <button class="action profile" data-open="profile"><span class="action-icon">👤</span><strong>Mijn profiel</strong><small>Stel je naam in en maak de app persoonlijk</small></button>
+    </section>
+
+    <div class="section-title"><h2>Actieve hunt</h2><span>Nu te vinden</span></div>
+    <article class="hunt-card" data-open="hunt">
+      <div class="hunt-image"><span class="live">LIVE</span>🦆</div>
+      <div><h3>De Gouden Snazzle</h3><p>Open de hunt om te zien welke Snazzle er verstopt is.</p><span class="pill">📍 Montfort</span></div>
+    </article>
+  </main>
+
+  <nav class="bottomnav" aria-label="Hoofdnavigatie">
+    <button class="navbtn active"><span>🏠</span>Home</button>
+    <button class="navbtn" data-open="hunt"><span>🔎</span>Hunts</button>
+    <button class="navbtn" data-toast="De kaart voegen we in de volgende versie toe"><span>🗺️</span>Kaart</button>
+    <button class="navbtn" data-open="profile"><span>👤</span>Profiel</button>
+  </nav>
+
+  <div class="sheet" id="huntSheet">
+    <div class="panel">
+      <div class="handle"></div>
+      <h2>Nieuwe Hunt ✨</h2>
+      <p>Deze Snazzle is nu te vinden. Bekijk hem goed en ga daarna op avontuur.</p>
+      <div class="snazzle-preview">🦆</div>
+      <h3>De Gouden Snazzle</h3>
+      <p><strong>Dorp:</strong> Montfort<br><strong>Regel:</strong> één Snazzle per gezin.</p>
+      <button class="primary" id="startHunt">Start deze hunt</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="profileSheet">
+    <div class="panel">
+      <div class="handle"></div>
+      <h2>Wie gaat er zoeken?</h2>
+      <p>Vul je voornaam in. Dan begroet Snazzle je voortaan persoonlijk.</p>
+      <div class="namebox"><input id="nameInput" maxlength="20" placeholder="Bijv. Marvin"><button id="saveName">Opslaan</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const welcome = $('#welcome');
+    const nameInput = $('#nameInput');
+    const avatarBtn = $('#avatarBtn');
+    function applyName(){
+      const name = localStorage.getItem('snazzleName') || '';
+      welcome.textContent = name ? `Welkom, ${name}!` : 'Welkom!';
+      avatarBtn.textContent = name ? name[0].toUpperCase() : 'S';
+      nameInput.value = name;
+    }
+    applyName();
+    function openSheet(type){ $('#'+type+'Sheet').classList.add('show'); }
+    document.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click',()=>openSheet(el.dataset.open)));
+    document.querySelectorAll('.sheet').forEach(el=>el.addEventListener('click',(e)=>{ if(e.target===el) el.classList.remove('show'); }));
+    avatarBtn.addEventListener('click',()=>openSheet('profile'));
+    $('#saveName').addEventListener('click',()=>{
+      const name = nameInput.value.trim();
+      if(name) localStorage.setItem('snazzleName',name); else localStorage.removeItem('snazzleName');
+      applyName(); $('#profileSheet').classList.remove('show'); showToast('Naam opgeslagen ✨');
+    });
+    $('#startHunt').addEventListener('click',()=>{ $('#huntSheet').classList.remove('show'); showToast('Hunt gestart! Veel succes 🦆'); });
+    function showToast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(window.__toast); window.__toast=setTimeout(()=>t.classList.remove('show'),2300); }
+    document.querySelectorAll('[data-toast]').forEach(el=>el.addEventListener('click',()=>showToast(el.dataset.toast)));
+  </script>
+</body>
+</html>
