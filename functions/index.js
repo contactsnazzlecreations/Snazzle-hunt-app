@@ -49,7 +49,7 @@ function addressText(order) {
 exports.sendShopOrderEmails = onDocumentCreated(
   {
     document: 'shopOrders/{orderId}',
-    region: 'europe-west4',
+    region: 'europe-west1',
     secrets: [SMTP_USER, SMTP_PASS],
     retry: true
   },
