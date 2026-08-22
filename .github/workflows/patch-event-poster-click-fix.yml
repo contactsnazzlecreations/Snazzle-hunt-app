@@ -1,0 +1,32 @@
+name: Patch event poster click fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-event-poster-click-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Patch app.js
+        run: python .github/scripts/patch_event_poster_click_fix.py
+
+      - name: Commit patched app
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js
+          git commit -m "Fix full-screen event poster on mobile"
+          git push
