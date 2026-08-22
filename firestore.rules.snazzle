@@ -27,7 +27,7 @@ service cloud.firestore {
 
     function validFinderClose(huntId) {
       return signedIn() &&
-        resource.data.found != true &&
+        resource.data.get("found", false) != true &&
         request.resource.data.found == true &&
         request.resource.data.foundByUserId == request.auth.uid &&
         request.resource.data.village == resource.data.village &&
