@@ -37,6 +37,12 @@ service cloud.firestore {
         getAfter(/databases/$(database)/documents/findings/$(huntId)).data.huntId == huntId;
     }
 
+    function ownsShopOrder(orderId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/shopOrders/$(orderId)) &&
+        get(/databases/$(database)/documents/shopOrders/$(orderId)).data.userId == request.auth.uid;
+    }
+
     match /adminUsers/{uid} {
       allow read: if isSuperAdmin() ||
         (signedIn() && request.auth.uid == uid);
@@ -145,6 +151,43 @@ service cloud.firestore {
       allow read: if isSuperAdmin() ||
         (signedIn() && resource.data.userId == request.auth.uid);
       allow update, delete: if isSuperAdmin();
+    }
+
+    match /shopMailConfig/{configId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /mailUsers/{recipientId} {
+      allow read: if false;
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /mailTemplates/{templateId} {
+      allow read: if isSuperAdmin();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /mail/{mailId} {
+      allow create: if ownsShopOrder(request.resource.data.orderId) &&
+        request.resource.data.keys().hasOnly(["orderId", "kind", "toUids", "to", "replyTo", "template"]) &&
+        (
+          (
+            request.resource.data.kind == "owner" &&
+            mailId == request.resource.data.orderId + "-owners" &&
+            request.resource.data.toUids == get(/databases/$(database)/documents/shopMailConfig/current).data.recipientUids &&
+            request.resource.data.replyTo == get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email &&
+            request.resource.data.template.name == "shop-owner-order"
+          ) ||
+          (
+            request.resource.data.kind == "customer" &&
+            mailId == request.resource.data.orderId + "-customer" &&
+            request.resource.data.to == [get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email] &&
+            request.resource.data.template.name == "shop-customer-confirmation"
+          )
+        );
+      allow read: if isSuperAdmin();
+      allow update, delete: if false;
     }
 
     match /{document=**} {
