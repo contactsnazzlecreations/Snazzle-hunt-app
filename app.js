@@ -9,5 +9,5 @@ let shopLoaded = false;
 onAuthStateChanged(auth, user => {
   if (!user || shopLoaded) return;
   shopLoaded = true;
-  import('./shop.js').catch(err => console.error('Snazzle shop kon niet laden', err));
+  import('./shop.js?v=3').catch(err => console.error('Snazzle shop kon niet laden', err));
 });
