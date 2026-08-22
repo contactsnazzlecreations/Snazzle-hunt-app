@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function adminExists() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid));
+    }
+
+    function isSuperAdmin() {
+      return adminExists() &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == "superadmin";
+    }
+
+    function isVillageAdmin(village) {
+      return adminExists() &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == "village_admin" &&
+        get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.village == village;
+    }
+
+    function ownsShopOrder(orderId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/shopOrders/$(orderId)) &&
+        get(/databases/$(database)/documents/shopOrders/$(orderId)).data.userId == request.auth.uid;
+    }
+
+    match /adminUsers/{uid} {
+      allow read: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if isSuperAdmin();
+    }
+
+    match /villages/{id} {
+      allow read: if signedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    match /hunts/{huntId} {
+      allow read: if signedIn();
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() ||
+        (
+          isVillageAdmin(resource.data.village) &&
+          request.resource.data.village == resource.data.village &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["imageUrl","hint","foundMessage"])
+        ) ||
+        (
+          signedIn() &&
+          resource.data.found != true &&
+          request.resource.data.found == true &&
+          request.resource.data.foundByUserId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["found","foundAt","foundByUserId","foundByNickname"])
+        );
+    }
+
+    match /findings/{id} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if isSuperAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid) ||
+        isVillageAdmin(resource.data.village);
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /users/{uid} {
+      allow create, read, update: if signedIn() && request.auth.uid == uid;
+      allow delete: if isSuperAdmin();
+    }
+
+    match /publicProfiles/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(["nickname","lastSeen"]);
+      allow delete: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+
+    match /shopProducts/{productId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /shopOrders/{orderId} {
+      allow create: if signedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.quantity is int &&
+        request.resource.data.quantity >= 1 &&
+        request.resource.data.quantity <= 10 &&
+        request.resource.data.adultConfirmed == true &&
+        request.resource.data.privacyAcknowledged == true &&
+        request.resource.data.status == "new" &&
+        request.resource.data.fulfillment in ["pickup","shipping"] &&
+        request.resource.data.productName ==
+          get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.name &&
+        request.resource.data.unitPriceCents ==
+          get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.priceCents &&
+        request.resource.data.productTotalCents ==
+          request.resource.data.unitPriceCents * request.resource.data.quantity;
+      allow read: if isSuperAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /shopMailConfig/{id} {
+      allow read: if signedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    match /mailUsers/{id} {
+      allow read: if false;
+      allow write: if isSuperAdmin();
+    }
+
+    match /mailTemplates/{id} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /mail/{mailId} {
+      allow create: if ownsShopOrder(request.resource.data.orderId) &&
+        request.resource.data.keys().hasOnly([
+          "orderId","kind","toUids","to","replyTo","template"
+        ]) &&
+        (
+          (
+            request.resource.data.kind == "owner" &&
+            mailId == request.resource.data.orderId + "-owners" &&
+            request.resource.data.toUids ==
+              get(/databases/$(database)/documents/shopMailConfig/current).data.recipientUids &&
+            request.resource.data.replyTo ==
+              get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email &&
+            request.resource.data.template.name == "shop-owner-order"
+          ) ||
+          (
+            request.resource.data.kind == "customer" &&
+            mailId == request.resource.data.orderId + "-customer" &&
+            request.resource.data.to == [
+              get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email
+            ] &&
+            request.resource.data.template.name == "shop-customer-confirmation"
+          )
+        );
+      allow read: if isSuperAdmin();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
