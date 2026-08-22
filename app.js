@@ -61,6 +61,36 @@ function setImg(img, fallback, src){
   if(src){ img.src=src; img.style.display='block'; if(fallback) fallback.style.display='none'; }
   else { img.removeAttribute('src'); img.style.display='none'; if(fallback) fallback.style.display='grid'; }
 }
+function renderDuckLogoFallback(){
+  const fallback=$('#logoFallback');
+  if(!fallback) return;
+  if(localSettings.profileImage){
+    fallback.innerHTML='';
+    fallback.removeAttribute('aria-label');
+    return;
+  }
+  fallback.setAttribute('aria-label','Blauw Snazzle badeendje');
+  fallback.innerHTML=`<svg class="snazzle-duck-logo" viewBox="0 0 100 100" role="img" aria-hidden="true">
+    <g class="duck-shape">
+      <ellipse cx="45" cy="62" rx="30" ry="21"></ellipse>
+      <circle cx="67" cy="39" r="15"></circle>
+      <path d="M80 35 L96 42 L80 49 Z"></path>
+      <path d="M20 55 L7 44 L12 64 Z"></path>
+    </g>
+  </svg>`;
+  if(!$('#duckLogoStyles')){
+    const style=document.createElement('style');
+    style.id='duckLogoStyles';
+    style.textContent=`
+      #logoFallback{width:100%;height:100%;display:grid;place-items:center}
+      .snazzle-duck-logo{width:52px;height:52px;overflow:visible;transform-origin:50% 70%;filter:drop-shadow(0 3px 2px rgba(0,0,0,.22));animation:duckLogoBob 3.2s ease-in-out infinite}
+      .snazzle-duck-logo .duck-shape{fill:#2fa9e8}
+      @keyframes duckLogoBob{0%,100%{transform:translateY(1px) rotate(-2deg)}50%{transform:translateY(-3px) rotate(2deg)}}
+      @media(prefers-reduced-motion:reduce){.snazzle-duck-logo{animation:none}}
+    `;
+    document.head.appendChild(style);
+  }
+}
 function compressFile(file, max=720, quality=.68){
   return new Promise((resolve,reject)=>{
     if(!file || !file.type.startsWith('image/')) return reject(new Error('Kies een afbeelding'));
@@ -94,6 +124,7 @@ function applyName(){
 }
 function renderLocalImages(){
   setImg($('#profileLogo'), $('#logoFallback'), localSettings.profileImage);
+  renderDuckLogoFallback();
   setImg($('#profilePreview'), $('#profilePreviewFallback'), localSettings.profileImage);
   if(localSettings.heroImage){
     $('#hero').style.backgroundImage=`linear-gradient(rgba(15,55,28,.38),rgba(10,40,20,.67)),url(${localSettings.heroImage})`;
