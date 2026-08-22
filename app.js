@@ -24,6 +24,14 @@ const db = getFirestore(app);
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
+// Hide empty hunt metadata pills completely (prevents an empty yellow bubble).
+if (!document.getElementById('emptyPillFix')) {
+  const style = document.createElement('style');
+  style.id = 'emptyPillFix';
+  style.textContent = '.meta .pill:empty{display:none!important}';
+  document.head.appendChild(style);
+}
+
 const fallbackVillages = ['Montfort', 'Posterholt', 'Sint Odiliënberg'];
 const localDefaults = { profileImage:'', heroImage:'', homeImage1:'', homeImage2:'' };
 let localSettings = loadLocalSettings();
@@ -178,7 +186,7 @@ function renderActive(){
   $('#activeStatus').textContent='Actief in '+selectedVillage;
   $('#huntTitle').textContent=h.title;
   $('#huntVillage').textContent='📍 '+h.village;
-  $('#huntRule').textContent=h.rule ? '👨‍👩‍👧 '+h.rule : ''; $('#huntRule').style.display=h.rule ? '' : 'none';
+  $('#huntRule').textContent=h.rule ? '👨‍👩‍👧 '+h.rule : ''; $('#huntRule').style.display=h.rule ? '' : 'none'; $('#huntRule').style.display=h.rule ? '' : 'none';
   $('#huntDescription').textContent=h.description||'';
   $('#hintBox').textContent=h.hint ? '💡 Hint: '+h.hint : '';
   $('#hintBox').classList.toggle('show',!!h.hint);
