@@ -1,7 +1,7 @@
 // Snazzle image fitting layer.
 // Keeps uploaded images fully visible inside app cards while preserving a filled, polished background.
 
-const IMAGE_FIT_VERSION = '1.0.0';
+const IMAGE_FIT_VERSION = '1.1.0';
 
 const frameSelectors = [
   '.photo',
@@ -30,7 +30,35 @@ function injectImageFitStyles(){
       width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;
       position:relative;z-index:1;background:transparent!important;
     }
-    .home-card .label,.photo>.live,.photo>.placeholder,.preview>span,.proof-preview>*:not(img){position:relative;z-index:2}
+    .photo>.live,.photo>.placeholder,.preview>span,.proof-preview>*:not(img){position:relative;z-index:2}
+
+    /* Home image captions stay subtly anchored inside the bottom edge. */
+    .home-card .label{
+      position:absolute!important;
+      left:12px!important;
+      bottom:10px!important;
+      z-index:3!important;
+      max-width:calc(100% - 24px);
+      padding:7px 12px 8px!important;
+      border-radius:999px!important;
+      background:linear-gradient(90deg,rgba(35,24,17,.88),rgba(53,38,25,.74))!important;
+      color:#fff7dd!important;
+      border:1px solid rgba(255,235,174,.34)!important;
+      box-shadow:0 3px 10px rgba(0,0,0,.22)!important;
+      font-family:ui-rounded,"Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif!important;
+      font-size:12px!important;
+      font-weight:900!important;
+      letter-spacing:.25px!important;
+      line-height:1.15!important;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      text-shadow:0 1px 2px rgba(0,0,0,.35);
+      backdrop-filter:blur(4px);
+    }
+    .home-card:nth-child(1) .label:before{content:'✨ ';}
+    .home-card:nth-child(2) .label:before{content:'🎉 ';}
+
     .shop-product-media img,.shop-summary-thumb img,.shop-image-preview img,.shop-admin-product .thumb img{padding:4px}
     .home-card>img,.photo>img,.preview>img{padding:3px}
     .snazzle-fit-frame{overflow:hidden!important}
