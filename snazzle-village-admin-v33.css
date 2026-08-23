@@ -1,0 +1,56 @@
+/* Snazzle Hunt v33 — directe dorpafbeeldingen + duidelijke eenmalige knipoog. */
+
+#adminVillageList .village-access-card{padding-right:18px!important}
+#adminVillageList .village-access-card:after{top:54px!important}
+.v33-village-image-admin{
+  margin-top:12px;padding-top:11px;border-top:1px solid rgba(117,91,50,.22);
+  display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;
+}
+.v33-village-preview{
+  width:92px;height:68px;border-radius:12px;overflow:hidden;background:#e7dcc1;
+  border:2px solid #b99964;display:grid;place-items:center;color:#796247;
+  font-size:9px;font-weight:900;text-align:center;
+}
+.v33-village-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.v33-village-actions{display:grid;gap:7px}
+.v33-village-actions label,.v33-village-actions button{
+  width:100%;border:0;border-radius:11px;padding:9px 10px;font-size:10px;font-weight:950;text-align:center;
+}
+.v33-village-actions label{background:#3f8b54;color:#fff;box-shadow:0 3px 0 #2a643a;cursor:pointer}
+.v33-village-actions label input{display:none!important}
+.v33-village-actions button{background:#73553c;color:#fff;box-shadow:0 3px 0 #4e3929}
+
+/* Grotere, beter zichtbare knipoog op het rechteroog van het ronde Snazzle-logo. */
+.logo{position:relative!important;overflow:hidden!important;isolation:isolate!important}
+.v33-wink-lid{
+  position:absolute;left:54%;top:38%;width:23%;height:14%;z-index:20;
+  border-bottom:5px solid #173128;border-radius:0 0 60% 60%;
+  background:rgba(24,66,55,.22);opacity:0;pointer-events:none;
+  transform:rotate(-8deg) scaleY(.1);transform-origin:center;
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.22));
+}
+.v33-wink-star{
+  position:absolute;left:77%;top:22%;z-index:21;color:#ffe16e;font-size:18px;opacity:0;
+  text-shadow:0 0 9px rgba(255,224,103,.95);pointer-events:none;
+}
+.logo.v33-wink-now img{animation:v33LogoNod 1.25s ease-in-out 1!important}
+.logo.v33-wink-now .v33-wink-lid{animation:v33WinkLid 1.15s ease-in-out 1}
+.logo.v33-wink-now .v33-wink-star{animation:v33WinkStar 1.15s ease-in-out 1}
+@keyframes v33WinkLid{
+  0%,18%,72%,100%{opacity:0;transform:rotate(-8deg) scaleY(.1)}
+  30%,58%{opacity:1;transform:rotate(-8deg) scaleY(1)}
+}
+@keyframes v33WinkStar{
+  0%,28%,100%{opacity:0;transform:scale(.3) rotate(-15deg)}
+  42%{opacity:1;transform:scale(1.35) rotate(10deg)}
+  66%{opacity:.7;transform:scale(.85) rotate(28deg)}
+}
+@keyframes v33LogoNod{
+  0%,100%{transform:rotate(0deg) scale(1)}
+  38%{transform:rotate(-2deg) scale(1.035)}
+  62%{transform:rotate(1deg) scale(1.01)}
+}
+
+@media(max-width:390px){
+  .v33-village-image-admin{grid-template-columns:82px 1fr}.v33-village-preview{width:82px;height:62px}
+}
