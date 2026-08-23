@@ -28,8 +28,11 @@ import './village-access.js?v=26';
 import './snazzle-characters.js?v=26';
 // Adventure Passport-basis: bestaande functies blijven intact.
 import './snazzle-adventure-ui-v28.js?v=31';
-// v31: rustige home zonder overlappende tekst + uitgebreid zelf beeldbeheer.
+// v31: rustige home zonder overlappende tekst.
 import './snazzle-clean-home-v31.js?v=31';
+// v32: alle zichtbare beelden beter beheerbaar, dorpafbeeldingen betrouwbaar in de kaart,
+// eigen bewegende Snazzle blijft animeren en het logo knipoogt één keer bij openen.
+import './snazzle-image-control-v32.js?v=32';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
