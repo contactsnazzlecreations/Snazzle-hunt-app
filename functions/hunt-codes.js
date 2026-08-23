@@ -2,11 +2,32 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const crypto = require('crypto');
 
+const MIN_CODE_LENGTH = 8;
+const MAX_ATTEMPTS = 8;
+const ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
+
 function normalizeCode(value) {
   return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
 }
-function hashCode(value) {
+function legacyHash(value) {
   return crypto.createHash('sha256').update(normalizeCode(value), 'utf8').digest('hex');
+}
+function secureHash(value, saltHex) {
+  return crypto.scryptSync(normalizeCode(value), Buffer.from(saltHex, 'hex'), 32).toString('hex');
+}
+function safeEqualHex(a, b) {
+  try {
+    const left = Buffer.from(String(a || ''), 'hex');
+    const right = Buffer.from(String(b || ''), 'hex');
+    return left.length > 0 && left.length === right.length && crypto.timingSafeEqual(left, right);
+  } catch {
+    return false;
+  }
+}
+function verifyStoredCode(code, secret) {
+  if (secret.salt && secret.codeHash) return safeEqualHex(secureHash(code, secret.salt), secret.codeHash);
+  if (secret.codeHash) return safeEqualHex(legacyHash(code), secret.codeHash);
+  return false;
 }
 async function requireSuperAdmin(db, uid) {
   if (!uid) throw new HttpsError('unauthenticated', 'Log eerst in als beheerder.');
@@ -31,6 +52,31 @@ function huntIsClaimable(hunt) {
   if (Number.isFinite(end) && end && now > end) return false;
   return true;
 }
+function attemptId(huntId, uid) {
+  return `${huntId}_${uid}`.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 240);
+}
+async function registerAttempt(db, huntId, uid) {
+  const ref = db.collection('huntCodeAttempts').doc(attemptId(huntId, uid));
+  const now = Date.now();
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? (snap.data() || {}) : {};
+    const windowStartedAt = Number(data.windowStartedAt || 0);
+    const sameWindow = windowStartedAt > 0 && now - windowStartedAt < ATTEMPT_WINDOW_MS;
+    const attempts = sameWindow ? Number(data.attempts || 0) : 0;
+    if (attempts >= MAX_ATTEMPTS) {
+      throw new HttpsError('resource-exhausted', 'Te veel codepogingen. Probeer het over enkele minuten opnieuw.');
+    }
+    tx.set(ref, {
+      huntId,
+      userId: uid,
+      attempts: attempts + 1,
+      windowStartedAt: sameWindow ? windowStartedAt : now,
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+  });
+  return ref;
+}
 
 const saveHuntCode = onCall({ region: 'europe-west1' }, async request => {
   const db = getFirestore();
@@ -38,15 +84,20 @@ const saveHuntCode = onCall({ region: 'europe-west1' }, async request => {
   const huntId = String(request.data?.huntId || '').trim();
   const code = normalizeCode(request.data?.code);
   if (!huntId) throw new HttpsError('invalid-argument', 'Hunt ontbreekt.');
-  if (code.length < 6) throw new HttpsError('invalid-argument', 'Gebruik minimaal 6 tekens voor de geheime code.');
+  if (code.length < MIN_CODE_LENGTH) throw new HttpsError('invalid-argument', `Gebruik minimaal ${MIN_CODE_LENGTH} tekens voor de geheime code.`);
   const huntSnap = await db.collection('hunts').doc(huntId).get();
   if (!huntSnap.exists) throw new HttpsError('not-found', 'Deze Hunt bestaat niet.');
+  const salt = crypto.randomBytes(16).toString('hex');
   await db.collection('huntSecrets').doc(huntId).set({
-    codeHash: hashCode(code),
+    codeHash: secureHash(code, salt),
+    salt,
+    algorithm: 'scrypt-v1',
     last2: code.slice(-2),
     active: true,
     updatedBy: request.auth.uid,
-    updatedAt: FieldValue.serverTimestamp()
+    updatedAt: FieldValue.serverTimestamp(),
+    usedAt: FieldValue.delete(),
+    usedBy: FieldValue.delete()
   }, { merge: true });
   return { ok: true, configured: true, last2: code.slice(-2) };
 });
@@ -69,9 +120,10 @@ const verifyHuntCode = onCall({ region: 'europe-west1' }, async request => {
   const code = normalizeCode(request.data?.code);
   const nickname = String(request.data?.nickname || 'Snazzle-speler').trim().slice(0, 20) || 'Snazzle-speler';
   const photoData = validatePhoto(request.data?.photoData);
-  if (!huntId || code.length < 6) throw new HttpsError('invalid-argument', 'Vul de volledige vindcode in.');
+  if (!huntId || code.length < MIN_CODE_LENGTH) throw new HttpsError('invalid-argument', 'Vul de volledige vindcode in.');
 
   const db = getFirestore();
+  const attemptRef = await registerAttempt(db, huntId, uid);
   const huntRef = db.collection('hunts').doc(huntId);
   const secretRef = db.collection('huntSecrets').doc(huntId);
   const findingRef = db.collection('findings').doc(huntId);
@@ -89,7 +141,7 @@ const verifyHuntCode = onCall({ region: 'europe-west1' }, async request => {
     if (!secretSnap.exists) throw new HttpsError('not-found', 'Voor deze Hunt is nog geen geheime code ingesteld.');
     const secret = secretSnap.data() || {};
     if (secret.active !== true || !secret.codeHash) throw new HttpsError('not-found', 'De geheime code is niet actief.');
-    if (hashCode(code) !== secret.codeHash) throw new HttpsError('permission-denied', 'De ingevoerde code klopt niet.');
+    if (!verifyStoredCode(code, secret)) throw new HttpsError('permission-denied', 'De ingevoerde code klopt niet.');
 
     const now = new Date().toISOString();
     const item = {
@@ -122,6 +174,8 @@ const verifyHuntCode = onCall({ region: 'europe-west1' }, async request => {
       foundMessage: hunt.foundMessage || 'Gefeliciteerd! Je hebt de Snazzle gevonden!'
     };
   });
+
+  await attemptRef.delete().catch(() => {});
   return result;
 });
 
