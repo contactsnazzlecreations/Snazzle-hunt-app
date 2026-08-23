@@ -28,6 +28,8 @@ import './village-access.js?v=26';
 import './snazzle-characters.js?v=26';
 // v28: Adventure Passport-layout, extra geheime bewegingen en zelf aanpasbare thema-afbeeldingen.
 import './snazzle-adventure-ui-v28.js?v=28';
+// v29: rijkere geïllustreerde homekaart, compactere appkaarten en extra geheime magie.
+import './snazzle-premium-home-v29.js?v=29';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
