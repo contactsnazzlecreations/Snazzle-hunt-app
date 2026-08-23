@@ -26,8 +26,10 @@ import './snazzle-home-magic.js?v=26';
 import './snazzle-home-magic-fix.js?v=26';
 import './village-access.js?v=26';
 import './snazzle-characters.js?v=26';
-// v30 clean: v29 is bewust uitgeschakeld; we keren terug naar de rustige Adventure Passport-basis.
-import './snazzle-adventure-ui-v28.js?v=30';
+// Adventure Passport-basis: bestaande functies blijven intact.
+import './snazzle-adventure-ui-v28.js?v=31';
+// v31: rustige home zonder overlappende tekst + uitgebreid zelf beeldbeheer.
+import './snazzle-clean-home-v31.js?v=31';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
