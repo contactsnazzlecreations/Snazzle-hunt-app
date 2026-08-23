@@ -36,6 +36,8 @@ import './snazzle-v32-guard.js?v=32';
 import './snazzle-image-control-v32.js?v=32';
 // v33: afbeelding per dorp direct in Dorpen-beheer + duidelijkere eenmalige knipoog.
 import './snazzle-village-admin-v33.js?v=33';
+// v34: elk geheime/bewegende eendje afzonderlijk instelbaar, animaties blijven behouden.
+import './snazzle-secret-characters-v34.js?v=34';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
