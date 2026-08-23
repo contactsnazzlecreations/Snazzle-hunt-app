@@ -70,3 +70,5 @@ jobs:
             echo 'Voeg een repository secret FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT, FIREBASE_SERVICE_ACCOUNT of FIREBASE_TOKEN toe.' >&2
             exit 1
           fi
+
+# Security deploy trigger: 2026-08-23
