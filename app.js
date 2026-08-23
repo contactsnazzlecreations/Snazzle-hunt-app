@@ -30,6 +30,8 @@ import './snazzle-characters.js?v=26';
 import './snazzle-adventure-ui-v28.js?v=31';
 // v31: rustige home zonder overlappende tekst.
 import './snazzle-clean-home-v31.js?v=31';
+// Compatibility guard voorkomt dat het oude v31-beeldbeheer opnieuw wordt opgebouwd.
+import './snazzle-v32-guard.js?v=32';
 // v32: alle zichtbare beelden beter beheerbaar, dorpafbeeldingen betrouwbaar in de kaart,
 // eigen bewegende Snazzle blijft animeren en het logo knipoogt één keer bij openen.
 import './snazzle-image-control-v32.js?v=32';
