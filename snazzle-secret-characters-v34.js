@@ -1,7 +1,8 @@
 // Snazzle Hunt v34 — ieder geheim/bewegend eendje afzonderlijk vervangbaar.
 // Alleen de afbeelding verandert; bestaande bewegingen, timers en klikacties blijven intact.
+// v34.1: de langslopende Snazzle gebruikt standaard de afbeelding van 'Snazzle gids / menu'.
 
-const V34='34.0.0';
+const V34='34.1.0';
 const q34=(s,r=document)=>r.querySelector(s);
 const qa34=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB34='snazzleVisualAssetsV28';
@@ -11,7 +12,7 @@ let db34Promise=null;
 let timer34=null;
 
 const secretSlots34=[
-  {key:'secretRunnerCharacter',label:'🏃 Langslopende Snazzle',hint:'Het eendje dat af en toe door het scherm loopt.',targets:()=>qa34('#ui28Runner')},
+  {key:'secretRunnerCharacter',fallbackKey:'guideCharacter',label:'🏃 Langslopende Snazzle',hint:'Het eendje dat af en toe door het scherm loopt. Zonder eigen afbeelding gebruikt hij automatisch Snazzle gids / menu.',targets:()=>qa34('#ui28Runner')},
   {key:'secretPeekerCharacter',label:'👀 Kijkende Snazzle',hint:'Het eendje dat stiekem vanaf de linker- of rechterkant kijkt.',targets:()=>qa34('#ui28Peeker')},
   {key:'secretFloatingCharacter',label:'✨ Zwevende Snazzle',hint:'Het zwevende / onverwachte eendje dat als bezoeker verschijnt.',targets:()=>qa34('#snazzleVisitor b,#snazzleVisitor')},
   {key:'secretSurpriseCharacter',label:'🎉 Verrassings-Snazzle',hint:'Het grote eendje dat bij een geheime vondst of verrassing verschijnt.',targets:()=>qa34('#magicBig')}
@@ -23,7 +24,7 @@ function ensureStyles34(){
   s.id='snazzleSecretCharactersV34Styles';
   s.textContent=`
     .v34-secret-custom{background-image:var(--v34-secret-image)!important;background-size:contain!important;background-position:center!important;background-repeat:no-repeat!important}
-    .v34-secret-custom>img,.v34-secret-custom img{opacity:0!important;visibility:hidden!important}
+    .v34-secret-custom>img,.v34-secret-custom img,.v34-secret-custom>.secret-emoji{opacity:0!important;visibility:hidden!important}
     #ui28Runner.v34-secret-custom,#ui28Peeker.v34-secret-custom{background-color:transparent!important}
     #magicBig.v34-secret-custom{min-width:82px;min-height:82px}
     #snazzleVisitor b.v34-secret-custom{display:inline-block!important;min-width:42px;min-height:42px}
@@ -70,11 +71,18 @@ function compress34(file,max=1000,quality=.9){
   });
 }
 function toast34(text){const t=q34('#toast');if(!t){console.info(text);return;}t.textContent=text;t.classList.add('show');clearTimeout(window.__v34Toast);window.__v34Toast=setTimeout(()=>t.classList.remove('show'),2400);}
-function preview34(src){return src?`<img src="${src}" alt="Voorbeeld">`:'Gebruik algemene geheime Snazzle';}
+function preview34(src,fallbackText='Gebruik algemene geheime Snazzle'){return src?`<img src="${src}" alt="Voorbeeld">`:fallbackText;}
+
+async function sourceForSlot34(slot){
+  const own=await get34(slot.key);
+  if(own)return own;
+  if(slot.fallbackKey)return await get34(slot.fallbackKey);
+  return '';
+}
 
 async function applySecrets34(){
   for(const slot of secretSlots34){
-    const src=await get34(slot.key);
+    const src=await sourceForSlot34(slot);
     for(const target of slot.targets()){
       if(!target)continue;
       if(src){target.classList.add('v34-secret-custom');target.style.setProperty('--v34-secret-image',`url("${src}")`);}
@@ -93,14 +101,16 @@ function hideOldGeneric34(){
 async function buildManager34(){
   const parent=q34('#v32ImageManager')||q34('#imagesAdmin');if(!parent||q34('#v34SecretManager'))return;
   const section=document.createElement('section');section.id='v34SecretManager';section.className='v34-secret-section';
-  section.innerHTML='<h4>🦆 Geheime bewegende Snazzles apart</h4><p>Je kunt nu ieder bewegend eendje een eigen afbeelding geven. De beweging, timing en klikactie blijven hetzelfde.</p><div class="v34-secret-grid"></div><div class="v34-general-note">Tip: kies bij voorkeur een PNG/WebP met transparante achtergrond. Met “Terug naar algemene Snazzle” gebruikt dat effect weer de algemene geheime Snazzle.</div>';
+  section.innerHTML='<h4>🦆 Geheime bewegende Snazzles apart</h4><p>Je kunt ieder bewegend eendje een eigen afbeelding geven. De langslopende Snazzle gebruikt standaard jouw afbeelding bij “Snazzle gids / menu”. De beweging, timing en klikactie blijven hetzelfde.</p><div class="v34-secret-grid"></div><div class="v34-general-note">Tip: kies bij voorkeur een PNG/WebP met transparante achtergrond. Voor de langslopende Snazzle hoef je dus niets extra in te stellen als de afbeelding bij “Snazzle gids / menu” al goed staat.</div>';
   parent.appendChild(section);const grid=q34('.v34-secret-grid',section);
   for(const slot of secretSlots34){
-    const src=await get34(slot.key),card=document.createElement('div');card.className='v34-secret-card';
-    card.innerHTML=`<strong>${slot.label}</strong><small>${slot.hint}</small><div class="v34-secret-preview">${preview34(src)}</div><label class="v34-secret-pick">Kies eigen afbeelding<input type="file" accept="image/*"></label><button type="button" class="v34-secret-clear">Terug naar algemene Snazzle</button>`;
+    const own=await get34(slot.key),fallback=slot.fallbackKey?await get34(slot.fallbackKey):'',shown=own||fallback;
+    const emptyText=slot.fallbackKey?'Gebruikt Snazzle gids / menu':'Gebruik algemene geheime Snazzle';
+    const card=document.createElement('div');card.className='v34-secret-card';
+    card.innerHTML=`<strong>${slot.label}</strong><small>${slot.hint}</small><div class="v34-secret-preview">${preview34(shown,emptyText)}</div><label class="v34-secret-pick">Kies eigen afbeelding<input type="file" accept="image/*"></label><button type="button" class="v34-secret-clear">${slot.fallbackKey?'Gebruik Snazzle gids / menu':'Terug naar algemene Snazzle'}</button>`;
     const input=q34('input',card),clear=q34('.v34-secret-clear',card),preview=q34('.v34-secret-preview',card);
     input.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const data=await compress34(f);await set34(slot.key,data);input.value='';preview.innerHTML=preview34(data);await applySecrets34();toast34(`${slot.label.replace(/^[^ ]+ /,'')} aangepast ✓`);}catch(err){toast34(err.message||'Opslaan mislukt');}};
-    clear.onclick=async()=>{await del34(slot.key);preview.innerHTML=preview34('');await applySecrets34();toast34('Algemene Snazzle hersteld');};
+    clear.onclick=async()=>{await del34(slot.key);const fallbackNow=slot.fallbackKey?await get34(slot.fallbackKey):'';preview.innerHTML=preview34(fallbackNow,emptyText);await applySecrets34();toast34(slot.fallbackKey?'Snazzle gids / menu wordt nu gebruikt':'Algemene Snazzle hersteld');};
     grid.appendChild(card);
   }
 }
