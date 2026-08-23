@@ -95,6 +95,11 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
     }
 
+    match /snazzleCards/{cardId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
     match /shopProducts/{productId} {
       allow read: if signedIn();
       allow create, update, delete: if isSuperAdmin();
