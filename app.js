@@ -32,9 +32,10 @@ import './snazzle-adventure-ui-v28.js?v=31';
 import './snazzle-clean-home-v31.js?v=31';
 // Compatibility guard voorkomt dat het oude v31-beeldbeheer opnieuw wordt opgebouwd.
 import './snazzle-v32-guard.js?v=32';
-// v32: alle zichtbare beelden beter beheerbaar, dorpafbeeldingen betrouwbaar in de kaart,
-// eigen bewegende Snazzle blijft animeren en het logo knipoogt één keer bij openen.
+// v32: alle zichtbare beelden beter beheerbaar.
 import './snazzle-image-control-v32.js?v=32';
+// v33: afbeelding per dorp direct in Dorpen-beheer + duidelijkere eenmalige knipoog.
+import './snazzle-village-admin-v33.js?v=33';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
