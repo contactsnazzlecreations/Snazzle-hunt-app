@@ -13,7 +13,7 @@
 fetch('./index.html?fresh='+Date.now(),{cache:'no-store'})
   .then(r=>r.text())
   .then(html=>{
-    html=html.replace('./app.js?v=9','./app.js?v=12');
+    html=html.replace('./app.js?v=9','./app.js?v=13');
     document.open(); document.write(html); document.close();
   })
   .catch(()=>{document.body.innerHTML='<div class="load">Kon Snazzle Hunt niet laden. Probeer opnieuw.</div>';});
