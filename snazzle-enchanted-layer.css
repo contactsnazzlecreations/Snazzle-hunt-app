@@ -1,0 +1,185 @@
+/* Snazzle Hunt — Enchanted Jungle layer v21
+   Extra familiefilm-magie zonder de rustige Hunt-first layout te verstoren. */
+
+:root{
+  --enchanted-gold:#ffe59a;
+  --enchanted-moon:#fff7d5;
+  --enchanted-mint:#bff6cf;
+  --enchanted-teal:#69d5c0;
+  --enchanted-violet:#a999e8;
+  --enchanted-deep:#062c25;
+  --enchanted-glow:0 0 26px rgba(255,229,154,.22);
+}
+
+body{
+  background:
+    radial-gradient(ellipse at 50% -8%,rgba(255,246,205,.22),transparent 28%),
+    radial-gradient(circle at 12% 18%,rgba(111,222,188,.15),transparent 22%),
+    radial-gradient(circle at 88% 27%,rgba(176,151,232,.10),transparent 24%),
+    radial-gradient(circle at 45% 68%,rgba(255,218,113,.08),transparent 30%),
+    linear-gradient(180deg,#176c49 0%,#0d563e 31%,#073f33 67%,#052c25 100%) !important;
+}
+
+/* zachte lichtstralen; bewust rustig gehouden */
+.app::before{
+  content:"";
+  position:fixed;
+  left:50%;top:0;
+  width:min(560px,100%);height:44vh;
+  transform:translateX(-50%);
+  pointer-events:none;
+  z-index:-1;
+  opacity:.55;
+  background:
+    linear-gradient(112deg,transparent 20%,rgba(255,248,214,.08) 35%,transparent 48%),
+    linear-gradient(72deg,transparent 42%,rgba(187,246,208,.06) 52%,transparent 64%);
+  animation:enchantedBeams 12s ease-in-out infinite alternate;
+}
+
+.top{filter:drop-shadow(0 6px 13px rgba(1,31,21,.16))}
+
+.logo{
+  box-shadow:
+    0 0 0 3px rgba(86,55,26,.72),
+    0 8px 0 #4b2b18,
+    0 0 30px rgba(255,226,120,.42),
+    0 15px 34px rgba(0,0,0,.27) !important;
+}
+
+.title-logo{
+  text-shadow:
+    0 2px 0 #69431f,
+    0 5px 14px rgba(0,0,0,.34),
+    0 0 22px rgba(255,225,132,.30) !important;
+}
+
+.hero{
+  border-color:#e0bd70 !important;
+  background:
+    linear-gradient(180deg,rgba(17,93,61,.13),rgba(3,40,29,.77)),
+    radial-gradient(circle at 18% 8%,rgba(255,246,207,.22),transparent 29%),
+    radial-gradient(circle at 82% 22%,rgba(132,234,205,.13),transparent 27%),
+    linear-gradient(138deg,#359a64,#0b4c38 66%,#0a3932) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,250,225,.24),
+    inset 0 -48px 88px rgba(1,27,20,.28),
+    0 8px 0 #4d321e,
+    0 20px 42px rgba(0,21,14,.35),
+    0 0 34px rgba(255,224,132,.17) !important;
+}
+
+.hero::after{
+  content:"✦   ·   ✧   ·   ✦" !important;
+  color:#fff0b2 !important;
+  opacity:.92 !important;
+  text-shadow:0 0 8px rgba(255,236,174,.8),0 0 18px rgba(255,221,117,.36);
+  animation:enchantedTwinkle 3.4s ease-in-out infinite !important;
+}
+
+.hero h1{
+  text-shadow:
+    0 3px 0 rgba(61,44,24,.72),
+    0 7px 18px rgba(0,0,0,.32),
+    0 0 22px rgba(255,245,205,.18) !important;
+}
+
+.hero small{
+  color:#fff1b7 !important;
+  letter-spacing:2px !important;
+}
+
+.main-action{
+  border-color:#ffe4a0 !important;
+  background:
+    radial-gradient(circle at 14% 8%,rgba(255,255,255,.82),transparent 19%),
+    linear-gradient(135deg,#fff6bd 0%,#ffdd70 48%,#f3ac35 100%) !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(137,78,20,.11),
+    0 7px 0 #70431f,
+    0 18px 34px rgba(0,21,13,.29),
+    0 0 29px rgba(255,222,109,.24) !important;
+}
+
+.main-action::before{
+  text-shadow:0 0 8px #fff9da,0 0 18px rgba(255,225,122,.65) !important;
+}
+
+/* Hunt kaart blijft het visuele anker */
+.hunt{
+  border-color:#d9b568 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,247,210,.16),
+    0 8px 0 #392417,
+    0 18px 39px rgba(0,20,13,.34),
+    0 0 25px rgba(255,223,132,.12) !important;
+}
+
+.photo>.live{
+  border-color:#f3ffd7 !important;
+  box-shadow:0 4px 12px rgba(0,0,0,.23),0 0 17px rgba(179,245,138,.28) !important;
+}
+
+.hint.show{
+  animation:enchantedReveal .38s cubic-bezier(.2,.9,.25,1.15) !important;
+}
+
+/* Kaarten/collectie: rijker wanneer je er bewust naartoe gaat */
+.collection-home-card{
+  background:
+    radial-gradient(circle at 15% 0%,rgba(255,255,255,.18),transparent 26%),
+    linear-gradient(135deg,#6458c9,#3c55b7 46%,#147e68) !important;
+  border-color:#e1c371 !important;
+  box-shadow:0 6px 0 #49301d,0 14px 27px rgba(0,18,12,.27),0 0 22px rgba(185,169,255,.10) !important;
+}
+
+.collection-hero{
+  background:
+    radial-gradient(circle at 16% 0%,rgba(255,255,255,.18),transparent 25%),
+    radial-gradient(circle at 88% 85%,rgba(124,230,204,.17),transparent 30%),
+    linear-gradient(135deg,#6558c9,#4054bd 47%,#16836d) !important;
+  border-color:#d7bc76 !important;
+  box-shadow:0 5px 0 #49396d,0 13px 26px rgba(0,19,14,.24),0 0 25px rgba(205,188,255,.10) !important;
+}
+
+.collection-home-icon{
+  border-color:#f3d47a !important;
+  box-shadow:0 4px 0 #4e2d18,0 0 18px rgba(255,225,112,.30) !important;
+}
+
+/* panelen voelen als een sprookjesboek, niet als een technisch dashboard */
+.panel{
+  border-color:#dfbd73 !important;
+  background:
+    radial-gradient(circle at 86% 4%,rgba(255,255,255,.40),transparent 22%),
+    radial-gradient(circle at 12% 20%,rgba(191,246,207,.12),transparent 25%),
+    linear-gradient(#fff3c5,#eacb89) !important;
+  box-shadow:0 -16px 42px rgba(0,16,10,.40),inset 0 1px rgba(255,255,255,.58) !important;
+}
+
+.bottom{
+  background:
+    linear-gradient(180deg,rgba(255,239,190,.08),transparent 27%),
+    linear-gradient(180deg,#315f44,#183e2e 58%,#102d23) !important;
+  border-top-color:#d8b66d !important;
+  box-shadow:0 -9px 26px rgba(0,18,12,.36),0 -1px 0 rgba(255,244,202,.24) !important;
+}
+
+.bottom button:active b{filter:drop-shadow(0 0 10px rgba(255,236,172,.45))}
+
+@keyframes enchantedBeams{
+  from{opacity:.36;transform:translateX(-50%) translateY(-4px)}
+  to{opacity:.64;transform:translateX(-50%) translateY(7px)}
+}
+@keyframes enchantedTwinkle{
+  0%,100%{opacity:.46;filter:brightness(.9)}
+  48%{opacity:1;filter:brightness(1.22)}
+}
+@keyframes enchantedReveal{
+  0%{opacity:0;transform:translateY(7px) scale(.975);filter:brightness(.9)}
+  70%{opacity:1;transform:translateY(-1px) scale(1.008);filter:brightness(1.08)}
+  100%{transform:none;filter:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .app::before,.hero::after{animation:none!important}
+}
