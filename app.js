@@ -42,6 +42,8 @@ import './snazzle-secret-characters-v34.js?v=341';
 import './snazzle-idle-hunt-duck-v35.js?v=35';
 // v36: eigen afbeelding voor de Snazzle Thuis Hunt-kaart en het Thuis Hunt-menu.
 import './snazzle-home-hunt-image-v36.js?v=36';
+// v37: klikbare geheime verrassingen — alleen zichtbaar nadat een kind het geheim aantikt.
+import './snazzle-click-secrets-v37.js?v=37';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
