@@ -25,18 +25,6 @@ service cloud.firestore {
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.village == village;
     }
 
-    function validFinderClose(huntId) {
-      return signedIn() &&
-        resource.data.found != true &&
-        request.resource.data.found == true &&
-        request.resource.data.foundByUserId == request.auth.uid &&
-        request.resource.data.village == resource.data.village &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["found", "foundAt", "foundByUserId", "foundByNickname"]) &&
-        getAfter(/databases/$(database)/documents/findings/$(huntId)).data.userId == request.auth.uid &&
-        getAfter(/databases/$(database)/documents/findings/$(huntId)).data.huntId == huntId;
-    }
-
     function ownsShopOrder(orderId) {
       return signedIn() &&
         exists(/databases/$(database)/documents/shopOrders/$(orderId)) &&
@@ -64,18 +52,22 @@ service cloud.firestore {
           request.resource.data.diff(resource.data)
             .affectedKeys()
             .hasOnly(["imageUrl", "hint", "foundMessage"])
-        ) ||
-        validFinderClose(huntId);
+        );
     }
 
+    // Vondsten worden uitsluitend door de beveiligde Firebase Function aangemaakt.
+    // De Admin SDK van de Function omzeilt deze clientregels na succesvolle codecontrole.
     match /findings/{findingId} {
-      allow create: if signedIn() &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.huntId == findingId;
+      allow create, update, delete: if isSuperAdmin();
       allow read: if isSuperAdmin() ||
         (signedIn() && resource.data.userId == request.auth.uid) ||
         isVillageAdmin(resource.data.village);
-      allow update, delete: if isSuperAdmin();
+    }
+
+    // Geheime Hunt-codes zijn nooit rechtstreeks vanuit de app leesbaar of schrijfbaar.
+    // Ook de hoofdbeheerder beheert ze via de beveiligde callable Functions.
+    match /huntSecrets/{huntId} {
+      allow read, write: if false;
     }
 
     match /users/{uid} {
