@@ -40,6 +40,8 @@ import './snazzle-village-admin-v33.js?v=33';
 import './snazzle-secret-characters-v34.js?v=341';
 // v35: het eendje in 'Nu te vinden' bij geen actieve Hunt is apart vervangbaar.
 import './snazzle-idle-hunt-duck-v35.js?v=35';
+// v36: eigen afbeelding voor de Snazzle Thuis Hunt-kaart en het Thuis Hunt-menu.
+import './snazzle-home-hunt-image-v36.js?v=36';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
