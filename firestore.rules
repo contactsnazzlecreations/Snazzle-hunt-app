@@ -87,6 +87,62 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
     }
 
+    // Extra Hint: centraal wordt alleen starttijd + totaal geverifieerde meters bewaard.
+    // Exacte GPS-posities en wandelroutes worden nooit naar Firestore geschreven.
+    match /snazzleHuntSessions/{sessionId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly([
+          "userId", "huntId", "startedAt", "meters", "lastMoveAt", "hintOpenedAt"
+        ]) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.huntId is string &&
+        request.resource.data.huntId.size() >= 1 &&
+        request.resource.data.huntId.size() <= 160 &&
+        sessionId == request.resource.data.huntId + "_" + request.auth.uid &&
+        exists(/databases/$(database)/documents/hunts/$(request.resource.data.huntId)) &&
+        get(/databases/$(database)/documents/hunts/$(request.resource.data.huntId)).data.extraHintEnabled == true &&
+        request.resource.data.startedAt == request.time &&
+        request.resource.data.meters == 0 &&
+        request.resource.data.lastMoveAt == request.time &&
+        request.resource.data.hintOpenedAt == null;
+
+      allow update: if signedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.huntId == resource.data.huntId &&
+        request.resource.data.startedAt == resource.data.startedAt &&
+        request.resource.data.keys().hasOnly([
+          "userId", "huntId", "startedAt", "meters", "lastMoveAt", "hintOpenedAt"
+        ]) &&
+        (
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(["meters", "lastMoveAt"]) &&
+            request.resource.data.hintOpenedAt == resource.data.hintOpenedAt &&
+            request.resource.data.meters is int &&
+            request.resource.data.meters >= resource.data.meters &&
+            request.resource.data.meters <= resource.data.meters + 80 &&
+            request.resource.data.lastMoveAt == request.time &&
+            request.time >= resource.data.lastMoveAt + duration.value(20, "s")
+          ) ||
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(["hintOpenedAt"]) &&
+            resource.data.hintOpenedAt == null &&
+            request.resource.data.hintOpenedAt == request.time &&
+            exists(/databases/$(database)/documents/hunts/$(resource.data.huntId)) &&
+            get(/databases/$(database)/documents/hunts/$(resource.data.huntId)).data.extraHintEnabled == true &&
+            get(/databases/$(database)/documents/hunts/$(resource.data.huntId)).data.extraHintDelayMinutes is int &&
+            get(/databases/$(database)/documents/hunts/$(resource.data.huntId)).data.extraHintMinMeters is int &&
+            request.time >= resource.data.startedAt + duration.value(get(/databases/$(database)/documents/hunts/$(resource.data.huntId)).data.extraHintDelayMinutes, "m") &&
+            resource.data.meters >= get(/databases/$(database)/documents/hunts/$(resource.data.huntId)).data.extraHintMinMeters
+          )
+        );
+
+      allow delete: if isSuperAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
     // Snazzle Samen Buiten: alleen beheerders maken openbare Treffpunten.
     // Er worden geen namen van kinderen, chatberichten of live locaties opgeslagen.
     match /snazzleMeetups/{meetupId} {
