@@ -1,0 +1,60 @@
+// Snazzle Hunt v39 — rustiger realistische Snazzle Wereld + afbeeldingen per seizoen.
+// Bestaande functies blijven intact; dit is een presentatie- en beheerlaag.
+
+const V39='39.0.0';
+const q39=(s,r=document)=>r.querySelector(s);
+const qa39=(s,r=document)=>[...r.querySelectorAll(s)];
+const DB39='snazzleVisualAssetsV28';
+const STORE39='assets';
+const SEASON_KEY='snazzleSeasonThemeV38';
+let db39Promise=null;
+let cache39=new Map();
+let timer39=null;
+
+const themes39=[
+  {id:'christmas',label:'🎄 Kerst'},
+  {id:'easter',label:'🐣 Pasen'},
+  {id:'halloween',label:'🎃 Halloween'},
+  {id:'winter',label:'❄️ Winter'},
+  {id:'summer',label:'☀️ Zomer'},
+  {id:'spring',label:'🌸 Lente'}
+];
+const slots39=[
+  {id:'backdrop',label:'Achtergrond hele Home',hint:'Volledig sfeerbeeld achter de hoofdpagina.'},
+  {id:'header',label:'Bovenkant / logo-zone',hint:'Sfeerbeeld achter logo en menuknop.'},
+  {id:'hero',label:'Grote Hunt-afbeelding',hint:'Afbeelding in het grote avonturenvak.'},
+  {id:'character',label:'Seizoens-Snazzle',hint:'Transparante PNG/WebP die subtiel in de Home-sfeer verschijnt.'}
+];
+
+function db39(){if(db39Promise)return db39Promise;db39Promise=new Promise((resolve,reject)=>{const r=indexedDB.open(DB39,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE39))r.result.createObjectStore(STORE39);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});return db39Promise;}
+async function get39(k){if(cache39.has(k))return cache39.get(k)||'';try{const db=await db39();const v=await new Promise((resolve,reject)=>{const tx=db.transaction(STORE39,'readonly');const r=tx.objectStore(STORE39).get(k);r.onsuccess=()=>resolve(r.result||'');r.onerror=()=>reject(r.error);});cache39.set(k,v||'');return v||'';}catch{return '';}}
+async function set39(k,v){const db=await db39();await new Promise((resolve,reject)=>{const tx=db.transaction(STORE39,'readwrite');tx.objectStore(STORE39).put(v,k);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});cache39.set(k,v||'');}
+async function del39(k){const db=await db39();await new Promise((resolve,reject)=>{const tx=db.transaction(STORE39,'readwrite');tx.objectStore(STORE39).delete(k);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});cache39.set(k,'');}
+function compress39(file,max=1500,q=.9){return new Promise((resolve,reject)=>{if(!file?.type?.startsWith('image/'))return reject(new Error('Kies een afbeelding'));const fr=new FileReader();fr.onerror=()=>reject(new Error('Lezen mislukt'));fr.onload=()=>{const im=new Image();im.onerror=()=>reject(new Error('Openen mislukt'));im.onload=()=>{const s=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.naturalWidth*s));c.height=Math.max(1,Math.round(im.naturalHeight*s));c.getContext('2d').drawImage(im,0,0,c.width,c.height);let out=c.toDataURL('image/webp',q);if(!out.startsWith('data:image/webp'))out=c.toDataURL('image/png');resolve(out);};im.src=fr.result;};fr.readAsDataURL(file);});}
+function toast39(t){const el=q39('#toast');if(!el)return;el.textContent=t;el.classList.add('show');clearTimeout(window.__v39Toast);window.__v39Toast=setTimeout(()=>el.classList.remove('show'),2200);}
+function themeNow39(){try{return JSON.parse(localStorage.getItem(SEASON_KEY)||'{}').theme||'normal';}catch{return 'normal';}}
+function key39(theme,slot){return `v39Theme_${theme}_${slot}`;}
+
+function styles39(){if(q39('#v39Styles'))return;const s=document.createElement('style');s.id='v39Styles';s.textContent=`
+/* Wereld: minder emoji, meer rustige 2.5D diepte */
+.v38-world-map.v39-real{background-image:linear-gradient(180deg,rgba(220,244,196,.08),rgba(15,77,48,.15) 45%,rgba(4,43,31,.36)),var(--v38-world-bg,linear-gradient(180deg,#b7d99a 0%,#86b66f 24%,#5d955b 55%,#2f6848 100%))!important;box-shadow:inset 0 25px 55px rgba(255,255,255,.12),inset 0 -55px 80px rgba(4,36,26,.32),0 8px 0 #704925,0 15px 30px rgba(0,0,0,.22)!important}
+.v38-world-map.v39-real .v38-tree{display:none!important}.v39-depth{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}.v39-depth:before{content:'';position:absolute;left:-8%;right:-8%;top:7%;height:31%;background:radial-gradient(ellipse at 10% 100%,#507b49 0 38%,transparent 39%),radial-gradient(ellipse at 36% 100%,#5e8950 0 43%,transparent 44%),radial-gradient(ellipse at 68% 100%,#456f43 0 46%,transparent 47%),radial-gradient(ellipse at 96% 100%,#365f3d 0 39%,transparent 40%);filter:blur(.2px);opacity:.9}.v39-depth:after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 18% 44%,rgba(16,84,42,.42) 0 5%,transparent 12%),radial-gradient(circle at 83% 50%,rgba(13,75,40,.45) 0 6%,transparent 13%),radial-gradient(circle at 11% 72%,rgba(9,64,37,.50) 0 7%,transparent 15%),radial-gradient(circle at 88% 78%,rgba(8,56,35,.52) 0 7%,transparent 15%),linear-gradient(90deg,rgba(8,55,34,.16),transparent 18% 82%,rgba(8,55,34,.18));opacity:.92}.v39-grass{position:absolute;left:0;right:0;bottom:0;height:36%;z-index:2;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(21,84,47,.15)),repeating-linear-gradient(100deg,transparent 0 10px,rgba(255,255,255,.018) 11px 12px);mask-image:linear-gradient(to bottom,transparent,#000 25%)}
+.v38-node{z-index:6!important}.v38-player-pos{z-index:8!important}.v38-river{z-index:2!important;opacity:.62!important;filter:saturate(.78) brightness(.95)}.v38-path-svg{z-index:4!important}.v38-path-svg polyline{stroke:#ead9a9!important;stroke-width:1.25!important;opacity:.78!important}
+/* actief thema: eigen afbeeldingen */
+#v39ThemeBackdrop{position:fixed;inset:0;z-index:0;pointer-events:none;background-size:cover;background-position:center;opacity:.30}.top.v39-theme-header{isolation:isolate}.v39-header-art{position:absolute;inset:-4px -7px;z-index:0;border-radius:24px;background-size:cover;background-position:center;opacity:.30;pointer-events:none}.top.v39-theme-header>*:not(.v39-header-art){position:relative;z-index:1}.hero.v39-theme-hero{background-image:linear-gradient(rgba(5,46,32,.18),rgba(4,35,27,.50)),var(--v39-hero)!important;background-size:cover!important;background-position:center!important}.v39-theme-character{position:absolute;right:16px;bottom:12px;width:96px;height:96px;object-fit:contain;z-index:3;pointer-events:none;filter:drop-shadow(0 7px 7px rgba(0,0,0,.24))}
+.v39-admin{margin-top:14px;padding:12px;border-radius:17px;background:#f5efdc;border:2px solid #bba46c;color:#3f3424}.v39-admin h4{margin:0;font-size:16px}.v39-admin>p{margin:5px 0 10px;font-size:10px;font-weight:780;line-height:1.45;color:#665943}.v39-theme-block{padding:10px;margin-top:9px;border-radius:14px;background:#fffaf0;border:1px solid #c6ae78}.v39-theme-block h5{margin:0 0 7px;font-size:12px}.v39-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.v39-card{padding:8px;border-radius:11px;background:#f2ead7;border:1px solid #c6ad76}.v39-card strong{display:block;font-size:9px}.v39-card small{display:block;min-height:28px;margin-top:2px;font-size:8px;line-height:1.3;color:#705e43}.v39-preview{height:72px;margin-top:6px;border-radius:8px;background:#ded7c6;overflow:hidden;display:grid;place-items:center;font-size:8px;text-align:center}.v39-preview img{width:100%;height:100%;object-fit:contain}.v39-pick{display:block;margin-top:6px;padding:7px;border-radius:8px;background:#3f7e48;color:#fff;text-align:center;font-size:8px;font-weight:900}.v39-pick input{display:none!important}.v39-clear{width:100%;margin-top:5px;padding:6px;border:0;border-radius:7px;background:#74543c;color:#fff;font-size:8px;font-weight:900}@media(max-width:390px){.v39-grid{grid-template-columns:1fr}}
+`;document.head.appendChild(s);}
+
+function realisticWorld39(){const map=q39('.v38-world-map');if(!map)return;map.classList.add('v39-real');if(!q39('.v39-depth',map)){const d=document.createElement('div');d.className='v39-depth';map.prepend(d);const g=document.createElement('div');g.className='v39-grass';map.appendChild(g);}}
+
+async function applyThemeImages39(){const theme=themeNow39();let back=q39('#v39ThemeBackdrop');if(!back){back=document.createElement('div');back.id='v39ThemeBackdrop';document.body.prepend(back);}if(theme==='normal'||theme==='custom'){back.style.display='none';q39('.v39-header-art')?.remove();q39('.top')?.classList.remove('v39-theme-header');const hero=q39('#hero');hero?.classList.remove('v39-theme-hero');hero?.style.removeProperty('--v39-hero');q39('.v39-theme-character')?.remove();return;}
+const [backImg,headerImg,heroImg,charImg]=await Promise.all(slots39.map(s=>get39(key39(theme,s.id))));back.style.backgroundImage=backImg?`url("${backImg}")`:'';back.style.display=backImg?'block':'none';const top=q39('.top');if(top){let art=q39('.v39-header-art',top);if(headerImg){if(!art){art=document.createElement('div');art.className='v39-header-art';top.prepend(art);}art.style.backgroundImage=`url("${headerImg}")`;top.classList.add('v39-theme-header');}else{art?.remove();top.classList.remove('v39-theme-header');}}
+const hero=q39('#hero');if(hero){if(heroImg){hero.classList.add('v39-theme-hero');hero.style.setProperty('--v39-hero',`url("${heroImg}")`);}else{hero.classList.remove('v39-theme-hero');hero.style.removeProperty('--v39-hero');}let ch=q39('.v39-theme-character',hero);if(charImg){if(!ch){ch=document.createElement('img');ch.className='v39-theme-character';ch.alt='Seizoens Snazzle';hero.appendChild(ch);}ch.src=charImg;}else ch?.remove();}}
+
+function preview39(src){return src?`<img src="${src}" alt="Voorbeeld">`:'Nog geen afbeelding';}
+async function buildAdmin39(){const parent=q39('#v32ImageManager')||q39('#imagesAdmin');if(!parent||q39('#v39ThemeAdmin'))return;const section=document.createElement('section');section.id='v39ThemeAdmin';section.className='v39-admin';section.innerHTML='<h4>🖼️ Thema-afbeeldingen per feest</h4><p>Elk seizoen krijgt zijn eigen afbeeldingen. Je gewone Snazzle-layout blijft bewaard. Kies hierboven bij Seizoenssfeer welk thema actief is.</p>';parent.appendChild(section);for(const theme of themes39){const block=document.createElement('div');block.className='v39-theme-block';block.innerHTML=`<h5>${theme.label}</h5><div class="v39-grid"></div>`;section.appendChild(block);const grid=q39('.v39-grid',block);for(const slot of slots39){const key=key39(theme.id,slot.id),src=await get39(key),card=document.createElement('div');card.className='v39-card';card.innerHTML=`<strong>${slot.label}</strong><small>${slot.hint}</small><div class="v39-preview">${preview39(src)}</div><label class="v39-pick">Afbeelding kiezen<input type="file" accept="image/*"></label><button type="button" class="v39-clear">Verwijderen</button>`;const input=q39('input',card),pv=q39('.v39-preview',card),clear=q39('.v39-clear',card);input.onchange=async e=>{const f=e.target.files?.[0];if(!f)return;try{const data=await compress39(f);await set39(key,data);input.value='';pv.innerHTML=preview39(data);await applyThemeImages39();toast39(`${theme.label} afbeelding opgeslagen ✓`);}catch(err){toast39(err.message||'Opslaan mislukt');}};clear.onclick=async()=>{await del39(key);pv.innerHTML=preview39('');await applyThemeImages39();toast39('Afbeelding verwijderd');};grid.appendChild(card);}}}
+
+async function sync39(){styles39();realisticWorld39();await buildAdmin39();await applyThemeImages39();}
+function queue39(){clearTimeout(timer39);timer39=setTimeout(()=>sync39().catch(console.warn),120);}
+function init39(){if(window.__snazzleV39)return;window.__snazzleV39=true;sync39();new MutationObserver(m=>{if(m.some(x=>x.type==='childList'))queue39();}).observe(document.body,{childList:true,subtree:true});document.addEventListener('change',e=>{if(e.target?.id==='v38SeasonSelect')setTimeout(()=>{cache39=new Map(cache39);applyThemeImages39();},100);});document.addEventListener('click',e=>{if(e.target.closest?.('[data-tab],.bottom button,.quick-menu-list button'))setTimeout(queue39,100);});}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init39,{once:true});else init39();
