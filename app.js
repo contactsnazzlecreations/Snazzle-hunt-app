@@ -55,8 +55,8 @@ import './snazzle-samen-buiten-v40.js?v=40';
 import './snazzle-samen-buiten-v40-fix.js?v=401';
 // v41: extra hint pas na centrale speurtijd + geverifieerde beweging, zonder locatiegeschiedenis op te slaan.
 import './snazzle-extra-hints-v41.js?v=41';
-// v42: mobiele fix voor sluiten van dorpsvenster en 'Gebruik dit dorp'.
-import './snazzle-village-sheet-fix-v42.js?v=42';
+// v43: herstelt mobiele scroll/taps zonder globale capture die andere interacties kan blokkeren.
+import './snazzle-mobile-interaction-fix-v43.js?v=43';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
