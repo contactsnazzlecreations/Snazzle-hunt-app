@@ -48,6 +48,8 @@ import './snazzle-click-secrets-v37.js?v=37';
 import './snazzle-world-adventure-v38.js?v=38';
 // v38: seizoenssferen voor Home, inclusief Kerst, Pasen, Halloween en eigen afbeeldingen/kleuren.
 import './snazzle-season-theme-v38.js?v=38';
+// v39: minder cartooneske 2.5D wereld + aparte afbeeldingen per seizoenthema.
+import './snazzle-world-theme-v39.js?v=39';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
