@@ -52,6 +52,7 @@ import './snazzle-season-theme-v38.js?v=38';
 import './snazzle-world-theme-v39.js?v=39';
 // v40: veilige openbare Snazzle Treffpunten voor gezinnen — zonder chat of live kindlocatie.
 import './snazzle-samen-buiten-v40.js?v=40';
+import './snazzle-samen-buiten-v40-fix.js?v=401';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
