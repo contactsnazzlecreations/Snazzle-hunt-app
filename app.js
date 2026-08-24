@@ -50,13 +50,10 @@ import './snazzle-world-adventure-v38.js?v=38';
 import './snazzle-season-theme-v38.js?v=38';
 // v39: minder cartooneske 2.5D wereld + aparte afbeeldingen per seizoenthema.
 import './snazzle-world-theme-v39.js?v=39';
-// v40: veilige openbare Snazzle Treffpunten voor gezinnen — zonder chat of live kindlocatie.
-import './snazzle-samen-buiten-v40.js?v=40';
-import './snazzle-samen-buiten-v40-fix.js?v=401';
-// v41: extra hint pas na centrale speurtijd + geverifieerde beweging, zonder locatiegeschiedenis op te slaan.
-import './snazzle-extra-hints-v41.js?v=41';
-// v44: minimale dorpsknop-fix; geen globale observers/capture/touch-regels.
-import './snazzle-village-controls-v44.js?v=44';
+
+// v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
+// De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
+
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 // Load the shop only after Firebase has restored/created a signed-in user.
