@@ -9,6 +9,10 @@ const ASSETS = ['profileImage','heroImage','homeImage1','homeImage2'];
 const central = {};
 let listenersStarted = false;
 
+// Gebruik een reeds bestaande, centraal leesbare configuratiecollectie.
+// Alleen de hoofdbeheerder kan hierin schrijven volgens de bestaande Firestore-regels.
+const assetRef = key => doc(db,'shopMailConfig','snazzleAsset_'+key);
+
 function toast(message){
   const el=document.getElementById('toast');
   if(!el) return;
@@ -92,33 +96,44 @@ function compressFile(file,max=800,quality=.68){
 }
 
 async function saveCentralAsset(key,file){
+  let src='';
   try{
-    const src=await compressFile(file);
-    await setDoc(doc(db,'snazzleAppAssets',key),{
+    src=await compressFile(file);
+  }catch(err){
+    toast(err?.message||'Afbeelding kon niet worden gelezen');
+    return;
+  }
+  try{
+    await setDoc(assetRef(key),{
       dataUrl:src,
       updatedAt:new Date().toISOString(),
-      updatedBy:auth.currentUser?.uid||''
+      updatedBy:auth.currentUser?.uid||'',
+      purpose:'snazzleAppAsset'
     });
     applyAsset(key,src);
     toast('Afbeelding centraal opgeslagen ✅');
   }catch(err){
     console.error(err);
-    toast(err?.message||'Centraal opslaan mislukt');
+    // Geen regressie: op het beheertoestel blijft de afbeelding in elk geval bruikbaar.
+    applyAsset(key,src);
+    toast('Afbeelding lokaal opgeslagen; centraal opslaan lukte niet');
   }
 }
 
 async function clearCentralAsset(key){
   try{
-    await setDoc(doc(db,'snazzleAppAssets',key),{
+    await setDoc(assetRef(key),{
       dataUrl:'',
       updatedAt:new Date().toISOString(),
-      updatedBy:auth.currentUser?.uid||''
+      updatedBy:auth.currentUser?.uid||'',
+      purpose:'snazzleAppAsset'
     });
     applyAsset(key,'');
     toast('Afbeelding centraal verwijderd');
   }catch(err){
     console.error(err);
-    toast('Verwijderen mislukt');
+    applyAsset(key,'');
+    toast('Afbeelding op dit toestel verwijderd');
   }
 }
 
@@ -137,14 +152,14 @@ function installAdminHandlers(){
     button.onclick=()=>clearCentralAsset(button.dataset.removeLocalImage);
   });
   const note=document.querySelector('#imagesAdmin p');
-  if(note) note.textContent='Deze afbeeldingen worden nu centraal opgeslagen. Iedereen ziet automatisch hetzelfde Snazzle-uiterlijk.';
+  if(note) note.textContent='Deze afbeeldingen worden centraal opgeslagen. Iedereen ziet automatisch hetzelfde Snazzle-uiterlijk.';
 }
 
 function startListeners(){
   if(listenersStarted) return;
   listenersStarted=true;
   ASSETS.forEach(key=>{
-    onSnapshot(doc(db,'snazzleAppAssets',key),snap=>{
+    onSnapshot(assetRef(key),snap=>{
       if(snap.exists()) applyAsset(key,snap.data()?.dataUrl||'');
     },err=>console.warn('Centraal Snazzle-beeld niet geladen',key,err));
   });
@@ -159,14 +174,15 @@ async function migrateOwnersLocalAssets(user){
     try{ local=JSON.parse(localStorage.getItem('snazzleSettings')||'{}'); }catch{}
     for(const key of ASSETS){
       if(!local[key]) continue;
-      const target=doc(db,'snazzleAppAssets',key);
+      const target=assetRef(key);
       const snap=await getDoc(target);
       if(!snap.exists()){
         await setDoc(target,{
           dataUrl:local[key],
           updatedAt:new Date().toISOString(),
           updatedBy:user.uid,
-          migratedFromLocal:true
+          migratedFromLocal:true,
+          purpose:'snazzleAppAsset'
         });
       }
     }
