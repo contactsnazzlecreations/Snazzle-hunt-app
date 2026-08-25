@@ -3,7 +3,7 @@ import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/fire
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-const VERSION='78.0.0';
+const VERSION='78.0.1';
 const LOCAL_KEY='snazzleCardWorldPreference';
 const CARD_LOCAL_KEY='snazzleCardCatalogV2';
 const VALID=['wild','spark','mix'];
@@ -122,7 +122,6 @@ function installStyles(){
     .onboard .sn-card-world-choice{background:linear-gradient(145deg,rgba(255,248,218,.98),rgba(238,219,158,.98));text-align:left}
     .sn-card-world-title{font-size:16px;font-weight:1000;line-height:1.2}.sn-card-world-sub{font-size:10px;font-weight:760;line-height:1.4;color:#705538;margin-top:5px}
     .sn-card-world-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}.sn-card-world-buttons button{min-width:0;border:2px solid #b59361;border-radius:15px;padding:10px 5px;background:#fffaf0;color:#3b2a1c;box-shadow:0 3px 0 #a28254;text-align:center}.sn-card-world-buttons button b{display:block;font-size:22px}.sn-card-world-buttons button strong{display:block;font-size:12px;margin-top:3px}.sn-card-world-buttons button small{display:block;font-size:8px;line-height:1.2;margin-top:3px;color:#745b3e;font-weight:800}.sn-card-world-buttons button.on{border-color:#3f8247;background:linear-gradient(#efffc7,#c9ee83);box-shadow:0 3px 0 #5c853e,0 0 0 3px rgba(104,170,73,.14);transform:translateY(-1px)}
-    .sn-card-world-current{margin:7px 0 0;font-size:10px;font-weight:900;color:#526d2f}
     .sn-card-world-badge{display:inline-block;margin-left:6px;padding:3px 6px;border-radius:99px;background:#e9ddbb;color:#5d4328;font-size:8px;font-weight:1000;vertical-align:middle}
     .sn-world-hidden{display:none!important}
     @media(max-width:390px){.sn-card-world-buttons{gap:5px}.sn-card-world-buttons button{padding:9px 3px}.sn-card-world-buttons button strong{font-size:11px}.sn-card-world-buttons button small{font-size:7px}}
@@ -153,7 +152,7 @@ function injectChoices(){
     const el=box.firstElementChild;
     if(save) profile.insertBefore(el,save); else profile.appendChild(el);
     bindChoice(el);
-    if(save) save.textContent='Profiel opslaan';
+    if(save&&save.textContent!=='Profiel opslaan') save.textContent='Profiel opslaan';
   }
   paintChoices();
 }
@@ -191,12 +190,15 @@ function applyCardWorlds(){
     const unlockedNormal=normal.filter(unlocked).length;
     const count=$('#sc2SummaryCount');
     const text=$('#sc2SummaryText');
-    if(count) count.textContent=`${unlockedNormal}/${normal.length}`;
-    if(text) text.textContent=normal.length?`${Math.round(unlockedNormal/normal.length*100)||0}% van je collectie ontdekt`:'Nog geen kaarten in jouw wereld';
+    const countValue=`${unlockedNormal}/${normal.length}`;
+    const textValue=normal.length?`${Math.round(unlockedNormal/normal.length*100)||0}% van je collectie ontdekt`:'Nog geen kaarten in jouw wereld';
+    if(count&&count.textContent!==countValue) count.textContent=countValue;
+    if(text&&text.textContent!==textValue) text.textContent=textValue;
     const home=$('#collectionHomeStatus');
     const all=cards.filter(c=>c.active!==false&&cardVisible(c));
     const discovered=all.filter(unlocked).length;
-    if(home) home.textContent=all.length?`${discovered} van ${all.length} Snazzles ontdekt`:'Ontdek je magische Snazzle Cards';
+    const homeValue=all.length?`${discovered} van ${all.length} Snazzles ontdekt`:'Ontdek je magische Snazzle Cards';
+    if(home&&home.textContent!==homeValue) home.textContent=homeValue;
     annotateAdminRows();
   }finally{ applying=false; }
 }
@@ -272,12 +274,17 @@ function annotateAdminRows(){
   $$('.sc2-row').forEach(row=>{
     const strong=$('strong',row);
     if(!strong) return;
-    const number=strong.textContent.split('·')[0].trim();
+    const number=strong.childNodes[0]?.textContent?.split('·')[0]?.trim()||strong.textContent.split('·')[0].trim();
     const card=cardByNumber(number);
     if(!card) return;
     let badge=$('.sn-card-world-badge',row);
-    if(!badge){badge=document.createElement('span');badge.className='sn-card-world-badge';strong.appendChild(badge);}
-    badge.textContent=WORLD_LABELS[normalizeWorld(card.world)]||WORLD_LABELS.all;
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='sn-card-world-badge';
+      strong.appendChild(badge);
+    }
+    const label=WORLD_LABELS[normalizeWorld(card.world)]||WORLD_LABELS.all;
+    if(badge.textContent!==label) badge.textContent=label;
   });
 }
 
