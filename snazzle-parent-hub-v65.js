@@ -101,7 +101,7 @@ async function verifySuperAdmin(user){
 function fillAdmin(){
   if(!$('#snParentAdminV65'))return;
   const map={Title:'title',Intro:'intro',SafetyTitle:'safetyTitle',SafetyText:'safetyText',PrivacyTitle:'privacyTitle',PrivacyText:'privacyText',TipsTitle:'tipsTitle',TipsText:'tipsText',ContactTitle:'contactTitle',ContactText:'contactText'};
-  Object.entries(map).forEach(([id,key])=>{const el=$('#snParent'+id);if(el)el.value=config[key]||'';});
+  Object.entries(map).forEach(([id,key])=>{const el=$('#snParent'+id+'Admin');if(el)el.value=config[key]||'';});
 }
 function selectAdmin(tab,section){
   $$('#adminSheet .super-only .tabs [data-tab],#adminSheet .super-only .tabs [data-news-tab],#adminSheet .super-only .tabs [data-sn47-tab-admin],#adminSheet .super-only .tabs [data-sn-listen-tab],#adminSheet .super-only .tabs [data-sn-parent-tab]').forEach(b=>b.classList.remove('on'));
