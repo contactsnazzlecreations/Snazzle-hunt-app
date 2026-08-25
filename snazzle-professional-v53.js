@@ -362,6 +362,16 @@ function installRuntimeGuard(){
   });
 }
 
+function observeHuntControls(){
+  const watch=el=>{
+    if(!el||el.dataset.snProObserved==='1') return;
+    el.dataset.snProObserved='1';
+    new MutationObserver(updateHuntJourney).observe(el,{attributes:true,attributeFilter:['class','disabled'],childList:true,subtree:true,characterData:true});
+  };
+  watch(q('#startBtn'));
+  watch(q('#foundBtn'));
+}
+
 function start(){
   installMetaAndPerformance();
   applyPreferences();
@@ -372,15 +382,13 @@ function start(){
   installSoundHooks();
   installRuntimeGuard();
   queueInstall();
+  observeHuntControls();
 
-  const observer=new MutationObserver(queueInstall);
+  const observer=new MutationObserver(()=>{queueInstall();observeHuntControls();});
   observer.observe(document.body,{childList:true,subtree:true});
-  // Status- en knopteksten veranderen zonder altijd nieuwe elementen te maken.
-  const huntObserver=new MutationObserver(()=>updateHuntJourney());
-  const hunt=q('.hunt'); if(hunt) huntObserver.observe(hunt,{childList:true,subtree:true,attributes:true,attributeFilter:['class','disabled','style']});
 
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){queueInstall();updateHuntJourney();}});
-  window.addEventListener('pageshow',()=>{queueInstall();updateHuntJourney();});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){queueInstall();observeHuntControls();updateHuntJourney();}});
+  window.addEventListener('pageshow',()=>{queueInstall();observeHuntControls();updateHuntJourney();});
 }
 
 start();
