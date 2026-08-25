@@ -107,6 +107,7 @@ const optionalModules=[
   './snazzle-auto-update-v51.js',
   './snazzle-privacy-v52.js',
   './snazzle-parent-hub-v65.js',
+  './snazzle-parent-close-fix-v76.js',
   './snazzle-central-assets-v48.js',
   './snazzle-admin-reset-v49.js',
   './snazzle-admin-backup-v50.js',
