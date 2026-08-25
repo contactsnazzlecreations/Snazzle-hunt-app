@@ -22,6 +22,13 @@ function toast(message){
   window.__centralAssetToast=setTimeout(()=>el.classList.remove('show'),2600);
 }
 
+function readLocal(key){
+  try{
+    const settings=JSON.parse(localStorage.getItem('snazzleSettings')||'{}');
+    return String(settings?.[key]||'');
+  }catch{return '';}
+}
+
 function setImg(imgId,fallbackId,src){
   const img=document.getElementById(imgId);
   const fallback=document.getElementById(fallbackId);
@@ -71,7 +78,18 @@ function applyAsset(key,src){
   }
 }
 
-function compressFile(file,max=800,quality=.68){
+function preserveLocalAsset(key){
+  const local=readLocal(key);
+  if(local){
+    central[key]=local;
+    // Een leeg oud cloud-document mag nooit meer een bestaande lokale afbeelding wissen.
+    applyAsset(key,local);
+    return true;
+  }
+  return false;
+}
+
+function compressFile(file,max=800,quality=.72){
   return new Promise((resolve,reject)=>{
     if(!file || !file.type?.startsWith('image/')) return reject(new Error('Kies een afbeelding'));
     const reader=new FileReader();
@@ -83,7 +101,8 @@ function compressFile(file,max=800,quality=.68){
         canvas.width=Math.max(1,Math.round(img.width*scale));
         canvas.height=Math.max(1,Math.round(img.height*scale));
         canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-        const out=canvas.toDataURL('image/jpeg',quality);
+        let out=canvas.toDataURL('image/webp',quality);
+        if(!out.startsWith('data:image/webp')) out=canvas.toDataURL('image/jpeg',quality);
         if(out.length>850000) reject(new Error('Afbeelding is te groot'));
         else resolve(out);
       };
@@ -106,6 +125,7 @@ async function saveCentralAsset(key,file){
   try{
     await setDoc(assetRef(key),{
       dataUrl:src,
+      cleared:false,
       updatedAt:new Date().toISOString(),
       updatedBy:auth.currentUser?.uid||'',
       purpose:'snazzleAppAsset'
@@ -114,7 +134,6 @@ async function saveCentralAsset(key,file){
     toast('Afbeelding centraal opgeslagen ✅');
   }catch(err){
     console.error(err);
-    // Geen regressie: op het beheertoestel blijft de afbeelding in elk geval bruikbaar.
     applyAsset(key,src);
     toast('Afbeelding lokaal opgeslagen; centraal opslaan lukte niet');
   }
@@ -124,6 +143,7 @@ async function clearCentralAsset(key){
   try{
     await setDoc(assetRef(key),{
       dataUrl:'',
+      cleared:true,
       updatedAt:new Date().toISOString(),
       updatedBy:auth.currentUser?.uid||'',
       purpose:'snazzleAppAsset'
@@ -160,7 +180,20 @@ function startListeners(){
   listenersStarted=true;
   ASSETS.forEach(key=>{
     onSnapshot(assetRef(key),snap=>{
-      if(snap.exists()) applyAsset(key,snap.data()?.dataUrl||'');
+      if(!snap.exists()){
+        preserveLocalAsset(key);
+        return;
+      }
+      const data=snap.data()||{};
+      const src=String(data.dataUrl||'');
+      if(src){
+        applyAsset(key,src);
+      }else if(data.cleared===true){
+        // Alleen een expliciete verwijderactie mag een lokale afbeelding leegmaken.
+        applyAsset(key,'');
+      }else{
+        preserveLocalAsset(key);
+      }
     },err=>console.warn('Centraal Snazzle-beeld niet geladen',key,err));
   });
 }
@@ -170,15 +203,17 @@ async function migrateOwnersLocalAssets(user){
     const adminSnap=await getDoc(doc(db,'adminUsers',user.uid));
     const admin=adminSnap.data();
     if(!adminSnap.exists() || admin?.active!==true || admin?.role!=='superadmin') return;
-    let local={};
-    try{ local=JSON.parse(localStorage.getItem('snazzleSettings')||'{}'); }catch{}
     for(const key of ASSETS){
-      if(!local[key]) continue;
+      const local=readLocal(key);
+      if(!local) continue;
       const target=assetRef(key);
       const snap=await getDoc(target);
-      if(!snap.exists()){
+      const data=snap.exists() ? (snap.data()||{}) : {};
+      // Herstel ook oude lege documenten die vóór deze fix een lokale afbeelding konden blokkeren.
+      if(!snap.exists() || (!data.dataUrl && data.cleared!==true)){
         await setDoc(target,{
-          dataUrl:local[key],
+          dataUrl:local,
+          cleared:false,
           updatedAt:new Date().toISOString(),
           updatedBy:user.uid,
           migratedFromLocal:true,
@@ -199,7 +234,6 @@ onAuthStateChanged(auth,async user=>{
   await migrateOwnersLocalAssets(user);
 });
 
-// Andere modules kunnen centrale assets opnieuw toepassen nadat zij de home hebben opgebouwd.
 window.SnazzleCentralAssets={
   reapply(){ ASSETS.forEach(key=>{ if(key in central) applyAsset(key,central[key]); }); }
 };
