@@ -23,6 +23,40 @@ professionalTheme.rel = 'stylesheet';
 professionalTheme.href = fresh('./snazzle-professional-v53.css');
 document.head.appendChild(professionalTheme);
 
+// v59: laatste gecontroleerde kwaliteitslaag. Deze CSS staat vroeg zodat ook de echte bootervaring direct klopt.
+const finalPolishTheme = document.createElement('link');
+finalPolishTheme.rel = 'stylesheet';
+finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
+document.head.appendChild(finalPolishTheme);
+
+// Echte startbeleving vóór de zware modules. v53 gebruikt dezelfde sessievlag en maakt daardoor geen tweede splash.
+(function installEarlyBootV59(){
+  const build=()=>{
+    if(!document.body || document.getElementById('snV59Boot')) return;
+    document.body.classList.add('sn-v59-booting');
+    if(sessionStorage.getItem('snazzleProSplashSeen')==='1'){
+      document.body.classList.remove('sn-v59-booting');
+      document.body.classList.add('sn-v59-ready');
+      return;
+    }
+    sessionStorage.setItem('snazzleProSplashSeen','1');
+    const splash=document.createElement('div');
+    splash.id='snV59Boot';
+    splash.className='sn-v59-boot';
+    splash.setAttribute('aria-hidden','true');
+    splash.innerHTML='<div class="sn-v59-boot-inner"><div class="sn-v59-boot-mark">🦆</div><h1>Snazzle</h1><p>Samen naar buiten</p><small>Je avontuur wordt klaargezet…</small><div class="sn-v59-boot-line"></div></div>';
+    document.body.appendChild(splash);
+    // Absolute noodrem: een presentatie-effect mag de app nooit blokkeren.
+    setTimeout(()=>{
+      splash.classList.add('hide');
+      document.body.classList.remove('sn-v59-booting');
+      document.body.classList.add('sn-v59-ready');
+      setTimeout(()=>splash.remove(),350);
+    },3200);
+  };
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
+})();
+
 // Belangrijk: lokaal alles met exact dezelfde runtimeVersion laden.
 await import(fresh('./app-core.js'));
 // v51: controleert automatisch op nieuwe GitHub-versies en vernieuwt veilig zonder oude cache.
@@ -80,12 +114,14 @@ await import(fresh('./snazzle-world-hub-v47.js'));
 await import(fresh('./snazzle-central-visuals-v54.js'));
 // v55: extra mobiele beheercompatibiliteit.
 await import(fresh('./snazzle-admin-access-v55.js'));
-// v53: laatste professionele polish nadat de bestaande schermen zijn opgebouwd.
+// v53: professionele basispolish nadat de bestaande schermen zijn opgebouwd.
 await import(fresh('./snazzle-professional-v53.js'));
-// v56: volledig onafhankelijke beheer-ingang als allerlaatste compatibiliteitslaag.
+// v56: volledig onafhankelijke beheer-ingang als laatste compatibiliteitslaag.
 await import(fresh('./snazzle-admin-access-v56.js'));
 // v58: veilige auth-bewuste beheerroute. Gebruik ?veiligbeheer=1; opent pas nadat Firebase Auth klaar is.
 await import(fresh('./snazzle-safe-admin-v58.js'));
+// v59: afwerking van de tien professionele punten. Bewust ná v58; raakt auth niet aan.
+await import(fresh('./snazzle-final-polish-v59.js'));
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
