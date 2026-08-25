@@ -1,0 +1,33 @@
+name: Patch Snazzle Ontdekkersbos variety v38.5
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-snazzle-ontdekkersbos-variety-v385.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Add varied nature questions and funny Snazzle rules
+        run: python .github/scripts/patch_snazzle_ontdekkersbos_variety_v385.py
+
+      - name: Commit Ontdekkersbos update
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add snazzle-world-adventure-v38.js app.js index.html
+          git commit -m "Vary Ontdekkersbos questions and nature rules v38.5"
+          git push
