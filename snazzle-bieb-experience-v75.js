@@ -2,13 +2,13 @@
 // Verfijnt alleen de presentatie: leeshoek, bibliothecaris, boekdetail, leesweetjes en lokale bieb-locaties.
 // Geen eindeloze transform-animaties: de eerdere stabiliteitsfixes blijven leidend.
 
-const VERSION='75.0.0';
+const VERSION='75.0.1';
 
 const LIBRARIES=[
   {
-    place:'Montfort',icon:'🏡',name:'BIEB Mofert',address:'De Vaert 15, 6065 CX Montfort',hours:'Woensdag 10.00 – 12.00 uur',
-    note:'Bibliorura organiseert daarnaast ook activiteiten in Dörpshoes Montfort, Markt 14. Kijk voor een activiteit altijd even in de actuele agenda.',
-    route:'https://www.google.com/maps/search/?api=1&query=De+Vaert+15+6065+CX+Montfort'
+    place:'Montfort',icon:'🏡',name:'Bieb in Dörpshoes Montfort',address:'Dörpshoes Montfort, Markt 14, Montfort',hours:'Bekijk de actuele openingstijden bij het Dörpshoes of Bibliorura.',
+    note:'De Bieb is gevestigd in het Dörpshoes in Montfort.',
+    route:'https://www.google.com/maps/search/?api=1&query=Dorpshoes+Montfort+Markt+14+Montfort'
   },
   {
     place:'Herkenbosch',icon:'📚',name:'Open Bieb',address:'Bosscherhof 1, 6075 HE Herkenbosch',hours:'Woensdag en vrijdag 14.30 – 17.00 uur',
@@ -156,7 +156,7 @@ function ensureLocations(overlay){
   section.id='snBiebLocations75';section.className='sn-bieb-section';
   const local=LIBRARIES.filter(x=>!x.nearby).map(locationMarkup).join('');
   const nearby=LIBRARIES.filter(x=>x.nearby).map(locationMarkup).join('');
-  section.innerHTML=`<div class="sn-bieb-section-head"><h2>📍 Waar is een Bieb?</h2><small>Roerdalen & dichtbij</small></div><div class="sn-bieb-locations75">${local}<div class="sn-bieb-location-sub75">Ook vlakbij Roerdalen</div>${nearby}</div><div class="sn-bieb-source75">Locaties en tijden gecontroleerd bij Bibliotheek Bibliorura in augustus 2026. Openingstijden kunnen wijzigen. <a href="https://bibliorura.nl/service/afhaalpunten-vrijwilligersbibliotheken" target="_blank" rel="noopener noreferrer">Bekijk actuele Roerdalen-info</a> · <a href="https://bibliorura.nl/service/openingstijden" target="_blank" rel="noopener noreferrer">Roermond</a></div>`;
+  section.innerHTML=`<div class="sn-bieb-section-head"><h2>📍 Waar is een Bieb?</h2><small>Roerdalen & dichtbij</small></div><div class="sn-bieb-locations75">${local}<div class="sn-bieb-location-sub75">Ook vlakbij Roerdalen</div>${nearby}</div><div class="sn-bieb-source75">Locaties en openingstijden kunnen wijzigen. Kijk voor actuele informatie bij de locatie zelf of bij Bibliorura. <a href="https://bibliorura.nl/service/afhaalpunten-vrijwilligersbibliotheken" target="_blank" rel="noopener noreferrer">Bekijk actuele Roerdalen-info</a> · <a href="https://bibliorura.nl/service/openingstijden" target="_blank" rel="noopener noreferrer">Roermond</a></div>`;
   missions.insertAdjacentElement('afterend',section);
 }
 
