@@ -8,6 +8,8 @@ const db = getFirestore(app);
 const ASSETS = ['profileImage','heroImage','homeImage1','homeImage2'];
 const central = {};
 let listenersStarted = false;
+let currentIsSuperAdmin = false;
+let recovering = false;
 
 // Gebruik een reeds bestaande, centraal leesbare configuratiecollectie.
 // Alleen de hoofdbeheerder kan hierin schrijven volgens de bestaande Firestore-regels.
@@ -19,14 +21,23 @@ function toast(message){
   el.textContent=message;
   el.classList.add('show');
   clearTimeout(window.__centralAssetToast);
-  window.__centralAssetToast=setTimeout(()=>el.classList.remove('show'),2600);
+  window.__centralAssetToast=setTimeout(()=>el.classList.remove('show'),3000);
 }
 
+function readSettings(){
+  try{return JSON.parse(localStorage.getItem('snazzleSettings')||'{}');}
+  catch{return {};}
+}
+function writeSettings(settings){
+  try{localStorage.setItem('snazzleSettings',JSON.stringify(settings));}catch{}
+}
 function readLocal(key){
-  try{
-    const settings=JSON.parse(localStorage.getItem('snazzleSettings')||'{}');
-    return String(settings?.[key]||'');
-  }catch{return '';}
+  return String(readSettings()?.[key]||'');
+}
+function mirrorLocal(key,src){
+  const settings=readSettings();
+  settings[key]=src||'';
+  writeSettings(settings);
 }
 
 function setImg(imgId,fallbackId,src){
@@ -44,17 +55,10 @@ function setImg(imgId,fallbackId,src){
   }
 }
 
-function mirrorLocal(key,src){
-  try{
-    const settings=JSON.parse(localStorage.getItem('snazzleSettings')||'{}');
-    settings[key]=src||'';
-    localStorage.setItem('snazzleSettings',JSON.stringify(settings));
-  }catch{}
-}
-
-function applyAsset(key,src){
+function applyAsset(key,src,{persist=true}={}){
   central[key]=src||'';
-  mirrorLocal(key,central[key]);
+  // Belangrijk: een remote leegte mag niet stilzwijgend een oude lokale kopie vernietigen.
+  if(persist) mirrorLocal(key,central[key]);
   if(key==='profileImage'){
     setImg('profileLogo','logoFallback',central[key]);
     setImg('profilePreview','profilePreviewFallback',central[key]);
@@ -82,11 +86,10 @@ function preserveLocalAsset(key){
   const local=readLocal(key);
   if(local){
     central[key]=local;
-    // Een leeg oud cloud-document mag nooit meer een bestaande lokale afbeelding wissen.
-    applyAsset(key,local);
-    return true;
+    applyAsset(key,local,{persist:false});
+    return local;
   }
-  return false;
+  return '';
 }
 
 function compressFile(file,max=800,quality=.72){
@@ -114,45 +117,54 @@ function compressFile(file,max=800,quality=.72){
   });
 }
 
+async function saveCentralValue(key,src,{migrated=false,recovered=false}={}){
+  const user=auth.currentUser;
+  if(!user || !currentIsSuperAdmin || !src) return false;
+  await setDoc(assetRef(key),{
+    dataUrl:src,
+    cleared:false,
+    updatedAt:new Date().toISOString(),
+    updatedBy:user.uid,
+    purpose:'snazzleAppAsset',
+    ...(migrated?{migratedFromLocal:true}:{}),
+    ...(recovered?{recoveredFromLegacyLocal:true}:{})
+  });
+  applyAsset(key,src,{persist:true});
+  return true;
+}
+
 async function saveCentralAsset(key,file){
   let src='';
+  try{src=await compressFile(file);}
+  catch(err){toast(err?.message||'Afbeelding kon niet worden gelezen');return;}
   try{
-    src=await compressFile(file);
-  }catch(err){
-    toast(err?.message||'Afbeelding kon niet worden gelezen');
-    return;
-  }
-  try{
-    await setDoc(assetRef(key),{
-      dataUrl:src,
-      cleared:false,
-      updatedAt:new Date().toISOString(),
-      updatedBy:auth.currentUser?.uid||'',
-      purpose:'snazzleAppAsset'
-    });
-    applyAsset(key,src);
+    await saveCentralValue(key,src);
     toast('Afbeelding centraal opgeslagen ✅');
   }catch(err){
     console.error(err);
-    applyAsset(key,src);
+    applyAsset(key,src,{persist:true});
     toast('Afbeelding lokaal opgeslagen; centraal opslaan lukte niet');
   }
 }
 
 async function clearCentralAsset(key){
   try{
+    const user=auth.currentUser;
     await setDoc(assetRef(key),{
       dataUrl:'',
       cleared:true,
       updatedAt:new Date().toISOString(),
-      updatedBy:auth.currentUser?.uid||'',
+      updatedBy:user?.uid||'',
       purpose:'snazzleAppAsset'
     });
-    applyAsset(key,'');
+    // Alleen een bewuste beheeractie verwijdert ook de lokale kopie.
+    mirrorLocal(key,'');
+    applyAsset(key,'',{persist:false});
     toast('Afbeelding centraal verwijderd');
   }catch(err){
     console.error(err);
-    applyAsset(key,'');
+    mirrorLocal(key,'');
+    applyAsset(key,'',{persist:false});
     toast('Afbeelding op dit toestel verwijderd');
   }
 }
@@ -175,67 +187,106 @@ function installAdminHandlers(){
   if(note) note.textContent='Deze afbeeldingen worden centraal opgeslagen. Iedereen ziet automatisch hetzelfde Snazzle-uiterlijk.';
 }
 
+async function recoverLocalKeyIfNeeded(key,remoteData={}){
+  const local=readLocal(key);
+  if(!local || !currentIsSuperAdmin) return false;
+  // Als de cloud geen bruikbaar beeld heeft, is de nog aanwezige beheer-kopie de herstelbron.
+  if(remoteData?.dataUrl) return false;
+  try{
+    await saveCentralValue(key,local,{recovered:true});
+    return true;
+  }catch(err){
+    console.warn('Snazzle hoofdbeeld herstel',key,err);
+    return false;
+  }
+}
+
 function startListeners(){
   if(listenersStarted) return;
   listenersStarted=true;
   ASSETS.forEach(key=>{
-    onSnapshot(assetRef(key),snap=>{
+    onSnapshot(assetRef(key),async snap=>{
       if(!snap.exists()){
-        preserveLocalAsset(key);
+        const local=preserveLocalAsset(key);
+        if(local && currentIsSuperAdmin) await recoverLocalKeyIfNeeded(key,{});
         return;
       }
       const data=snap.data()||{};
       const src=String(data.dataUrl||'');
       if(src){
-        applyAsset(key,src);
-      }else if(data.cleared===true){
-        // Alleen een expliciete verwijderactie mag een lokale afbeelding leegmaken.
-        applyAsset(key,'');
-      }else{
-        preserveLocalAsset(key);
+        applyAsset(key,src,{persist:true});
+        return;
       }
+
+      const local=preserveLocalAsset(key);
+      if(local){
+        // Ook een oud 'cleared' document mag een nog aanwezige beheer-kopie niet meer wissen.
+        if(currentIsSuperAdmin) await recoverLocalKeyIfNeeded(key,data);
+        return;
+      }
+
+      // Geen lokale herstelbron: dan is een expliciet centraal verwijderd beeld echt leeg.
+      if(data.cleared===true) applyAsset(key,'',{persist:false});
     },err=>console.warn('Centraal Snazzle-beeld niet geladen',key,err));
   });
 }
 
 async function migrateOwnersLocalAssets(user){
+  if(recovering) return 0;
+  recovering=true;
+  let uploaded=0;
   try{
     const adminSnap=await getDoc(doc(db,'adminUsers',user.uid));
     const admin=adminSnap.data();
-    if(!adminSnap.exists() || admin?.active!==true || admin?.role!=='superadmin') return;
+    if(!adminSnap.exists() || admin?.active!==true || admin?.role!=='superadmin') return 0;
+    currentIsSuperAdmin=true;
     for(const key of ASSETS){
       const local=readLocal(key);
       if(!local) continue;
       const target=assetRef(key);
       const snap=await getDoc(target);
       const data=snap.exists() ? (snap.data()||{}) : {};
-      // Herstel ook oude lege documenten die vóór deze fix een lokale afbeelding konden blokkeren.
-      if(!snap.exists() || (!data.dataUrl && data.cleared!==true)){
-        await setDoc(target,{
-          dataUrl:local,
-          cleared:false,
-          updatedAt:new Date().toISOString(),
-          updatedBy:user.uid,
-          migratedFromLocal:true,
-          purpose:'snazzleAppAsset'
-        });
+      // Iedere nog aanwezige lokale beheer-kopie mag een ontbrekend/leeg oud document herstellen.
+      if(!snap.exists() || !data.dataUrl){
+        await saveCentralValue(key,local,{migrated:true,recovered:snap.exists()});
+        uploaded++;
       }
     }
+    if(uploaded) toast(`${uploaded} hoofdafbeelding${uploaded===1?'':'en'} hersteld en centraal bewaard ✨`);
+    return uploaded;
   }catch(err){
     console.warn('Lokale Snazzle-afbeeldingen konden nog niet centraal worden gemigreerd',err);
+    return uploaded;
+  }finally{
+    recovering=false;
   }
 }
 
-installAdminHandlers();
 onAuthStateChanged(auth,async user=>{
   if(!user) return;
+  currentIsSuperAdmin=false;
+  if(!user.isAnonymous){
+    try{
+      const adminSnap=await getDoc(doc(db,'adminUsers',user.uid));
+      const data=adminSnap.data()||{};
+      currentIsSuperAdmin=adminSnap.exists()&&data.active===true&&data.role==='superadmin';
+    }catch{}
+  }
   startListeners();
   installAdminHandlers();
-  await migrateOwnersLocalAssets(user);
+  if(currentIsSuperAdmin) await migrateOwnersLocalAssets(user);
 });
 
+installAdminHandlers();
+
 window.SnazzleCentralAssets={
-  reapply(){ ASSETS.forEach(key=>{ if(key in central) applyAsset(key,central[key]); }); }
+  reapply(){ ASSETS.forEach(key=>{ if(key in central) applyAsset(key,central[key],{persist:false}); }); },
+  recover:async()=>{
+    const user=auth.currentUser;
+    if(!user||user.isAnonymous) return 0;
+    return migrateOwnersLocalAssets(user);
+  },
+  localStatus:()=>Object.fromEntries(ASSETS.map(key=>[key,!!readLocal(key)]))
 };
 setTimeout(()=>window.SnazzleCentralAssets.reapply(),800);
 setTimeout(()=>window.SnazzleCentralAssets.reapply(),2200);
