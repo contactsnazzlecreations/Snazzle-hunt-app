@@ -322,6 +322,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Centrale Snazzle app-afbeeldingen: iedereen die de app gebruikt mag ze lezen.
+    // Alleen de hoofdbeheerder mag het gedeelde uiterlijk aanpassen.
+    match /snazzleAppAssets/{assetId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
