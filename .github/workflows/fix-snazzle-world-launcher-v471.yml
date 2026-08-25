@@ -1,4 +1,4 @@
-name: Update Snazzle World content v47.3
+name: Update Snazzle World content v47.4
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Add new adventures and expand story chapters
+      - name: Add new adventures and expand story chapters safely
         run: python .github/scripts/fix_snazzle_world_launcher_v471.py
 
       - name: Commit Snazzle World content update
@@ -29,5 +29,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add snazzle-world-hub-v47.js app.js index.html
-          git commit -m "Expand Snazzle World adventures and stories v47.3"
+          git commit -m "Expand Snazzle World adventures and stories v47.4"
           git push
