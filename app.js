@@ -82,8 +82,10 @@ await import(fresh('./snazzle-central-visuals-v54.js'));
 await import(fresh('./snazzle-admin-access-v55.js'));
 // v53: laatste professionele polish nadat de bestaande schermen zijn opgebouwd.
 await import(fresh('./snazzle-professional-v53.js'));
-// v56: volledig onafhankelijke beheer-ingang als allerlaatste laag; ondersteunt ook ?beheer=1.
+// v56: volledig onafhankelijke beheer-ingang als allerlaatste compatibiliteitslaag.
 await import(fresh('./snazzle-admin-access-v56.js'));
+// v58: veilige auth-bewuste beheerroute. Gebruik ?veiligbeheer=1; opent pas nadat Firebase Auth klaar is.
+await import(fresh('./snazzle-safe-admin-v58.js'));
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
