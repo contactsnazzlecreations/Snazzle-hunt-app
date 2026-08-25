@@ -114,6 +114,8 @@ await import(fresh('./snazzle-world-hub-v47.js'));
 await import(fresh('./snazzle-central-visuals-v54.js'));
 // v60: zichtbare herstelhulp voor oude lokale beeldkeuzes; alleen Hoofdbeheer kan naar centraal herstellen.
 await import(fresh('./snazzle-image-recovery-v60.js'));
+// v61: beheerpaneel altijd betrouwbaar afsluitbaar op mobiel.
+await import(fresh('./snazzle-admin-close-v61.js'));
 // v55: extra mobiele beheercompatibiliteit.
 await import(fresh('./snazzle-admin-access-v55.js'));
 // v53: professionele basispolish nadat de bestaande schermen zijn opgebouwd.
