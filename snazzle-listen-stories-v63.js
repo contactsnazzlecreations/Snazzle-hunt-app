@@ -22,6 +22,7 @@ const MAX_AUDIO_BYTES=60*1024*1024;
 const MAX_FALLBACK_AUDIO_BYTES=30*1024*1024;
 const MAX_IMAGE_BYTES=8*1024*1024;
 const AUDIO_CHUNK_BYTES=640*1024;
+const STORAGE_STALL_TIMEOUT_MS=20000;
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -138,7 +139,32 @@ function uniquePath(kind,file,fallbackExt){const ext=extensionOf(file,fallbackEx
 function validateImage(file){if(!file)return;if(!file.type?.startsWith('image/'))throw new Error('Kies een geldige afbeelding.');if(file.size>MAX_IMAGE_BYTES)throw new Error('De afbeelding is te groot. Maximaal 8 MB.');}
 function validateAudio(file){if(!file)return;const mp3=/\.mp3$/i.test(file.name||'')||['audio/mpeg','audio/mp3'].includes(file.type);if(!mp3)throw new Error('Kies een MP3-bestand.');if(file.size>MAX_AUDIO_BYTES)throw new Error('De MP3 is te groot. Maximaal 60 MB.');}
 async function uploadImageStorage(file){validateImage(file);const path=uniquePath('images',file,'jpg'),ref=storageRef(storage,path),snap=await uploadBytes(ref,file,{contentType:file.type||'image/jpeg',cacheControl:'public,max-age=3600'});return{mode:'storage',path,url:await getDownloadURL(snap.ref)};}
-function uploadAudioStorage(file,onProgress){validateAudio(file);const path=uniquePath('audio',file,'mp3'),ref=storageRef(storage,path);return new Promise((resolve,reject)=>{const task=uploadBytesResumable(ref,file,{contentType:'audio/mpeg',cacheControl:'public,max-age=3600'});task.on('state_changed',snap=>{const pct=snap.totalBytes?Math.round(snap.bytesTransferred/snap.totalBytes*100):0;onProgress?.(pct);},reject,async()=>{try{resolve({mode:'storage',path,url:await getDownloadURL(task.snapshot.ref)});}catch(e){reject(e);}});});}
+function uploadAudioStorage(file,onProgress){
+  validateAudio(file);
+  const path=uniquePath('audio',file,'mp3'),ref=storageRef(storage,path);
+  return new Promise((resolve,reject)=>{
+    const task=uploadBytesResumable(ref,file,{contentType:'audio/mpeg',cacheControl:'public,max-age=3600'});
+    let settled=false,lastActivity=Date.now();
+    const stopWatchdog=()=>clearInterval(watchdog);
+    const finish=(fn,value)=>{if(settled)return;settled=true;stopWatchdog();fn(value);};
+    const watchdog=setInterval(()=>{
+      if(settled)return;
+      if(Date.now()-lastActivity<STORAGE_STALL_TIMEOUT_MS)return;
+      try{task.cancel();}catch{}
+      const err=new Error('De Firebase-upload bleef hangen. De app schakelt over op reserve-opslag.');
+      err.code='storage/upload-timeout';
+      finish(reject,err);
+    },2000);
+    task.on('state_changed',snap=>{
+      lastActivity=Date.now();
+      const pct=snap.totalBytes?Math.round(snap.bytesTransferred/snap.totalBytes*100):0;
+      onProgress?.(pct);
+    },err=>finish(reject,err),async()=>{
+      try{finish(resolve,{mode:'storage',path,url:await getDownloadURL(task.snapshot.ref)});}
+      catch(e){finish(reject,e);}
+    });
+  });
+}
 async function deleteStoragePath(path){if(!path)return;try{await deleteObject(storageRef(storage,path));}catch(e){if(e?.code!=='storage/object-not-found')console.warn('Snazzle luisterbestand verwijderen',e);}}
 
 async function compressImageFallback(file,max=760,quality=.7,maxChars=190000){
