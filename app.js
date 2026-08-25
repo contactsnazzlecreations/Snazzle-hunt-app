@@ -36,8 +36,9 @@ async function safeImport(path){
   }
 }
 
-// v71 wordt vroeg geladen: compositor-optimalisatie en beelddecoding zijn actief vóór de overige presentatielagen.
+// v71 + v72 worden vroeg geladen: compositor-optimalisatie, beelddecoding en bronbewaking zijn actief vóór app-core.
 await safeImport('./snazzle-runtime-stability-v71.js');
+await safeImport('./snazzle-image-stability-v72.js');
 
 // Presentatielaag: sprookjesachtige Magic Jungle stijl zonder app-logica te wijzigen.
 const magicTheme = document.createElement('link');
