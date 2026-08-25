@@ -13,11 +13,21 @@ let busy=false;
 
 const byId=id=>document.getElementById(id);
 
+function clearSafeAdminRoute(){
+  try{
+    const url=new URL(location.href);
+    if(url.searchParams.get('veiligbeheer')!=='1') return;
+    url.searchParams.delete('veiligbeheer');
+    history.replaceState(history.state,'',url.pathname+(url.searchParams.toString()?`?${url.searchParams}`:'')+url.hash);
+  }catch{}
+}
 function hideSheet(id){
   const el=byId(id); if(!el) return;
   el.classList.remove('show');
   el.setAttribute('aria-hidden','true');
   el.style.removeProperty('display');
+  el.style.removeProperty('z-index');
+  el.style.removeProperty('pointer-events');
 }
 function showSheet(id){
   const el=byId(id); if(!el) return false;
@@ -107,9 +117,11 @@ async function safeLogin(){
     if(byId('adminRole')) byId('adminRole').textContent=profile.role==='superadmin'?'Hoofdbeheerder':`Dorpsbeheerder · ${profile.village||''}`;
     if(byId('adminPassword')) byId('adminPassword').value='';
     showAdmin();
+    clearSafeAdminRoute();
   }catch(err){
     console.error('Snazzle v58 login',err);
     showLogin();
+    clearSafeAdminRoute();
     status(err?.message==='geen-beheerrechten'?'Geen actieve beheerrechten':'Inloggen mislukt — controleer je gegevens');
   }finally{
     busy=false;
@@ -151,10 +163,11 @@ onAuthStateChanged(auth,async user=>{
   }else{
     showLogin();
   }
+  // Directe beheerlink is een eenmalige ingang. Daarna blijft de gewone Home-URL over.
+  clearSafeAdminRoute();
 });
 
 if(safeMode){
-  // Oude v56 directe beheerroute bewust uitschakelen: v58 bepaalt pas na Auth wat geopend moet worden.
   hideSheet('adminSheet');
   hideSheet('adminLogin');
   setTimeout(makeLoginInteractive,250);
