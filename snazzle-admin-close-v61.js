@@ -1,15 +1,40 @@
 // Snazzle v61 — robuuste mobiele sluiting voor het beheerpaneel.
-// Raakt Firebase/auth niet aan; alleen het sluiten van #adminSheet.
+// Raakt Firebase/auth niet aan; alleen het veilig sluiten van #adminSheet.
 
 const SHEET_ID='adminSheet';
+
+function clearAdminRoute(){
+  try{
+    const url=new URL(location.href);
+    const hadAdminRoute=url.searchParams.has('beheer') || url.searchParams.has('veiligbeheer');
+    if(!hadAdminRoute) return;
+    url.searchParams.delete('beheer');
+    url.searchParams.delete('veiligbeheer');
+    history.replaceState(history.state,'',url.pathname+(url.searchParams.toString()?`?${url.searchParams}`:'')+url.hash);
+  }catch{}
+}
 
 function closeAdmin(){
   const sheet=document.getElementById(SHEET_ID);
   if(!sheet) return;
   const active=document.activeElement;
   try{ active?.blur?.(); }catch{}
+
+  // v58 kan display:flex!important inline zetten. Alleen de class verwijderen was
+  // daarom niet genoeg op mobiel; verwijder ook alle tijdelijke inline open-stijlen.
   sheet.classList.remove('show');
   sheet.setAttribute('aria-hidden','true');
+  sheet.style.removeProperty('display');
+  sheet.style.removeProperty('z-index');
+  sheet.style.removeProperty('pointer-events');
+
+  const panel=sheet.querySelector('.panel');
+  if(panel){
+    panel.style.removeProperty('z-index');
+    panel.style.removeProperty('pointer-events');
+  }
+
+  clearAdminRoute();
 }
 
 function installStyle(){
