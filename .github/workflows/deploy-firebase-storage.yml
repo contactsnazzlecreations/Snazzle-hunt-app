@@ -1,0 +1,65 @@
+name: Deploy Firebase Storage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'storage.rules'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/deploy-firebase-storage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-storage-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Validate Storage configuration
+        shell: bash
+        run: |
+          test -f storage.rules
+          test -f firebase.json
+          test -f .firebaserc
+
+      - name: Authenticate and deploy Storage rules
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          SA_JSON="${FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT:-${FIREBASE_SERVICE_ACCOUNT:-}}"
+
+          if [ -n "$SA_JSON" ]; then
+            CREDS="$RUNNER_TEMP/firebase-service-account.json"
+            printf '%s' "$SA_JSON" > "$CREDS"
+            chmod 600 "$CREDS"
+            export GOOGLE_APPLICATION_CREDENTIALS="$CREDS"
+            firebase deploy --project snazzle-hunt --only storage --non-interactive
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy --project snazzle-hunt --only storage --non-interactive --token "$FIREBASE_TOKEN"
+          else
+            echo 'Geen Firebase deployment credential gevonden.' >&2
+            echo 'Voeg FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT, FIREBASE_SERVICE_ACCOUNT of FIREBASE_TOKEN toe.' >&2
+            exit 1
+          fi
