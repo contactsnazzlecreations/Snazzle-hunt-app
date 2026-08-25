@@ -5,7 +5,7 @@ import { getFirestore, doc, getDoc, onSnapshot, setDoc } from 'https://www.gstat
 const app=getApp();
 const auth=getAuth(app);
 const db=getFirestore(app);
-const ASSETS=['profileImage','heroImage','homeImage1','homeImage2'];
+const ASSETS=['profileImage','heroImage','homeImage1','homeImage2','introImage'];
 const central={};
 let currentIsSuperAdmin=false;
 let listenersStarted=false;
@@ -32,6 +32,22 @@ function setImg(imgId,fallbackId,src){
   if(src){img.src=src;img.style.display='block';if(fallback) fallback.style.display='none';}
   else{img.removeAttribute('src');img.style.display='none';if(fallback) fallback.style.display='grid';}
 }
+function applyIntroMark(src){
+  const mark=document.querySelector('#snV59Boot .sn-v59-boot-mark');
+  if(!mark) return;
+  mark.replaceChildren();
+  if(src){
+    const img=document.createElement('img');
+    img.src=src;
+    img.alt='Snazzle intro';
+    img.decoding='async';
+    img.draggable=false;
+    img.style.cssText='width:88%;height:88%;object-fit:contain;display:block;border-radius:42%;';
+    mark.appendChild(img);
+  }else{
+    mark.textContent='🦆';
+  }
+}
 function applyAsset(key,src,{persist=true}={}){
   central[key]=src||'';
   if(persist) mirrorLocal(key,central[key]);
@@ -51,6 +67,10 @@ function applyAsset(key,src,{persist=true}={}){
   if(key==='homeImage2'){
     setImg('homeImg2','homeEmpty2',central[key]);
     setImg('home2Preview','home2PreviewFallback',central[key]);
+  }
+  if(key==='introImage'){
+    setImg('introImagePreview','introImagePreviewFallback',central[key]);
+    applyIntroMark(central[key]);
   }
 }
 function compressFile(file,max=800,quality=.72){
@@ -86,26 +106,51 @@ async function saveCentralValue(key,src,extra={}){
 }
 async function saveCentralAsset(key,file){
   let src='';
-  try{src=await compressFile(file);}catch(err){toast(err?.message||'Afbeelding kon niet worden gelezen');return;}
-  try{await saveCentralValue(key,src);toast('Afbeelding centraal opgeslagen ✅');}
+  try{src=await compressFile(file,key==='introImage'?560:800,key==='introImage'?.8:.72);}catch(err){toast(err?.message||'Afbeelding kon niet worden gelezen');return;}
+  try{
+    const saved=await saveCentralValue(key,src);
+    if(saved) toast(key==='introImage'?'Intro-afbeelding centraal opgeslagen ✅':'Afbeelding centraal opgeslagen ✅');
+    else toast('Alleen de hoofdbeheerder kan deze afbeelding wijzigen');
+  }
   catch(err){console.error(err);applyAsset(key,src,{persist:true});toast('Afbeelding lokaal opgeslagen; centraal opslaan lukte niet');}
 }
 async function clearCentralAsset(key){
   try{
     const user=auth.currentUser;
+    if(!user||!currentIsSuperAdmin){toast('Alleen de hoofdbeheerder kan deze afbeelding verwijderen');return;}
     await setDoc(assetRef(key),{
       active:false,system:true,purpose:'snazzleAppAsset',key,dataUrl:'',cleared:true,
-      updatedAt:new Date().toISOString(),updatedBy:user?.uid||''
+      updatedAt:new Date().toISOString(),updatedBy:user.uid||''
     },{merge:true});
   }catch(err){console.warn(err);}
-  mirrorLocal(key,'');applyAsset(key,'',{persist:false});toast('Afbeelding verwijderd');
+  mirrorLocal(key,'');applyAsset(key,'',{persist:false});toast(key==='introImage'?'Intro-afbeelding verwijderd':'Afbeelding verwijderd');
+}
+function ensureIntroAdmin(){
+  const section=document.getElementById('imagesAdmin');
+  if(!section||document.getElementById('snIntroImageAdmin')) return;
+  const block=document.createElement('div');
+  block.id='snIntroImageAdmin';
+  block.innerHTML=`
+    <h3>Intro-afbeelding</h3>
+    <p style="font-size:11px;line-height:1.4;margin:0 0 8px">Deze afbeelding staat op het groene laadscherm wanneer de app opent.</p>
+    <div class="round-preview"><img id="introImagePreview" alt="Intro-afbeelding"><span id="introImagePreviewFallback">🦆</span></div>
+    <input id="introImageInput" type="file" accept="image/*">
+    <button class="secondary danger" id="removeIntroImageBtn" type="button">Intro-afbeelding verwijderen</button>
+  `;
+  const note=section.querySelector('p');
+  if(note) note.after(block); else section.prepend(block);
+  const local=central.introImage||readLocal('introImage');
+  setImg('introImagePreview','introImagePreviewFallback',local);
 }
 function installAdminHandlers(){
-  [['profileImageInput','profileImage'],['heroImageInput','heroImage'],['home1Input','homeImage1'],['home2Input','homeImage2']].forEach(([id,key])=>{
+  ensureIntroAdmin();
+  [['profileImageInput','profileImage'],['heroImageInput','heroImage'],['home1Input','homeImage1'],['home2Input','homeImage2'],['introImageInput','introImage']].forEach(([id,key])=>{
     const input=document.getElementById(id);if(input) input.onchange=e=>saveCentralAsset(key,e.target.files?.[0]);
   });
   document.querySelectorAll('[data-remove-local-image]').forEach(button=>button.onclick=()=>clearCentralAsset(button.dataset.removeLocalImage));
-  const note=document.querySelector('#imagesAdmin p');
+  const removeIntro=document.getElementById('removeIntroImageBtn');
+  if(removeIntro) removeIntro.onclick=()=>clearCentralAsset('introImage');
+  const note=document.querySelector('#imagesAdmin>p');
   if(note) note.textContent='Deze afbeeldingen worden centraal opgeslagen. Iedereen ziet automatisch hetzelfde Snazzle-uiterlijk.';
 }
 function startListeners(){
