@@ -153,8 +153,7 @@ const optionalModules=[
   './snazzle-input-visibility-v69.js',
   './snazzle-top-stability-v70.js',
   './snazzle-bieb-v73.js',
-  './snazzle-bieb-cloud-v74.js',
-  './snazzle-bieb-experience-v75.js'
+  './snazzle-bieb-cloud-v74.js'
 ];
 for(const modulePath of optionalModules){
   await safeImport(modulePath);
