@@ -298,9 +298,8 @@ function buildAdminUI(){
       <button class="save" id="snNewsSavePage">Pagina opslaan</button>
       <button class="secondary" id="snNewsCancelEdit">Annuleren</button>
     </div>`;
-  const logout = $('#adminLogoutBtn');
-  if(logout) superOnly.insertBefore(section, logout);
-  else superOnly.appendChild(section);
+  // De nieuwssectie hoort binnen het hoofdbeheerblok zelf.
+  superOnly.appendChild(section);
 
   tab.addEventListener('click', ()=>{
     $$('#adminSheet [data-tab]').forEach(b=>b.classList.remove('on'));
