@@ -9,7 +9,11 @@ import {
 const app = getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
-const NEWS_COLLECTION = 'snazzleNewsPages';
+// Gebruik verborgen, inactieve systeemdocumenten in de bestaande villages-collectie.
+// Die collectie heeft al productie-rechten in de app; active:false houdt deze documenten
+// volledig buiten de dorpenlijsten. Zo werkt de krant zonder een extra Firebase-deploy.
+const NEWS_COLLECTION = 'villages';
+const NEWS_KIND = 'snazzleNewsPage';
 const MAX_IMAGES = 3;
 
 let pages = [];
@@ -395,6 +399,9 @@ async function saveEditor(){
   if(title.length < 2) return toast('Vul een krantenkop in.');
   const existing = pages.find(p=>p.id===editingId);
   const payload = {
+    active: false,
+    contentType: NEWS_KIND,
+    name: 'Snazzle Nieuws systeempagina',
     kicker: $('#snNewsKicker').value.trim(),
     title,
     deck: $('#snNewsDeck').value.trim(),
@@ -444,9 +451,11 @@ async function movePage(id,delta){
 
 function startNewsListener(){
   if(unsubscribeNews) return;
-  const q = query(collection(db,NEWS_COLLECTION), orderBy('order','asc'));
-  unsubscribeNews = onSnapshot(q, snap=>{
-    pages = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.order??0)-(b.order??0));
+  unsubscribeNews = onSnapshot(collection(db,NEWS_COLLECTION), snap=>{
+    pages = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(page=>page.contentType===NEWS_KIND)
+      .sort((a,b)=>(a.order??0)-(b.order??0));
     if(currentPage > pages.length-1) currentPage = Math.max(0,pages.length-1);
     if($('#snNewsOverlay')?.classList.contains('show')) renderPage();
     renderAdminList();
