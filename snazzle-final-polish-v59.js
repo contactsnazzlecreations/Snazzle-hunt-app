@@ -10,6 +10,7 @@ const text=(el)=>String(el?.textContent||'').trim();
 let bootDone=false;
 let offlineTimer=null;
 let mediaObserver=null;
+let offlineHooksInstalled=false;
 
 function finishBoot(){
   if(bootDone) return;
@@ -109,13 +110,15 @@ function installMediaPolish(){
 const SHEET_NAV={huntSheet:'navHunt',villageSheet:'navHunt',friendsSheet:'navFriends',shopSheet:'navShop',profileSheet:'navProfile',findsSheet:'navProfile'};
 function updateNavigation(){
   const buttons=qa('.bottom button');
-  buttons.forEach(b=>{b.classList.remove('sn59-nav-active');b.removeAttribute('aria-current');});
   let activeId='navHome';
   for(const [sheetId,navId] of Object.entries(SHEET_NAV)){
     if(q('#'+sheetId)?.classList.contains('show')){activeId=navId;break;}
   }
-  const active=q('#'+activeId);
-  if(active){active.classList.add('sn59-nav-active');active.setAttribute('aria-current','page');}
+  buttons.forEach(b=>{
+    const active=b.id===activeId;
+    b.classList.toggle('sn59-nav-active',active);
+    if(active) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+  });
 }
 function installNavigationState(){
   const sheets=qa('.sheet');
@@ -153,8 +156,10 @@ function ensureHuntStatus(){
 function updateHuntStatus(){
   const state=huntState(),badge=q('#sn59HuntBadge'),mini=q('#sn59HuntMini');
   if(!badge) return;
-  badge.className='sn59-hunt-badge '+state.key;badge.textContent=state.label;
-  if(mini) mini.textContent=state.mini;
+  const desiredClass='sn59-hunt-badge '+state.key;
+  if(badge.className!==desiredClass) badge.className=desiredClass;
+  if(text(badge)!==state.label) badge.textContent=state.label;
+  if(mini&&text(mini)!==state.mini) mini.textContent=state.mini;
 }
 function flashAdventure(){
   const hunt=q('.hunt');if(!hunt) return;
@@ -179,9 +184,7 @@ function installHuntPolish(){
 }
 
 function parentStatusText(){
-  const secure=location.protocol==='https:';
-  const online=navigator.onLine;
-  return {secure,online};
+  return {secure:location.protocol==='https:',online:navigator.onLine};
 }
 function installParentExtras(){
   const panel=q('.sn-parent-panel');if(!panel) return;
@@ -196,17 +199,16 @@ function installParentExtras(){
     if(privacyTitle) privacyTitle.insertAdjacentElement('beforebegin',box); else panel.appendChild(box);
   }
   const s=parentStatusText(),status=q('#sn59TechStatus');
-  if(status) status.innerHTML=`
-    <div class="sn59-tech-chip"><b>${s.secure?'✓ HTTPS':'!'}</b>Beveiligde verbinding</div>
-    <div class="sn59-tech-chip"><b>${s.online?'✓ Online':'○ Offline'}</b>Verbindingsstatus</div>
-    <div class="sn59-tech-chip"><b>v${V59}</b>Final polish</div>`;
+  const desired=`<div class="sn59-tech-chip"><b>${s.secure?'✓ HTTPS':'!'}</b>Beveiligde verbinding</div><div class="sn59-tech-chip"><b>${s.online?'✓ Online':'○ Offline'}</b>Verbindingsstatus</div><div class="sn59-tech-chip"><b>v${V59}</b>Final polish</div>`;
+  if(status&&status.innerHTML!==desired) status.innerHTML=desired;
 }
 
 function newsReadTime(){
   const page=q('#snNewsPage'),node=q('#sn59NewsReadTime');if(!page||!node) return;
   const words=text(page).split(/\s+/).filter(Boolean).length;
   const mins=Math.max(1,Math.ceil(words/190));
-  node.textContent=`± ${mins} min lezen`;
+  const desired=`± ${mins} min lezen`;
+  if(text(node)!==desired) node.textContent=desired;
 }
 function installNewsReadingPolish(){
   const top=q('.sn-news-topbar');
@@ -241,7 +243,11 @@ function currentHuntSnapshot(){
 function saveOfflineSnapshot(){
   if(!navigator.onLine) return;
   const snap=currentHuntSnapshot();if(!snap) return;
-  try{localStorage.setItem('snazzleLastReadableHunt',JSON.stringify(snap));}catch{}
+  try{
+    const previous=safeJSON(localStorage.getItem('snazzleLastReadableHunt'),null);
+    if(previous&&previous.title===snap.title&&previous.village===snap.village&&previous.description===snap.description&&previous.hint===snap.hint) return;
+    localStorage.setItem('snazzleLastReadableHunt',JSON.stringify(snap));
+  }catch{}
 }
 function cachedSnapshot(){
   try{return safeJSON(localStorage.getItem('snazzleLastReadableHunt'),null)}catch{return null}
@@ -257,15 +263,16 @@ function renderOfflineSnapshot(){
   const hunt=q('.hunt');if(!hunt) return;
   const card=document.createElement('section');card.id='sn59OfflineCard';card.className='sn59-offline-card';card.setAttribute('role','status');
   const clean=s=>String(s||'').replace(/[<>]/g,'');
-  card.innerHTML=`<div class="sn59-offline-top"><strong>📴 Offline noodweergave</strong><span class="stamp">Laatst bewaard ${formatSaved(snap.savedAt)}</span></div>
-    <h3>${clean(snap.title)}</h3><p>${clean(snap.village)}</p><p>${clean(snap.description)}</p>${snap.hint?`<p>${clean(snap.hint)}</p>`:''}
-    <small>Dit is alleen de laatst opgeslagen informatie op dit toestel. Starten, bevestigen en nieuwe gegevens ophalen kan pas weer met internet.</small>`;
+  card.innerHTML=`<div class="sn59-offline-top"><strong>📴 Offline noodweergave</strong><span class="stamp">Laatst bewaard ${formatSaved(snap.savedAt)}</span></div><h3>${clean(snap.title)}</h3><p>${clean(snap.village)}</p><p>${clean(snap.description)}</p>${snap.hint?`<p>${clean(snap.hint)}</p>`:''}<small>Dit is alleen de laatst opgeslagen informatie op dit toestel. Starten, bevestigen en nieuwe gegevens ophalen kan pas weer met internet.</small>`;
   hunt.insertAdjacentElement('beforebegin',card);
 }
 function installOfflineSupport(){
   saveOfflineSnapshot();renderOfflineSnapshot();
-  window.addEventListener('online',()=>{saveOfflineSnapshot();renderOfflineSnapshot();installParentExtras();},{passive:true});
-  window.addEventListener('offline',()=>{renderOfflineSnapshot();installParentExtras();},{passive:true});
+  if(!offlineHooksInstalled){
+    offlineHooksInstalled=true;
+    window.addEventListener('online',()=>{saveOfflineSnapshot();renderOfflineSnapshot();installParentExtras();},{passive:true});
+    window.addEventListener('offline',()=>{renderOfflineSnapshot();installParentExtras();},{passive:true});
+  }
   const hunt=q('.hunt');
   if(hunt&&hunt.dataset.sn59Cache!=='1'){
     hunt.dataset.sn59Cache='1';
@@ -274,9 +281,7 @@ function installOfflineSupport(){
 }
 
 function installQualitySignals(){
-  // Geen extra analytics of tracking: alleen lokale UX-status.
-  const allButtons=qa('button');
-  allButtons.forEach(b=>{
+  qa('button').forEach(b=>{
     if(!b.hasAttribute('type')) b.type='button';
     if(!b.disabled&&b.getBoundingClientRect().height>0&&b.getBoundingClientRect().height<40) b.classList.add('sn59-small-target');
   });
