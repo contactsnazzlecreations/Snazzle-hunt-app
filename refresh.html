@@ -4,19 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#0d563d">
 <title>Snazzle Hunt</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(180deg,#17684c,#083a31);color:#fff7df;font-family:system-ui,sans-serif;text-align:center}.load{padding:24px;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,.3)}.duck{font-size:58px;display:block;margin-bottom:12px}</style>
 </head>
-<body><div class="load"><span class="duck">🦆✨</span>Snazzle herstelversie v45 wordt geladen…</div>
+<body><div class="load"><span class="duck">🦆✨</span>De nieuwste Snazzle Hunt wordt geladen…</div>
 <script>
-fetch('./index.html?fresh='+Date.now(),{cache:'no-store'})
-  .then(r=>r.text())
-  .then(html=>{
-    html=html.replace('./app.js?v=9','./app.js?v=45');
-    document.open(); document.write(html); document.close();
-  })
-  .catch(()=>{document.body.innerHTML='<div class="load">Kon Snazzle Hunt niet laden. Probeer opnieuw.</div>';});
+(async()=>{
+  const stamp=Date.now();
+  try{
+    // Ruim eventuele oude Cache Storage op; veilig wanneer er niets aanwezig is.
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(key=>caches.delete(key)));
+    }
+    // Ruim eventueel ooit geregistreerde service workers op.
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(reg=>reg.unregister()));
+    }
+    const response=await fetch('./index.html?fresh='+stamp,{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+    if(!response.ok) throw new Error('index '+response.status);
+    let html=await response.text();
+    // Ongeacht welk oud versienummer in index.html staat: app.js krijgt per start een unieke URL.
+    html=html.replace(/\.\/app\.js\?v=[^\"']+/g,'./app.js?v='+stamp);
+    html=html.replace(/\.\/app\.js(?=[\"'])/g,'./app.js?v='+stamp);
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(err){
+    console.error(err);
+    document.body.innerHTML='<div class="load"><span class="duck">🦆</span>De nieuwste Snazzle Hunt kon niet worden geladen. Sluit deze pagina en open de link opnieuw.</div>';
+  }
+})();
 </script>
 </body>
 </html>
