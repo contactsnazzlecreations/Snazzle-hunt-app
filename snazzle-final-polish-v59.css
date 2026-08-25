@@ -1,0 +1,110 @@
+/* Snazzle Final Polish v59 — laatste kwaliteitslaag zonder auth/Firebase-logica te wijzigen. */
+
+:root{
+  --sn59-radius:18px;
+  --sn59-gold:#ffe071;
+  --sn59-green:#2e7d45;
+  --sn59-cream:#fff8e7;
+  --sn59-ink:#2d241b;
+}
+
+/* De app komt rustig in beeld nadat de initiële modules klaar zijn. */
+body.sn-v59-booting .app{opacity:.001}
+body .app{transition:opacity .24s ease}
+body.sn-v59-ready .app{opacity:1}
+
+/* De echte bootsplash wordt al vóór de zware modules opgebouwd. */
+#snV59Boot.sn-v59-boot{
+  position:fixed;inset:0;z-index:14000;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 27%,rgba(180,233,97,.24),transparent 28%),linear-gradient(180deg,#0d5b39,#052f20);
+  color:#fff8df;transition:opacity .28s ease,visibility .28s ease;
+}
+#snV59Boot.sn-v59-boot.hide{opacity:0;visibility:hidden;pointer-events:none}
+#snV59Boot .sn-v59-boot-inner{text-align:center;padding:28px;max-width:310px}
+#snV59Boot .sn-v59-boot-mark{
+  width:96px;height:96px;margin:0 auto 17px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(145deg,#ffe675,#f5b536);border:4px solid #8d5d28;
+  box-shadow:0 9px 0 #51331c,0 18px 38px rgba(0,0,0,.28);font-size:46px;
+  animation:sn59BootFloat 1.8s ease-in-out infinite;
+}
+#snV59Boot h1{margin:0;color:#ffd75a;font-size:34px;letter-spacing:.5px;text-shadow:0 3px #4b2c18}
+#snV59Boot p{margin:7px 0 0;color:#dff3c5;font-weight:850}
+#snV59Boot small{display:block;margin-top:13px;color:#fff0ba;font-weight:750;opacity:.86}
+#snV59Boot .sn-v59-boot-line{width:128px;height:4px;border-radius:99px;margin:15px auto 0;background:rgba(255,255,255,.16);overflow:hidden}
+#snV59Boot .sn-v59-boot-line:after{content:"";display:block;width:42%;height:100%;border-radius:inherit;background:#ffe278;animation:sn59Load 1.05s ease-in-out infinite}
+@keyframes sn59BootFloat{0%,100%{transform:translateY(1px) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
+@keyframes sn59Load{0%{transform:translateX(-120%)}100%{transform:translateX(340%)}}
+
+/* Afbeeldingen laden niet meer hard in maar vloeien rustig in. */
+img.sn59-media{opacity:1;transition:opacity .22s ease,filter .22s ease}
+img.sn59-media.sn59-loading{opacity:.2;filter:blur(3px)}
+img.sn59-media.sn59-loaded{opacity:1;filter:none}
+.sn59-media-shell{position:relative;overflow:hidden}
+.sn59-media-shell.sn59-waiting:before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(105deg,rgba(255,255,255,.04) 15%,rgba(255,255,255,.16) 42%,rgba(255,255,255,.04) 70%);
+  background-size:230% 100%;animation:sn59Shimmer 1.25s linear infinite;
+}
+@keyframes sn59Shimmer{to{background-position:-230% 0}}
+
+/* Actieve navigatie voelt als een echte app. */
+.bottom button.sn59-nav-active{color:#fff5b6!important;position:relative}
+.bottom button.sn59-nav-active b{transform:translateY(-2px) scale(1.07);filter:drop-shadow(0 3px 2px rgba(0,0,0,.28))}
+.bottom button.sn59-nav-active:after{
+  content:"";display:block;width:22px;height:3px;border-radius:99px;background:#ffe071;margin:4px auto 0;
+  box-shadow:0 0 9px rgba(255,224,113,.55);
+}
+
+/* Hunt: één duidelijke status en premium mini-missie. */
+.sn59-hunt-status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 9px}
+.sn59-hunt-badge{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:6px 9px;border-radius:999px;background:rgba(255,246,210,.13);border:1px solid rgba(255,235,168,.35);color:#fff1bd;font-size:10px;font-weight:1000;letter-spacing:.35px;text-transform:uppercase}
+.sn59-hunt-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:#ffd55a;box-shadow:0 0 0 4px rgba(255,213,90,.12)}
+.sn59-hunt-badge.searching:before{background:#7fd354;box-shadow:0 0 0 4px rgba(127,211,84,.14)}
+.sn59-hunt-badge.ready:before{background:#ffb33e;box-shadow:0 0 0 4px rgba(255,179,62,.15)}
+.sn59-hunt-badge.done:before{background:#9ee66b;box-shadow:0 0 0 4px rgba(158,230,107,.16)}
+.sn59-hunt-mini{font-size:9px;font-weight:800;color:#f1dfb6;text-align:right}
+.sn59-adventure-flash{animation:sn59Adventure .65s ease}
+@keyframes sn59Adventure{0%{box-shadow:0 0 0 rgba(255,222,103,0)}45%{box-shadow:0 0 0 6px rgba(255,222,103,.16),0 0 28px rgba(255,222,103,.22)}100%{box-shadow:0 0 0 rgba(255,222,103,0)}}
+
+/* Offline: recente hunt-informatie blijft leesbaar, maar kan niet per ongeluk als live worden gezien. */
+.sn59-offline-card{
+  margin:13px 0 15px;padding:14px;border-radius:18px;background:linear-gradient(145deg,#544938,#3b342b);
+  color:#fff8e5;border:2px solid #c8ad78;box-shadow:0 6px 18px rgba(0,0,0,.2);
+}
+.sn59-offline-card .sn59-offline-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+.sn59-offline-card strong{color:#ffe395;font-size:14px}.sn59-offline-card .stamp{font-size:9px;font-weight:900;color:#ddd0ad;text-transform:uppercase;letter-spacing:.55px}
+.sn59-offline-card h3{margin:4px 0 5px;font-size:19px;color:white}.sn59-offline-card p{margin:4px 0;color:#f1e8d1;font-size:12px;line-height:1.42}.sn59-offline-card small{display:block;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.14);color:#d9cba9;font-weight:780;line-height:1.35}
+
+/* Ouders: compacte technische status + veilige speelafspraken. */
+.sn59-parent-safety{margin:14px 0;padding:13px;border-radius:17px;background:#fffaf0;border:1px solid #d1b77e;color:#493824}
+.sn59-parent-safety h3{margin:0 0 8px;color:#23573a;font-size:14px}
+.sn59-parent-check{display:grid;grid-template-columns:22px 1fr;gap:7px;align-items:start;margin:7px 0;font-size:11px;font-weight:750;line-height:1.35;color:#675239}
+.sn59-parent-check b{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#dff0be;color:#2d6a35;font-size:11px}
+.sn59-tech-status{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 3px}
+.sn59-tech-chip{padding:8px 5px;border-radius:12px;background:#f2e6c5;border:1px solid #d1b77e;text-align:center;color:#5d492f;font-size:9px;font-weight:850;line-height:1.25}
+.sn59-tech-chip b{display:block;color:#26593b;font-size:10px;margin-bottom:2px}
+
+/* Nieuws: leestijd en rustige focus. */
+.sn-news-readtime{margin-left:auto;margin-right:6px;color:#ffe7a4;font-size:10px;font-weight:850;white-space:nowrap;opacity:.88}
+.sn-news-page.sn59-page-focus{outline:none}
+.sn-news-page.sn59-page-focus:focus-visible{box-shadow:inset 0 0 0 3px rgba(98,74,43,.26)}
+
+/* Meer consistentie in kaartjes, velden en touch targets. */
+.panel button,.quick-menu-list button,.sn-parent-panel button{touch-action:manipulation}
+.bottom button{min-height:48px}
+.quick-menu-list button{min-height:58px}
+.field input,.field textarea,.field select{font-size:16px!important}
+
+/* Zeer kleine schermen blijven rustig. */
+@media(max-width:390px){
+  .sn59-tech-status{grid-template-columns:1fr}
+  .sn59-hunt-status-row{align-items:flex-start;flex-direction:column}
+  .sn59-hunt-mini{text-align:left}
+}
+
+@media(prefers-reduced-motion:reduce){
+  #snV59Boot .sn-v59-boot-mark,#snV59Boot .sn-v59-boot-line:after,.sn59-media-shell.sn59-waiting:before{animation:none!important}
+}
+html.sn-reduced-motion #snV59Boot .sn-v59-boot-mark,
+html.sn-reduced-motion #snV59Boot .sn-v59-boot-line:after,
+html.sn-reduced-motion .sn59-media-shell.sn59-waiting:before{animation:none!important}
