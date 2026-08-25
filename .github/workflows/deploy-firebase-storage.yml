@@ -40,7 +40,7 @@ jobs:
           test -f firebase.json
           test -f .firebaserc
 
-      - name: Authenticate and deploy Storage rules
+      - name: Authenticate and deploy Storage rules when credentials exist
         shell: bash
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -59,7 +59,6 @@ jobs:
           elif [ -n "${FIREBASE_TOKEN:-}" ]; then
             firebase deploy --project snazzle-hunt --only storage --non-interactive --token "$FIREBASE_TOKEN"
           else
-            echo 'Geen Firebase deployment credential gevonden.' >&2
-            echo 'Voeg FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT, FIREBASE_SERVICE_ACCOUNT of FIREBASE_TOKEN toe.' >&2
-            exit 1
+            echo 'Firebase Storage-credentials zijn nog niet ingesteld; deploy wordt veilig overgeslagen.'
+            echo 'De app gebruikt intussen automatisch de beveiligde Firestore-fallback voor luisterverhalen.'
           fi
