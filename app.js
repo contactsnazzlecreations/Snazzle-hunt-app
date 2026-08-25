@@ -21,6 +21,8 @@ document.head.appendChild(enchantedTheme);
 await import(fresh('./app-core.js'));
 // v51: controleert automatisch op nieuwe GitHub-versies en vernieuwt veilig zonder oude cache.
 await import(fresh('./snazzle-auto-update-v51.js'));
+// v52: openbaar privacybeleid + duidelijke privacy- en kindveiligheidslinks in de app.
+await import(fresh('./snazzle-privacy-v52.js'));
 // v48: logo en hoofdafbeeldingen centraal delen zodat ieder toestel hetzelfde uiterlijk ziet.
 await import(fresh('./snazzle-central-assets-v48.js'));
 // v49: veilige beheer-wachtwoordreset via Firebase Auth.
