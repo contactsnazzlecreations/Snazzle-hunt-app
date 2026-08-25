@@ -1,0 +1,33 @@
+name: Fix Snazzle News admin v46.1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-snazzle-news-admin-v461.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Apply hotfix
+        run: python .github/scripts/fix_snazzle_news_admin_v461.py
+
+      - name: Commit hotfix
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add snazzle-news-v46.js app.js index.html
+          git commit -m "Fix Snazzle News admin mounting"
+          git push
