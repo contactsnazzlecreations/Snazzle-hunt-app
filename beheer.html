@@ -56,7 +56,9 @@ async function enterIfAdmin(user){
   if(profile?.active===true){
     try{localStorage.setItem('snazzleAdminEmail',user.email||email.value.trim());}catch{}
     setStatus('Inloggen gelukt. Beheer wordt geopend…','ok');
-    setTimeout(()=>location.replace('./?beheer=1&v=57'),450);
+    // Gebruik de auth-bewuste eenmalige beheerroute. Deze ruimt zichzelf daarna op,
+    // zodat een volgende start gewoon op Home uitkomt.
+    setTimeout(()=>location.replace('./?veiligbeheer=1'),450);
     return true;
   }
   return false;
