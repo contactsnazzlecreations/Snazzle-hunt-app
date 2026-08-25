@@ -1,0 +1,33 @@
+name: Snazzle News storage v46.2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/snazzle-news-v462-storage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Apply compatible central storage
+        run: python .github/scripts/snazzle_news_v462_storage.py
+
+      - name: Commit compatibility patch
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add snazzle-news-v46.js app.js index.html
+          git commit -m "Use existing central storage for Snazzle News"
+          git push
