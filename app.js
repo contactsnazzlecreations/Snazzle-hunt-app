@@ -78,10 +78,12 @@ await import(fresh('./snazzle-news-v46.js'));
 await import(fresh('./snazzle-world-hub-v47.js'));
 // v54: alle oudere lokale beeldkeuzes veilig naar centraal beeldbeheer migreren en op elk toestel synchroniseren.
 await import(fresh('./snazzle-central-visuals-v54.js'));
-// v55: robuuste directe beheerknop, ook op mobiele browsers met overlappende presentatielagen.
+// v55: extra mobiele beheercompatibiliteit.
 await import(fresh('./snazzle-admin-access-v55.js'));
-// v53: laatste professionele polish pas laden nadat de bestaande schermen zijn opgebouwd.
+// v53: laatste professionele polish nadat de bestaande schermen zijn opgebouwd.
 await import(fresh('./snazzle-professional-v53.js'));
+// v56: volledig onafhankelijke beheer-ingang als allerlaatste laag; ondersteunt ook ?beheer=1.
+await import(fresh('./snazzle-admin-access-v56.js'));
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
