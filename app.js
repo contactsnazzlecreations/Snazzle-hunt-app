@@ -52,6 +52,8 @@ import './snazzle-season-theme-v38.js?v=38';
 import './snazzle-world-theme-v39.js?v=39';
 // v46: Het Snazzle Nieuws — interactieve krant met centraal paginabeheer.
 import './snazzle-news-v46.js?v=462';
+// v47: één rustige Snazzle Wereld-hub met privé kamer, missies, verhalen, badges, TV, mascotte, geheimen en seizoen.
+import './snazzle-world-hub-v47.js?v=47';
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
