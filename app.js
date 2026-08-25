@@ -76,6 +76,8 @@ await import(fresh('./snazzle-world-theme-v39.js'));
 await import(fresh('./snazzle-news-v46.js'));
 // v47: één rustige Snazzle Wereld-hub met privé kamer, missies, verhalen, badges, TV, mascotte, geheimen en seizoen.
 await import(fresh('./snazzle-world-hub-v47.js'));
+// v54: alle oudere lokale beeldkeuzes veilig naar centraal beeldbeheer migreren en op elk toestel synchroniseren.
+await import(fresh('./snazzle-central-visuals-v54.js'));
 // v53: laatste professionele polish pas laden nadat de bestaande schermen zijn opgebouwd.
 await import(fresh('./snazzle-professional-v53.js'));
 
