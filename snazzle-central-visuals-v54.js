@@ -172,11 +172,17 @@ async function applyRemoteSnapshot(snapshot){
 
   const local=await allLocal();
   let changed=false;
+  let adminRecoveryNeeded=false;
   for(const [key,remote] of remoteMap){
     if(remote.cleared){
       if(local.has(key)){
-        await deleteLocal(key);
-        changed=true;
+        if(superAdmin){
+          // Een nog aanwezige oude beheer-kopie is een herstelbron en wordt niet meer stil verwijderd.
+          adminRecoveryNeeded=true;
+        }else{
+          await deleteLocal(key);
+          changed=true;
+        }
       }
       continue;
     }
@@ -186,6 +192,7 @@ async function applyRemoteSnapshot(snapshot){
     }
   }
   remoteReady=true;
+  if(adminRecoveryNeeded) setTimeout(()=>pushLocalSnapshot({propagateDeletes:false}),120);
   if(changed) queueVisualReload();
 }
 
@@ -209,16 +216,16 @@ async function isCurrentUserSuperAdmin(user){
 }
 
 async function migrateExistingLocal(user){
-  if(!superAdmin) return;
+  if(!superAdmin) return 0;
+  let uploaded=0;
   try{
     const local=await allLocal();
-    if(!local.size) return;
+    if(!local.size) return 0;
     const remote=await readRemoteOnce();
-    let uploaded=0;
     for(const [key,raw] of local){
       const current=remote.get(key);
-      // Bestaande centrale keuze is leidend. Alleen ontbrekende oude keuzes migreren.
-      if(current && (current.dataUrl || current.cleared)) continue;
+      // Alleen een werkelijk bestaand cloudbeeld is leidend. Een oude clear mag een lokale beheer-kopie herstellen.
+      if(current?.dataUrl) continue;
       const dataUrl=await cloudSafe(raw);
       await setDoc(visualRef(key),{
         purpose:PURPOSE,
@@ -227,7 +234,8 @@ async function migrateExistingLocal(user){
         cleared:false,
         updatedAt:new Date().toISOString(),
         updatedBy:user.uid,
-        migratedFromLocal:true
+        migratedFromLocal:true,
+        recoveredFromLegacyLocal:current?.cleared===true
       });
       uploaded++;
     }
@@ -235,14 +243,16 @@ async function migrateExistingLocal(user){
   }catch(err){
     console.warn('Snazzle v54 migratie',err);
   }
+  return uploaded;
 }
 
 async function pushLocalSnapshot({propagateDeletes=false}={}){
-  if(!superAdmin || pushing) return;
+  if(!superAdmin || pushing) return 0;
   pushing=true;
+  let uploaded=0;
   try{
     const user=auth.currentUser;
-    if(!user) return;
+    if(!user) return 0;
     const local=await allLocal();
     const remote=remoteReady ? remoteMap : await readRemoteOnce();
     for(const [key,raw] of local){
@@ -255,8 +265,10 @@ async function pushLocalSnapshot({propagateDeletes=false}={}){
         dataUrl,
         cleared:false,
         updatedAt:new Date().toISOString(),
-        updatedBy:user.uid
+        updatedBy:user.uid,
+        recoveredFromLegacyLocal:current?.cleared===true
       });
+      uploaded++;
     }
     if(propagateDeletes && remoteReady){
       for(const [key,current] of remote){
@@ -277,6 +289,7 @@ async function pushLocalSnapshot({propagateDeletes=false}={}){
   }finally{
     pushing=false;
   }
+  return uploaded;
 }
 
 function schedulePush(options){
@@ -299,8 +312,8 @@ function watchAdminImageEdits(){
 }
 
 function startRemoteListener(){
-  const q=query(collection(db,COLLECTION),where('purpose','==',PURPOSE));
-  onSnapshot(q,snapshot=>{
+  const visualQuery=query(collection(db,COLLECTION),where('purpose','==',PURPOSE));
+  onSnapshot(visualQuery,snapshot=>{
     applyRemoteSnapshot(snapshot).catch(err=>console.warn('Snazzle v54 toepassen',err));
   },err=>console.warn('Snazzle v54 centrale beelden niet geladen',err));
 }
@@ -316,5 +329,10 @@ watchAdminImageEdits();
 window.SnazzleVisualSyncV54={
   push:()=>pushLocalSnapshot({propagateDeletes:false}),
   pushAndClean:()=>pushLocalSnapshot({propagateDeletes:true}),
+  recover:async()=>{
+    const user=auth.currentUser;
+    if(!user||!superAdmin) return 0;
+    return migrateExistingLocal(user);
+  },
   local:allLocal
 };
