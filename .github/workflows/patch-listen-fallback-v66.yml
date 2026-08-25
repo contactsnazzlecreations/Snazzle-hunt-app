@@ -1,0 +1,51 @@
+name: Patch luisterverhaal fallback v66
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-listen-fallback-v66.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-listen-fallback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gebruik bestaande toegestane Firestore collectie voor audioblokken
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('snazzle-listen-stories-v63.js')
+          text = p.read_text(encoding='utf-8')
+          old = "const CHUNK_COLLECTION='shopMailConfig', CHUNK_TYPE='snazzleAudioChunk';"
+          new = "const CHUNK_COLLECTION='villages', CHUNK_TYPE='snazzleAudioChunk';"
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('Verwachte CHUNK_COLLECTION regel niet gevonden')
+          p.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit wijziging
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- snazzle-listen-stories-v63.js; then
+            echo 'Wijziging was al aanwezig.'
+            exit 0
+          fi
+          git config user.name 'Snazzle App Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add snazzle-listen-stories-v63.js
+          git commit -m 'Fix luisterverhaal reserve-opslag zonder Firebase deploy'
+          git push origin HEAD:main
