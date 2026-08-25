@@ -19,6 +19,8 @@ document.head.appendChild(enchantedTheme);
 
 // Belangrijk: lokaal alles met exact dezelfde runtimeVersion laden.
 await import(fresh('./app-core.js'));
+// v48: logo en hoofdafbeeldingen centraal delen zodat ieder toestel hetzelfde uiterlijk ziet.
+await import(fresh('./snazzle-central-assets-v48.js'));
 await import(fresh('./shop-compat.js'));
 await import(fresh('./kids-fun.js'));
 await import(fresh('./snazzle-route.js'));
