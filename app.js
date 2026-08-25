@@ -112,6 +112,8 @@ await import(fresh('./snazzle-news-v46.js'));
 await import(fresh('./snazzle-world-hub-v47.js'));
 // v62: duidelijke ingang naar het Snazzle Spel terug in het gewone menu.
 await import(fresh('./snazzle-game-menu-v62.js'));
+// v63: Snazzle Luisterverhalen met themakaarten en MP3-speler.
+await import(fresh('./snazzle-listen-stories-v63.js'));
 // v54: alle oudere lokale beeldkeuzes veilig naar centraal beeldbeheer migreren en op elk toestel synchroniseren.
 await import(fresh('./snazzle-central-visuals-v54.js'));
 // v60: zichtbare herstelhulp voor oude lokale beeldkeuzes; alleen Hoofdbeheer kan naar centraal herstellen.
