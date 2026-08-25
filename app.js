@@ -138,7 +138,8 @@ const optionalModules=[
   './snazzle-admin-access-v56.js',
   './snazzle-safe-admin-v58.js',
   './snazzle-final-polish-v59.js',
-  './snazzle-star-rewards-v67.js'
+  './snazzle-star-rewards-v67.js',
+  './snazzle-quiet-psst-v68.js'
 ];
 for(const modulePath of optionalModules){
   await safeImport(modulePath);
