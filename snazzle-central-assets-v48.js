@@ -106,7 +106,7 @@ async function saveCentralValue(key,src,extra={}){
 }
 async function saveCentralAsset(key,file){
   let src='';
-  try{src=await compressFile(file,key==='introImage'?560:800,key==='introImage'?.8:.72);}catch(err){toast(err?.message||'Afbeelding kon niet worden gelezen');return;}
+  try{src=await compressFile(file,key==='introImage'?560:800,key==='introImage' ? .8 : .72);}catch(err){toast(err?.message||'Afbeelding kon niet worden gelezen');return;}
   try{
     const saved=await saveCentralValue(key,src);
     if(saved) toast(key==='introImage'?'Intro-afbeelding centraal opgeslagen ✅':'Afbeelding centraal opgeslagen ✅');
