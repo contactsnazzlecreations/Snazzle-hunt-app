@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return signedIn() &&
+        firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
+        firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.uid)).data.role == "superadmin";
+    }
+
+    match /listen-stories/audio/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isSuperAdmin() &&
+        request.auth.uid == uid &&
+        request.resource.size <= 60 * 1024 * 1024 &&
+        request.resource.contentType == "audio/mpeg";
+      allow delete: if isSuperAdmin() && request.auth.uid == uid;
+    }
+
+    match /listen-stories/images/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isSuperAdmin() &&
+        request.auth.uid == uid &&
+        request.resource.size <= 8 * 1024 * 1024 &&
+        request.resource.contentType.matches("image/.*");
+      allow delete: if isSuperAdmin() && request.auth.uid == uid;
+    }
+
+    // Alles buiten de specifieke luisterverhalen-mappen blijft standaard gesloten.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
