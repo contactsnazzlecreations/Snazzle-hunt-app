@@ -30,7 +30,18 @@ service firebase.storage {
       allow delete: if isSuperAdmin() && request.auth.uid == uid;
     }
 
-    // Alles buiten de specifieke luisterverhalen-mappen blijft standaard gesloten.
+    // De Bieb: iedere gebruiker bewaart alleen eigen boekkaften.
+    // De foto's zijn niet openbaar doorzoekbaar en maximaal 1 MB per kaft.
+    match /bieb/covers/{uid}/{fileName} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.size <= 1024 * 1024 &&
+        request.resource.contentType.matches("image/.*");
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Alles buiten de specifieke mappen blijft standaard gesloten.
     match /{allPaths=**} {
       allow read, write: if false;
     }
