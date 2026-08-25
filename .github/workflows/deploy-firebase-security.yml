@@ -1,4 +1,4 @@
-name: Deploy Firebase Security
+name: Deploy Firebase + Hosting
 
 on:
   push:
@@ -8,6 +8,9 @@ on:
       - 'firestore.rules'
       - 'firebase.json'
       - '.firebaserc'
+      - '*.html'
+      - '*.js'
+      - '*.css'
       - '.github/workflows/deploy-firebase-security.yml'
   workflow_dispatch:
 
@@ -43,11 +46,14 @@ jobs:
           node --check functions/bootstrap.js
           node --check functions/index.js
           node --check functions/hunt-codes.js
+          node --check app.js
+          node --check snazzle-central-assets-v48.js
+          test -f index.html
           test -f firestore.rules
           test -f firebase.json
           test -f .firebaserc
 
-      - name: Authenticate and deploy security backend
+      - name: Authenticate and deploy backend + website
         shell: bash
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -62,13 +68,10 @@ jobs:
             printf '%s' "$SA_JSON" > "$CREDS"
             chmod 600 "$CREDS"
             export GOOGLE_APPLICATION_CREDENTIALS="$CREDS"
-            firebase deploy --project snazzle-hunt --only firestore:rules,functions --non-interactive
+            firebase deploy --project snazzle-hunt --only hosting,firestore:rules,functions --non-interactive
           elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            firebase deploy --project snazzle-hunt --only firestore:rules,functions --non-interactive --token "$FIREBASE_TOKEN"
+            firebase deploy --project snazzle-hunt --only hosting,firestore:rules,functions --non-interactive --token "$FIREBASE_TOKEN"
           else
             echo 'Geen Firebase deployment credential gevonden.' >&2
-            echo 'Voeg een repository secret FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT, FIREBASE_SERVICE_ACCOUNT of FIREBASE_TOKEN toe.' >&2
             exit 1
           fi
-
-# Security deploy trigger: 2026-08-25 Snazzle Nieuws v46
