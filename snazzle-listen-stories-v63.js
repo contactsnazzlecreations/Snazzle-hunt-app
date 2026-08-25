@@ -1,22 +1,20 @@
-// Snazzle v63 — luisterverhalen met directe MP3- en afbeeldingsupload.
-// Firebase Storage is de voorkeursopslag. Als Storage nog niet is geactiveerd,
-// valt de app automatisch terug op een reeds beveiligde Firestore-opslagroute.
+// Snazzle v63 — luisterverhalen met robuuste MP3- en afbeeldingsupload.
+// Afbeeldingen worden compact rechtstreeks in Firestore opgeslagen, zodat Firebase Storage
+// de beheerder nooit meer kan laten vastlopen. Audio gebruikt Storage met automatische fallback.
 
 import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import {
-  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc,
   onSnapshot, query, where, writeBatch, Bytes
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 import {
-  getStorage, ref as storageRef, uploadBytes, uploadBytesResumable,
+  getStorage, ref as storageRef, uploadBytesResumable,
   getDownloadURL, deleteObject
 } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
 
 const app=getApp(), auth=getAuth(app), db=getFirestore(app), storage=getStorage(app);
 const COLLECTION='villages', TYPE='snazzleAudioStory';
-// Deze bestaande, afgeschermde collectie wordt uitsluitend als fallback voor audioblokken gebruikt.
-// Zo werkt uploaden direct, ook zolang de Storage-regels nog niet via CI kunnen worden uitgerold.
 const CHUNK_COLLECTION='villages', CHUNK_TYPE='snazzleAudioChunk';
 const MAX_AUDIO_BYTES=60*1024*1024;
 const MAX_FALLBACK_AUDIO_BYTES=30*1024*1024;
@@ -68,7 +66,9 @@ function ensureSheet(){
   const sheet=document.createElement('div');
   sheet.className='sheet';sheet.id='snListenSheet';sheet.setAttribute('aria-hidden','true');
   sheet.innerHTML=`<div class="panel sn-listen-panel"><div class="sn-listen-top"><button type="button" id="snListenClose" aria-label="Luisterverhalen sluiten">×</button><h2>Snazzle Luisterverhalen<small>tik • luister • droom mee</small></h2><div></div></div><section class="sn-listen-intro"><strong>🎧 Kies een verhaal</strong><p>Tik op een afbeelding en luister naar het avontuur. Pauzeren en verder luisteren kan met de speler.</p></section><section class="sn-listen-player" id="snListenPlayer"></section><div class="sn-listen-grid" id="snListenGrid"></div><div class="sn-listen-empty" id="snListenEmpty">De eerste Snazzle luisterverhalen komen hier te staan. 🎙️🦆</div></div>`;
-  document.body.appendChild(sheet);$('#snListenClose').onclick=closeSheet;sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet();});
+  document.body.appendChild(sheet);
+  $('#snListenClose').onclick=closeSheet;
+  sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet();});
 }
 function revokeAudioObjectUrl(){if(activeAudioObjectUrl){try{URL.revokeObjectURL(activeAudioObjectUrl);}catch{}activeAudioObjectUrl='';}}
 function openSheet(){ensureSheet();renderStories();const s=$('#snListenSheet');s.classList.add('show');s.setAttribute('aria-hidden','false');s.querySelector('.panel').scrollTop=0;}
@@ -87,7 +87,9 @@ async function loadFallbackAudio(item){
 async function playStory(item){
   ensureSheet();revokeAudioObjectUrl();
   const box=$('#snListenPlayer'),image=item.imageUrl?`<img src="${esc(item.imageUrl)}" alt="${esc(item.title)}">`:'';
-  box.classList.add('show');box.innerHTML=`${image}<h3>${esc(item.title)}</h3><p>${esc(item.theme||'Snazzle verhaal')}</p><div class="sn-listen-loading">🎧 Verhaal wordt klaargezet…</div>`;box.scrollIntoView({behavior:'smooth',block:'start'});
+  box.classList.add('show');
+  box.innerHTML=`${image}<h3>${esc(item.title)}</h3><p>${esc(item.theme||'Snazzle verhaal')}</p><div class="sn-listen-loading">🎧 Verhaal wordt klaargezet…</div>`;
+  box.scrollIntoView({behavior:'smooth',block:'start'});
   try{
     let src=item.audioUrl||'';
     if(!src&&item.audioMode==='firestore'){
@@ -101,76 +103,94 @@ async function playStory(item){
 }
 function renderStories(){
   ensureSheet();const grid=$('#snListenGrid'),empty=$('#snListenEmpty');grid.innerHTML='';
-  const visible=items.filter(x=>x.enabled!==false&&hasAudio(x)).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));empty.style.display=visible.length?'none':'block';
+  const visible=items.filter(x=>x.enabled!==false&&hasAudio(x)).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+  empty.style.display=visible.length?'none':'block';
   visible.forEach(item=>{const b=document.createElement('button');b.type='button';b.className='sn-listen-card';b.setAttribute('aria-label',`Luister naar ${item.title||'verhaal'}`);b.innerHTML=`<div class="sn-listen-cover">${item.imageUrl?`<img src="${esc(item.imageUrl)}" alt="">`:'🎧'}</div><div class="sn-listen-copy"><small>${esc(item.theme||'Luisterverhaal')}</small><strong>${esc(item.title||'Snazzle verhaal')}</strong><span>▶ Tik om te luisteren</span></div>`;b.onclick=()=>playStory(item);grid.appendChild(b);});
 }
 
 function installMenuButton(){
   const list=$('#quickMenuPanel .quick-menu-list');if(!list||$('#snListenMenuV63'))return;
-  const b=document.createElement('button');b.type='button';b.id='snListenMenuV63';b.innerHTML='<b>🎧</b><span><strong>Luisterverhalen</strong><small>Kies een verhaal en luister</small></span><i>›</i>';b.onclick=e=>{e.preventDefault();e.stopPropagation();try{$('#quickMenuClose')?.click();}catch{}setTimeout(openSheet,70);};
+  const b=document.createElement('button');b.type='button';b.id='snListenMenuV63';b.innerHTML='<b>🎧</b><span><strong>Luisterverhalen</strong><small>Kies een verhaal en luister</small></span><i>›</i>';
+  b.onclick=e=>{e.preventDefault();e.stopPropagation();try{$('#quickMenuClose')?.click();}catch{}setTimeout(openSheet,70);};
   const game=$('#snazzleGameMenuV62');if(game?.nextSibling)list.insertBefore(b,game.nextSibling);else if(game)list.appendChild(b);else list.appendChild(b);
 }
 
 function adminSectionMarkup(){return `<h3>🎧 Snazzle Luisterverhalen</h3><div class="sn-listen-admin-note">Voeg hier zelf luisterverhalen toe. Kies een afbeelding en een MP3 rechtstreeks vanaf je telefoon of computer en druk op Opslaan.</div><div class="sn-listen-admin-list" id="snListenAdminList"></div><button type="button" class="save" id="snListenNew">+ Nieuw luisterverhaal</button><div id="snListenEditor" hidden></div>`;}
 function selectAdminSection(tab,section){$$('#adminSheet [data-tab],#adminSheet [data-news-tab],#adminSheet [data-sn47-tab-admin],#adminSheet [data-sn-listen-tab]').forEach(b=>b.classList.remove('on'));$$('#adminSheet .admin-section').forEach(s=>s.classList.remove('on'));tab.classList.add('on');section.classList.add('on');renderAdmin();}
 function ensureAdminUI(){
-  if(!isSuperAdmin||$('#snListenAdminV63'))return;const superOnly=$('#adminSheet .super-only'),tabs=$('#adminSheet .super-only .tabs');
-  if(superOnly&&tabs){const tab=document.createElement('button');tab.type='button';tab.dataset.snListenTab='snListenAdminV63';tab.textContent='Luister 🎧';tabs.appendChild(tab);const section=document.createElement('section');section.className='admin-section sn-listen-admin';section.id='snListenAdminV63';section.innerHTML=adminSectionMarkup();superOnly.appendChild(section);tab.onclick=()=>selectAdminSection(tab,section);}else{const host=$('#sn47Admin');if(!host)return;const section=document.createElement('section');section.className='sn-listen-admin';section.id='snListenAdminV63';section.innerHTML=adminSectionMarkup();host.appendChild(section);}
+  if(!isSuperAdmin||$('#snListenAdminV63'))return;
+  const superOnly=$('#adminSheet .super-only'),tabs=$('#adminSheet .super-only .tabs');
+  if(superOnly&&tabs){
+    const tab=document.createElement('button');tab.type='button';tab.dataset.snListenTab='snListenAdminV63';tab.textContent='Luister 🎧';tabs.appendChild(tab);
+    const section=document.createElement('section');section.className='admin-section sn-listen-admin';section.id='snListenAdminV63';section.innerHTML=adminSectionMarkup();superOnly.appendChild(section);tab.onclick=()=>selectAdminSection(tab,section);
+  }else{
+    const host=$('#sn47Admin');if(!host)return;const section=document.createElement('section');section.className='sn-listen-admin';section.id='snListenAdminV63';section.innerHTML=adminSectionMarkup();host.appendChild(section);
+  }
   $('#snListenNew').onclick=()=>openEditor('');renderAdmin();
 }
 function renderAdmin(){
-  if(!isSuperAdmin||!$('#snListenAdminList'))return;const list=$('#snListenAdminList');list.innerHTML='';const real=items.slice().sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+  if(!isSuperAdmin||!$('#snListenAdminList'))return;
+  const list=$('#snListenAdminList');list.innerHTML='';
+  const real=items.slice().sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
   if(!real.length)list.innerHTML='<div class="sn-listen-admin-row"><strong>Nog geen verhalen</strong><small>Tik op “Nieuw luisterverhaal” om te beginnen.</small></div>';
   real.forEach(item=>{const r=document.createElement('div');r.className='sn-listen-admin-row';r.innerHTML=`<strong>${esc(item.title||'Luisterverhaal')}</strong><small>${esc(item.theme||'Geen thema')} · ${item.enabled===false?'verborgen':'zichtbaar'} · ${hasAudio(item)?'MP3 klaar':'geen MP3'}</small><div class="sn-listen-admin-actions"><button type="button" data-edit="${item.id}">Bewerken</button><button type="button" data-delete="${item.id}">Verwijderen</button></div>`;r.querySelector('[data-edit]').onclick=()=>openEditor(item.id);r.querySelector('[data-delete]').onclick=()=>removeItem(item.id);list.appendChild(r);});
 }
 function setEditorProgress(text,error=false){const p=$('#snListenProgress');if(!p)return;p.textContent=text;p.classList.toggle('error',error);}
 function openEditor(id){
-  editingId=id;pendingImageFile=null;pendingAudioFile=null;removeCurrentImage=false;const item=items.find(x=>x.id===id)||{},ed=$('#snListenEditor');if(!ed)return;ed.hidden=false;
+  editingId=id;pendingImageFile=null;pendingAudioFile=null;removeCurrentImage=false;
+  const item=items.find(x=>x.id===id)||{},ed=$('#snListenEditor');if(!ed)return;ed.hidden=false;
   const currentImage=item.imageUrl?`<div class="sn-listen-current" id="snListenCurrentImage"><img src="${esc(item.imageUrl)}" alt=""><span>Huidige afbeelding blijft staan als je geen nieuwe kiest.</span></div><button type="button" class="secondary sn-listen-clear" id="snListenRemoveImage">Huidige afbeelding verwijderen</button>`:'<div class="sn-listen-current" id="snListenCurrentImage"><span>Nog geen afbeelding.</span></div>';
   const currentAudio=hasAudio(item)?'<div class="sn-listen-current"><span>✓ Huidige MP3 blijft staan als je geen nieuwe kiest.</span></div>':'<div class="sn-listen-current"><span>Nog geen MP3 gekozen.</span></div>';
   ed.innerHTML=`<h4>${id?'Luisterverhaal bewerken':'Nieuw luisterverhaal'}</h4><div class="field"><label>Titel</label><input id="snListenTitle" maxlength="100" value="${esc(item.title||'')}"></div><div class="field"><label>Thema</label><input id="snListenTheme" maxlength="60" placeholder="Bijv. Halloween, Middeleeuwen, Kerst" value="${esc(item.theme||'')}"></div><label class="sn-listen-file"><b>🖼️ Afbeelding kiezen</b><input id="snListenImageFile" type="file" accept="image/*">${currentImage}</label><label class="sn-listen-file"><b>🎧 MP3 kiezen</b><input id="snListenAudioFile" type="file" accept=".mp3,audio/mpeg,audio/mp3">${currentAudio}</label><label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-weight:900"><input id="snListenEnabled" type="checkbox" ${item.enabled!==false?'checked':''}> Zichtbaar in de app</label><div id="snListenProgress" class="sn-listen-progress">${id?'Kies alleen nieuwe bestanden als je ze wilt vervangen.':'Kies een MP3; een afbeelding is optioneel.'}</div><div class="sn-listen-editor-actions"><button type="button" class="save" id="snListenSave">Opslaan</button><button type="button" class="secondary" id="snListenCancel">Annuleren</button></div>`;
-  $('#snListenImageFile').onchange=e=>{pendingImageFile=e.target.files?.[0]||null;removeCurrentImage=false;if(pendingImageFile)setEditorProgress(`Afbeelding gekozen: ${pendingImageFile.name}`);};$('#snListenAudioFile').onchange=e=>{pendingAudioFile=e.target.files?.[0]||null;if(pendingAudioFile)setEditorProgress(`MP3 gekozen: ${pendingAudioFile.name}`);};
+  $('#snListenImageFile').onchange=e=>{pendingImageFile=e.target.files?.[0]||null;removeCurrentImage=false;if(pendingImageFile)setEditorProgress(`Afbeelding gekozen: ${pendingImageFile.name}`);};
+  $('#snListenAudioFile').onchange=e=>{pendingAudioFile=e.target.files?.[0]||null;if(pendingAudioFile)setEditorProgress(`MP3 gekozen: ${pendingAudioFile.name}`);};
   if($('#snListenRemoveImage'))$('#snListenRemoveImage').onclick=e=>{e.preventDefault();removeCurrentImage=true;pendingImageFile=null;$('#snListenImageFile').value='';const c=$('#snListenCurrentImage');if(c)c.innerHTML='<span>Afbeelding wordt verwijderd bij opslaan.</span>';setEditorProgress('Huidige afbeelding wordt verwijderd.');};
-  $('#snListenCancel').onclick=()=>{ed.hidden=true;};$('#snListenSave').onclick=saveItem;ed.scrollIntoView({behavior:'smooth',block:'nearest'});
+  $('#snListenCancel').onclick=()=>{ed.hidden=true;};
+  $('#snListenSave').onclick=saveItem;
+  ed.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function extensionOf(file,fallback){const m=String(file?.name||'').toLowerCase().match(/\.([a-z0-9]{2,5})$/);return(m?.[1]||fallback).replace(/[^a-z0-9]/g,'');}
-function uniquePath(kind,file,fallbackExt){const ext=extensionOf(file,fallbackExt),id=`${Date.now()}-${Math.random().toString(36).slice(2,9)}`;return`listen-stories/${kind}/${currentUser.uid}/${id}.${ext}`;}
 function validateImage(file){if(!file)return;if(!file.type?.startsWith('image/'))throw new Error('Kies een geldige afbeelding.');if(file.size>MAX_IMAGE_BYTES)throw new Error('De afbeelding is te groot. Maximaal 8 MB.');}
 function validateAudio(file){if(!file)return;const mp3=/\.mp3$/i.test(file.name||'')||['audio/mpeg','audio/mp3'].includes(file.type);if(!mp3)throw new Error('Kies een MP3-bestand.');if(file.size>MAX_AUDIO_BYTES)throw new Error('De MP3 is te groot. Maximaal 60 MB.');}
-async function uploadImageStorage(file){validateImage(file);const path=uniquePath('images',file,'jpg'),ref=storageRef(storage,path),snap=await uploadBytes(ref,file,{contentType:file.type||'image/jpeg',cacheControl:'public,max-age=3600'});return{mode:'storage',path,url:await getDownloadURL(snap.ref)};}
+function extensionOf(file,fallback){const m=String(file?.name||'').toLowerCase().match(/\.([a-z0-9]{2,5})$/);return(m?.[1]||fallback).replace(/[^a-z0-9]/g,'');}
+function uniquePath(kind,file,fallbackExt){const ext=extensionOf(file,fallbackExt),id=`${Date.now()}-${Math.random().toString(36).slice(2,9)}`;return`listen-stories/${kind}/${currentUser.uid}/${id}.${ext}`;}
+
+async function compressImage(file,max=900,quality=.76,maxChars=260000){
+  validateImage(file);
+  const data=await new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(new Error('Afbeelding kon niet worden gelezen.'));r.onload=()=>res(r.result);r.readAsDataURL(file);});
+  const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Afbeelding kon niet worden geopend.'));i.src=data;});
+  let limit=max,q=quality;
+  for(let n=0;n<8;n++){
+    const scale=Math.min(1,limit/Math.max(im.width,im.height)),c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(im.width*scale));c.height=Math.max(1,Math.round(im.height*scale));
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    const out=c.toDataURL('image/jpeg',q);
+    if(out.length<=maxChars)return out;
+    limit=Math.round(limit*.82);q=Math.max(.38,q-.06);
+  }
+  throw new Error('De afbeelding blijft te groot. Kies een andere afbeelding.');
+}
+
 function uploadAudioStorage(file,onProgress){
   validateAudio(file);
   const path=uniquePath('audio',file,'mp3'),ref=storageRef(storage,path);
   return new Promise((resolve,reject)=>{
     const task=uploadBytesResumable(ref,file,{contentType:'audio/mpeg',cacheControl:'public,max-age=3600'});
     let settled=false,lastActivity=Date.now();
-    const stopWatchdog=()=>clearInterval(watchdog);
-    const finish=(fn,value)=>{if(settled)return;settled=true;stopWatchdog();fn(value);};
     const watchdog=setInterval(()=>{
-      if(settled)return;
-      if(Date.now()-lastActivity<STORAGE_STALL_TIMEOUT_MS)return;
+      if(settled||Date.now()-lastActivity<STORAGE_STALL_TIMEOUT_MS)return;
       try{task.cancel();}catch{}
-      const err=new Error('De Firebase-upload bleef hangen. De app schakelt over op reserve-opslag.');
-      err.code='storage/upload-timeout';
-      finish(reject,err);
+      const err=new Error('De Firebase-upload bleef hangen. De app schakelt over op reserve-opslag.');err.code='storage/upload-timeout';
+      settled=true;clearInterval(watchdog);reject(err);
     },2000);
-    task.on('state_changed',snap=>{
-      lastActivity=Date.now();
-      const pct=snap.totalBytes?Math.round(snap.bytesTransferred/snap.totalBytes*100):0;
-      onProgress?.(pct);
-    },err=>finish(reject,err),async()=>{
-      try{finish(resolve,{mode:'storage',path,url:await getDownloadURL(task.snapshot.ref)});}
-      catch(e){finish(reject,e);}
+    task.on('state_changed',snap=>{lastActivity=Date.now();const pct=snap.totalBytes?Math.round(snap.bytesTransferred/snap.totalBytes*100):0;onProgress?.(pct);},err=>{if(settled)return;settled=true;clearInterval(watchdog);reject(err);},async()=>{
+      if(settled)return;
+      try{const url=await getDownloadURL(task.snapshot.ref);settled=true;clearInterval(watchdog);resolve({mode:'storage',path,url});}
+      catch(e){settled=true;clearInterval(watchdog);reject(e);}
     });
   });
 }
 async function deleteStoragePath(path){if(!path)return;try{await deleteObject(storageRef(storage,path));}catch(e){if(e?.code!=='storage/object-not-found')console.warn('Snazzle luisterbestand verwijderen',e);}}
-
-async function compressImageFallback(file,max=760,quality=.7,maxChars=190000){
-  validateImage(file);const data=await new Promise((res,rej)=>{const r=new FileReader();r.onerror=()=>rej(new Error('Afbeelding kon niet worden gelezen.'));r.onload=()=>res(r.result);r.readAsDataURL(file);});const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Afbeelding kon niet worden geopend.'));i.src=data;});let limit=max,q=quality;
-  for(let n=0;n<7;n++){const scale=Math.min(1,limit/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*scale));c.height=Math.max(1,Math.round(im.height*scale));c.getContext('2d').drawImage(im,0,0,c.width,c.height);const out=c.toDataURL('image/jpeg',q);if(out.length<=maxChars)return out;limit=Math.round(limit*.82);q=Math.max(.35,q-.07);}throw new Error('De afbeelding blijft te groot. Kies een andere afbeelding.');
-}
 function fallbackChunkId(storyId,version,index){return`${storyId}_${version}_${index}`;}
 async function uploadAudioFallback(file,storyId,onProgress){
   validateAudio(file);if(file.size>MAX_FALLBACK_AUDIO_BYTES)throw new Error('Deze MP3 is groter dan 30 MB. Kies voorlopig een kleinere MP3.');
@@ -186,27 +206,58 @@ async function deleteFallbackAudio(storyId,version,count){
 function storageUnavailable(err){return String(err?.code||err?.message||'').toLowerCase().includes('storage/');}
 
 async function saveItem(){
-  if(!isSuperAdmin||!currentUser)return;const title=$('#snListenTitle')?.value.trim()||'';if(title.length<2)return setEditorProgress('Vul eerst een titel in.',true);const existing=items.find(x=>x.id===editingId)||null;if(!hasAudio(existing)&&!pendingAudioFile)return setEditorProgress('Kies eerst een MP3-bestand.',true);
+  if(!isSuperAdmin||!currentUser)return;
+  const title=$('#snListenTitle')?.value.trim()||'';
+  if(title.length<2)return setEditorProgress('Vul eerst een titel in.',true);
+  const existing=items.find(x=>x.id===editingId)||null;
+  if(!hasAudio(existing)&&!pendingAudioFile)return setEditorProgress('Kies eerst een MP3-bestand.',true);
   try{validateImage(pendingImageFile);validateAudio(pendingAudioFile);}catch(e){return setEditorProgress(e.message,true);}
-  const storyId=editingId||doc(collection(db,COLLECTION)).id,save=$('#snListenSave');save.disabled=true;save.textContent='Bezig…';let newImage=null,newAudio=null;
+  const storyId=editingId||doc(collection(db,COLLECTION)).id,save=$('#snListenSave');
+  save.disabled=true;save.textContent='Bezig…';
+  let newImageUrl=null,newAudio=null;
   try{
-    if(pendingImageFile){setEditorProgress('Afbeelding uploaden…');try{newImage=await uploadImageStorage(pendingImageFile);}catch(e){if(!storageUnavailable(e))throw e;setEditorProgress('Afbeelding wordt centraal opgeslagen…');newImage={mode:'firestore',path:'',url:await compressImageFallback(pendingImageFile)};}}
-    if(pendingAudioFile){setEditorProgress('MP3 uploaden… 0%');try{newAudio=await uploadAudioStorage(pendingAudioFile,p=>setEditorProgress(`MP3 uploaden… ${p}%`));}catch(e){if(!storageUnavailable(e))throw e;setEditorProgress('MP3 wordt centraal opgeslagen… 0%');newAudio=await uploadAudioFallback(pendingAudioFile,storyId,p=>setEditorProgress(`MP3 wordt centraal opgeslagen… ${p}%`));}}
-
+    if(pendingImageFile){
+      setEditorProgress('Afbeelding verwerken…');
+      newImageUrl=await compressImage(pendingImageFile);
+      setEditorProgress('Afbeelding klaar ✓');
+    }
+    if(pendingAudioFile){
+      setEditorProgress('MP3 uploaden… 0%');
+      try{newAudio=await uploadAudioStorage(pendingAudioFile,p=>setEditorProgress(`MP3 uploaden… ${p}%`));}
+      catch(e){if(!storageUnavailable(e))throw e;setEditorProgress('MP3 wordt centraal opgeslagen… 0%');newAudio=await uploadAudioFallback(pendingAudioFile,storyId,p=>setEditorProgress(`MP3 wordt centraal opgeslagen… ${p}%`));}
+    }
     const newMode=newAudio?.mode||existing?.audioMode||(existing?.audioUrl?'storage':'');
-    const payload={contentType:TYPE,name:`Luisterverhaal ${title}`,title,theme:$('#snListenTheme')?.value.trim()||'',imageUrl:newImage?.url||(removeCurrentImage?'':existing?.imageUrl||''),imagePath:newImage?.path||(removeCurrentImage?'':existing?.imagePath||''),audioMode:newMode,audioReady:newAudio?true:(existing?.audioReady!==false),audioUrl:newAudio?.mode==='storage'?newAudio.url:(newAudio?.mode==='firestore'?'':existing?.audioUrl||''),audioPath:newAudio?.mode==='storage'?newAudio.path:(newAudio?.mode==='firestore'?'':existing?.audioPath||''),audioVersion:newAudio?.mode==='firestore'?newAudio.version:(newAudio?.mode==='storage'?'':existing?.audioVersion||''),audioChunkCount:newAudio?.mode==='firestore'?newAudio.chunkCount:(newAudio?.mode==='storage'?0:Number(existing?.audioChunkCount)||0),audioSize:newAudio?.size||pendingAudioFile?.size||Number(existing?.audioSize)||0,enabled:$('#snListenEnabled')?.checked!==false,active:false,order:existing?Number(existing.order)||0:items.length,updatedAt:new Date().toISOString(),createdAt:existing?.createdAt||new Date().toISOString()};
+    const payload={
+      contentType:TYPE,name:`Luisterverhaal ${title}`,title,theme:$('#snListenTheme')?.value.trim()||'',
+      imageUrl:newImageUrl??(removeCurrentImage?'':existing?.imageUrl||''),imagePath:'',
+      audioMode:newMode,audioReady:newAudio?true:(existing?.audioReady!==false),
+      audioUrl:newAudio?.mode==='storage'?newAudio.url:(newAudio?.mode==='firestore'?'':existing?.audioUrl||''),
+      audioPath:newAudio?.mode==='storage'?newAudio.path:(newAudio?.mode==='firestore'?'':existing?.audioPath||''),
+      audioVersion:newAudio?.mode==='firestore'?newAudio.version:(newAudio?.mode==='storage'?'':existing?.audioVersion||''),
+      audioChunkCount:newAudio?.mode==='firestore'?newAudio.chunkCount:(newAudio?.mode==='storage'?0:Number(existing?.audioChunkCount)||0),
+      audioSize:newAudio?.size||pendingAudioFile?.size||Number(existing?.audioSize)||0,
+      enabled:$('#snListenEnabled')?.checked!==false,active:false,order:existing?Number(existing.order)||0:items.length,
+      updatedAt:new Date().toISOString(),createdAt:existing?.createdAt||new Date().toISOString()
+    };
     await setDoc(doc(db,COLLECTION,storyId),payload,{merge:false});
-
-    if((newImage||removeCurrentImage)&&existing?.imagePath)await deleteStoragePath(existing.imagePath);
+    if((newImageUrl!==null||removeCurrentImage)&&existing?.imagePath)await deleteStoragePath(existing.imagePath);
     if(newAudio&&existing?.audioPath)await deleteStoragePath(existing.audioPath);
     if(newAudio&&existing?.audioMode==='firestore'&&existing?.audioVersion)await deleteFallbackAudio(existing.id,existing.audioVersion,existing.audioChunkCount);
-    setEditorProgress('Luisterverhaal opgeslagen ✓');setTimeout(()=>{if($('#snListenEditor'))$('#snListenEditor').hidden=true;},450);
+    pendingImageFile=null;pendingAudioFile=null;removeCurrentImage=false;
+    setEditorProgress('Luisterverhaal opgeslagen ✓');
+    setTimeout(()=>{if($('#snListenEditor'))$('#snListenEditor').hidden=true;},450);
   }catch(e){
-    console.error('Snazzle luisterverhaal opslaan',e);if(newImage?.mode==='storage'&&newImage.path)await deleteStoragePath(newImage.path);if(newAudio?.mode==='storage'&&newAudio.path)await deleteStoragePath(newAudio.path);if(newAudio?.mode==='firestore')await deleteFallbackAudio(storyId,newAudio.version,newAudio.chunkCount);setEditorProgress(e?.message||'Opslaan lukte niet.',true);
-  }finally{if(save){save.disabled=false;save.textContent='Opslaan';}}
+    console.error('Snazzle luisterverhaal opslaan',e);
+    if(newAudio?.mode==='storage'&&newAudio.path)await deleteStoragePath(newAudio.path);
+    if(newAudio?.mode==='firestore')await deleteFallbackAudio(storyId,newAudio.version,newAudio.chunkCount);
+    setEditorProgress(e?.message||'Opslaan lukte niet.',true);
+  }finally{save.disabled=false;save.textContent='Opslaan';}
 }
 async function removeItem(id){
-  if(!isSuperAdmin||!confirm('Dit luisterverhaal verwijderen?'))return;const item=items.find(x=>x.id===id);try{await deleteDoc(doc(db,COLLECTION,id));await deleteStoragePath(item?.audioPath);await deleteStoragePath(item?.imagePath);if(item?.audioMode==='firestore')await deleteFallbackAudio(id,item.audioVersion,item.audioChunkCount);}catch(e){console.error(e);alert('Verwijderen lukte niet.');}
+  if(!isSuperAdmin||!confirm('Dit luisterverhaal verwijderen?'))return;
+  const item=items.find(x=>x.id===id);
+  try{await deleteDoc(doc(db,COLLECTION,id));await deleteStoragePath(item?.audioPath);await deleteStoragePath(item?.imagePath);if(item?.audioMode==='firestore')await deleteFallbackAudio(id,item.audioVersion,item.audioChunkCount);}
+  catch(e){console.error(e);alert('Verwijderen lukte niet.');}
 }
 
 function startListener(){if(unsubscribe)return;unsubscribe=onSnapshot(query(collection(db,COLLECTION),where('contentType','==',TYPE)),snap=>{items=snap.docs.map(d=>({id:d.id,...d.data()}));renderStories();renderAdmin();},e=>console.warn('Snazzle luisterverhalen laden',e));}
