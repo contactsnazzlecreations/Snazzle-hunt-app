@@ -23,6 +23,8 @@ await import(fresh('./app-core.js'));
 await import(fresh('./snazzle-central-assets-v48.js'));
 // v49: veilige beheer-wachtwoordreset via Firebase Auth.
 await import(fresh('./snazzle-admin-reset-v49.js'));
+// v50: veilige tweede hoofdbeheerder voor noodherstel + onthouden beheer-e-mailadres.
+await import(fresh('./snazzle-admin-backup-v50.js'));
 await import(fresh('./shop-compat.js'));
 await import(fresh('./kids-fun.js'));
 await import(fresh('./snazzle-route.js'));
