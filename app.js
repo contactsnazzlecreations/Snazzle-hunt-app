@@ -45,7 +45,7 @@ import './snazzle-home-hunt-image-v36.js?v=36';
 // v37: klikbare geheime verrassingen — alleen zichtbaar nadat een kind het geheim aantikt.
 import './snazzle-click-secrets-v37.js?v=37';
 // v38: klikbare Snazzle Wereld met wandelen, natuurkennis, beweegmissie en sterrenprogressie.
-import './snazzle-world-adventure-v38.js?v=38';
+import './snazzle-world-adventure-v38.js?v=385';
 // v38: seizoenssferen voor Home, inclusief Kerst, Pasen, Halloween en eigen afbeeldingen/kleuren.
 import './snazzle-season-theme-v38.js?v=38';
 // v39: minder cartooneske 2.5D wereld + aparte afbeeldingen per seizoenthema.

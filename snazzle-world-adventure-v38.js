@@ -1,7 +1,7 @@
 // Snazzle Hunt v38 — interactieve Snazzle Wereld.
 // Thema: Het Snazzle Ontdekkersbos — kijken, denken, bewegen en goed zorgen voor buiten.
 
-const V38WORLD='38.0.0';
+const V38WORLD='38.5.0';
 const q38=(s,r=document)=>r.querySelector(s);
 const qa38=(s,r=document)=>[...r.querySelectorAll(s)];
 const WORLD_PROGRESS_KEY='snazzleWorldAdventureProgressV38';
@@ -13,13 +13,85 @@ let timer38=null;
 let pendingStage38=null;
 
 const worldStages38=[
-  {id:'bospoort',key:'worldStageBospoort',icon:'🌲',title:'De Bospoort',short:'Kijk als een echte speurder',x:17,y:84,fact:'Een goede natuurspeurder kijkt eerst rustig om zich heen. Zo zie je veel meer zonder dieren of planten te storen.',question:'Wat doet een goede Snazzle-speurder als eerste?',answers:['Rustig kijken en luisteren','Meteen alles aanraken'],correct:0},
-  {id:'sporenpad',key:'worldStageSporenpad',icon:'🐾',title:'Het Sporenpad',short:'Ontdek wie hier geweest is',x:43,y:72,fact:'Dieren laten sporen achter: pootafdrukken, veren, knaagsporen of een holletje. Je hoeft het dier zelf niet te zien om iets te ontdekken.',question:'Welk spoor kan vertellen dat er een dier langs kwam?',answers:['Een pootafdruk in modder','Een verkeersbord'],correct:0},
-  {id:'waterkant',key:'worldStageWaterkant',icon:'💧',title:'De Waterkant',short:'Water zit vol leven',x:76,y:62,fact:'Bij poelen en beken leven insecten, vogels, kikkers en planten. Kijk vanaf een veilige plek en laat de oever heel.',question:'Wat is slim bij de waterkant?',answers:['Op veilige afstand blijven en goed kijken','Zo dicht mogelijk over de rand hangen'],correct:0},
-  {id:'bloemenweide',key:'worldStageBloemenweide',icon:'🌼',title:'De Bloemenweide',short:'Waarom insecten belangrijk zijn',x:58,y:47,fact:'Bijen, hommels en andere insecten bezoeken bloemen en helpen bij bestuiving. Daardoor kunnen veel planten zaden en vruchten maken.',question:'Wie helpt bloemen vaak met bestuiven?',answers:['Bijen en andere insecten','Stoeptegels'],correct:0},
-  {id:'beweegbrug',key:'worldStageBeweegbrug',icon:'🌉',title:'De Beweegbrug',short:'Speurders blijven in beweging',x:27,y:34,fact:'Buiten bewegen is goed voor je lijf én je aandacht. Na bewegen kun je vaak weer scherper kijken en luisteren.',action:'Doe 5 rustige sprongen of balanceer 10 seconden op één been. Kies wat veilig kan.',actionButton:'Gedaan! Ik mag verder ⭐'},
-  {id:'uitzichtboom',key:'worldStageUitzicht',icon:'⭐',title:'De Uitzichtboom',short:'De Snazzle-code voor buiten',x:68,y:18,fact:'De beste speurder laat een plek netjes achter. Kijk, ontdek, beweeg — en neem alleen herinneringen mee.',question:'Wat past het beste bij de Snazzle-code?',answers:['Laat dieren en planten met rust en ruim je eigen afval op','Neem planten en dieren mee naar huis'],correct:0}
+  {id:'bospoort',key:'worldStageBospoort',icon:'🌲',title:'De Bospoort',short:'Kijk als een echte speurder',x:17,y:84,fact:'Een echte Snazzle-speurder gebruikt vooral zijn ogen en oren. Je hoeft niets stuk te maken of mee te nemen om iets bijzonders te ontdekken.',questions:[
+    {question:'Je hoort vlakbij een vogel zingen. Wat is de beste Snazzle-move?',answers:['Even stil worden en luisteren','Hard roepen zodat hij terugroept'],correct:0},
+    {question:'Je ziet een mooie bloem langs het pad. Wat doe je?',answers:['Plukken voor mijn collectie','Kijken of een foto maken en haar laten staan'],correct:1},
+    {question:'Waarom is het slim om soms ook omhoog te kijken?',answers:['Daar kun je wolken, bladeren en vogels ontdekken','Omdat alle Snazzles in bomen wonen'],correct:0},
+    {question:'Er groeit een klein plantje precies naast je voet. Wat doe je?',answers:['Eromheen stappen','Erop staan om te kijken hoe sterk het is'],correct:0},
+    {question:'Welke superkracht helpt je het meest om dieren te ontdekken?',answers:['Rustig kijken en luisteren','Zo hard mogelijk door het bos rennen'],correct:0},
+    {question:'Je vindt iets moois uit de natuur. Wat is meestal het beste souvenir?',answers:['Een foto of herinnering','Alles meenemen naar huis'],correct:0}
+  ]},
+  {id:'sporenpad',key:'worldStageSporenpad',icon:'🐾',title:'Het Sporenpad',short:'Ontdek wie hier geweest is',x:43,y:72,fact:'Dieren laten aanwijzingen achter zonder dat je ze zelf hoeft te zien. Denk aan pootafdrukken, veren, knaagsporen, holletjes en glimmende slakkensporen.',questions:[
+    {question:'Welk spoor kan vertellen dat er een dier langs kwam?',answers:['Een pootafdruk in modder','Een verkeersbord'],correct:0},
+    {question:'Je ziet een veertje op de grond. Wat doet een goede speurder?',answers:['Bekijken en de plek netjes laten','Meteen een heel nest gaan zoeken'],correct:0},
+    {question:'Wat kan een glimmend spoor over een blad verraden?',answers:['Dat er misschien een slak langs kwam','Dat een fiets daar reed'],correct:0},
+    {question:'Je ontdekt een klein holletje. Wat doe je?',answers:['Er een stok in steken','Van een afstand kijken en het met rust laten'],correct:1},
+    {question:'Waarom hoef je een dier niet aan te raken om een goede speurder te zijn?',answers:['Sporen en geluiden vertellen al heel veel','Omdat dieren altijd onzichtbaar zijn'],correct:0},
+    {question:'Je ziet knaagsporen aan een dennenappel. Wat denk je?',answers:['Een dier kan hier gegeten hebben','De dennenappel heeft zelf tanden'],correct:0}
+  ]},
+  {id:'waterkant',key:'worldStageWaterkant',icon:'💧',title:'De Waterkant',short:'Water zit vol leven',x:76,y:62,fact:'Bij poelen en beken leven veel dieren en planten. Kijk vanaf een veilige plek, blijf van nesten en dieren af en laat de oever heel.',questions:[
+    {question:'Wat is slim bij de waterkant?',answers:['Op veilige afstand blijven en goed kijken','Zo ver mogelijk over de rand hangen'],correct:0},
+    {question:'Je ziet een kikker aan de oever. Wat doe je?',answers:['Rustig kijken zonder hem op te jagen','Hem achterna rennen voor een betere foto'],correct:0},
+    {question:'Waarom laat je waterplanten het liefst staan?',answers:['Ze geven dieren schuilplaatsen en horen daar thuis','Omdat ze anders boos worden'],correct:0},
+    {question:'Een eend zwemt met jongen voorbij. Wat is de Snazzle-regel?',answers:['Afstand houden en rustig kijken','Ertussen gaan staan voor een selfie'],correct:0},
+    {question:'Wat hoort NIET in een beek of poel?',answers:['Waterinsecten','Afval'],correct:1},
+    {question:'Je ziet kleine insecten boven het water vliegen. Wat doe je?',answers:['Kijken hoe ze bewegen','Proberen ze allemaal te vangen'],correct:0}
+  ]},
+  {id:'bloemenweide',key:'worldStageBloemenweide',icon:'🌼',title:'De Bloemenweide',short:'Waarom insecten belangrijk zijn',x:58,y:47,fact:'Bloemen en insecten werken vaak samen. Bijen, hommels en vlinders vinden er voedsel en helpen ondertussen stuifmeel van bloem naar bloem te brengen.',questions:[
+    {question:'Wie helpt bloemen vaak met bestuiven?',answers:['Bijen en andere insecten','Stoeptegels'],correct:0},
+    {question:'Een bij zit op een bloem. Wat doe je?',answers:['Rustig op afstand kijken','De bloem schudden om te zien wat gebeurt'],correct:0},
+    {question:'Hoeveel poten heeft een insect?',answers:['Zes','Acht'],correct:0},
+    {question:'Is een spin een insect?',answers:['Ja, alle kleine dieren zijn insecten','Nee, een spin hoort bij de spinachtigen'],correct:1},
+    {question:'Waarom hebben veel bloemen opvallende kleuren en geuren?',answers:['Om bestuivers te lokken','Om verkeerslichten na te doen'],correct:0},
+    {question:'Wat is de vriendelijkste manier om een vlinder te bekijken?',answers:['Met je ogen, zonder hem vast te pakken','Met je handen achter hem aan jagen'],correct:0}
+  ]},
+  {id:'beweegbrug',key:'worldStageBeweegbrug',icon:'🌉',title:'De Beweegbrug',short:'Speurders blijven in beweging',x:27,y:34,fact:'Buiten bewegen maakt je wakker en helpt je daarna weer scherper kijken en luisteren. Doe alleen iets dat op jouw plek veilig kan.',actions:[
+    'Doe 5 rustige sprongen of balanceer 10 seconden op één been. Kies wat veilig kan.',
+    'Loop 10 rustige stappen alsof je een supersluwe bosvos bent. Kijk daarna om je heen wat je ineens opvalt.',
+    'Ga stevig staan, strek je armen als boomtakken en blijf 10 seconden zo stil mogelijk.',
+    'Loop 8 stappen extra langzaam. Kun jij bewegen zonder bladeren, dieren of planten te raken?',
+    'Draai één rustig rondje en noem daarna drie dingen uit de natuur die je ziet.',
+    'Blijf 15 seconden stil staan en luister. Hoeveel verschillende buitengeluiden hoor je?'
+  ],actionButton:'Gedaan! Ik mag verder ⭐'},
+  {id:'uitzichtboom',key:'worldStageUitzicht',icon:'⭐',title:'De Uitzichtboom',short:'De Snazzle-code voor buiten',x:68,y:18,fact:'De beste speurder laat een plek minstens zo mooi achter als hij hem vond. Geniet, kijk, luister en neem alleen herinneringen mee.',questions:[
+    {question:'Wat past het beste bij de Snazzle-code?',answers:['Dieren en planten met rust laten en eigen afval meenemen','Planten en dieren meenemen naar huis'],correct:0},
+    {question:'Waarom is dood hout in een bos vaak toch waardevol?',answers:['Het kan een thuis en voedselplek zijn voor kleine dieren en schimmels','Het is alleen maar rommel'],correct:0},
+    {question:'Je ziet een vogelnest. Wat doe je?',answers:['Afstand houden en niet storen','Even voelen of er eitjes in liggen'],correct:0},
+    {question:'Wat kun je aan bewegende bladeren soms merken?',answers:['Dat er wind staat','Dat de boom wil weglopen'],correct:0},
+    {question:'Donkere wolken komen dichterbij. Wat kunnen wolken je vertellen?',answers:['Dat het weer kan veranderen','Welke Snazzle morgen jarig is'],correct:0},
+    {question:'Wat is een goede afsluiting van een Snazzle-speurtocht?',answers:['Nog één keer om je heen kijken en alles netjes achterlaten','Een tak afbreken als trofee'],correct:0}
+  ]}
 ];
+
+const natureRules38=[
+  '🌿 Takken zijn geen drumsticks. Laat ze lekker aan de boom zitten.',
+  '🐝 Bijen hebben het druk genoeg. Kijken mag, vergaderen met ze hoeft niet.',
+  '🐌 Komt er een slak voorbij? Geef hem voorrang — hij is al niet de snelste.',
+  '☁️ Snazzle-tip: kijk ook eens omhoog. Wolken, vogels en bladeren geven gratis voorstelling.',
+  '🍃 Een mooi blaadje hoeft niet mee naar huis. Je ogen hebben ook een geheugen.',
+  '🐦 Een nest is iemands woonkamer. Dus niet aanbellen, porren of naar binnen gluren.',
+  '🪲 Insecten zijn mini-bosbewoners. Bewonder ze zonder ze op te pakken of achterna te zitten.',
+  '🌼 Bloemen staan het mooist waar ze groeien. Foto maken = top, plukken = liever niet.',
+  '👂 Soms is stil zijn een superkracht. Je hoort ineens vogels, wind en geritsel.',
+  '🗑️ De Snazzle-regel: neem je eigen rommel weer mee. Het bos heeft geen prullenbakdienst.',
+  '💧 Bij water wonen allerlei dieren. Laat hun zwembad heel en blijf zelf veilig op de kant.',
+  '📸 De beste natuurtrofee past in je telefoon: een foto. De natuur zelf blijft waar ze hoort.',
+  '🍄 Een paddenstoel is geen voetbal. Kijk, verwonder en laat hem staan.',
+  '👀 Kijk laag én hoog: onder blaadjes gebeurt iets anders dan tussen de wolken.',
+  '🐾 Zie je een spoor? Volg het met je ogen, niet door achter een dier aan te jagen.'
+];
+
+function pickDifferent38(items,key){
+  if(!Array.isArray(items)||!items.length)return null;
+  const storageKey='snazzleV38LastPick_'+key;
+  const last=Number(localStorage.getItem(storageKey));
+  let choices=items.map((_,i)=>i);
+  if(items.length>1&&Number.isInteger(last))choices=choices.filter(i=>i!==last);
+  const idx=choices[Math.floor(Math.random()*choices.length)] ?? 0;
+  localStorage.setItem(storageKey,String(idx));
+  return items[idx];
+}
+let activeChallenge38=null;
 const worldAssetSlots38=[{key:'worldSceneBackground',label:'🌍 Achtergrond van de Snazzle Wereld',hint:'Optioneel. Zonder afbeelding gebruikt de wereld de ingebouwde 2.5D boswereld.'},{key:'worldPlayerCharacter',label:'🦆 Wandelende Snazzle',hint:'Gebruik bij voorkeur een PNG/WebP met transparante achtergrond.'},...worldStages38.map(s=>({key:s.key,label:`${s.icon} ${s.title} — afbeelding`,hint:'Verschijnt in het informatievenster van deze plek.'}))];
 function progress38(){const n=Number(localStorage.getItem(WORLD_PROGRESS_KEY)||0);return Number.isFinite(n)?Math.max(0,Math.min(worldStages38.length,n)):0;}
 function setProgress38(n){localStorage.setItem(WORLD_PROGRESS_KEY,String(Math.max(0,Math.min(worldStages38.length,n))));}
@@ -40,15 +112,46 @@ function ensureStyles38(){if(q38('#snazzleWorldAdventureV38Styles'))return;const
 `;document.head.appendChild(s);}
 function findWorldEntry38(){const candidates=qa38('section,div,button,article,h2,h3');return candidates.find(el=>{const txt=(el.textContent||'').replace(/\s+/g,' ').trim();return txt.includes('Ontdek de Snazzle Wereld')&&txt.length<220;})||null;}
 function bindWorldEntry38(){const entry=findWorldEntry38();if(!entry||entry.dataset.v38WorldBound)return;entry.dataset.v38WorldBound='1';entry.classList.add('v38-world-entry');entry.setAttribute('role','button');entry.setAttribute('tabindex','0');entry.setAttribute('aria-label','Open de interactieve Snazzle Wereld');const open=e=>{if(e.target.closest?.('button,a,input,label,select'))return;e.preventDefault();openWorld38();};entry.addEventListener('click',open);entry.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openWorld38();}});}
-function ensureWorldSheet38(){if(q38('#v38WorldSheet'))return;const s=document.createElement('div');s.className='sheet';s.id='v38WorldSheet';s.innerHTML=`<div class="panel v38-world-panel"><div class="v38-world-topbar"><button type="button" id="v38WorldBack" aria-label="Sluiten">×</button><h2>Snazzle Ontdekkersbos<small>Kijk • denk • beweeg • zorg voor buiten</small></h2><div></div></div><div class="v38-world-intro"><strong>🌍 Welkom in de Snazzle Wereld</strong><p>Help Snazzle langs zes plekken. Tik op een vrijgespeelde plek, wandel erheen en los de korte ontdekking op.</p></div><div class="v38-progress"><span>Avontuur</span><div class="v38-progress-track"><div class="v38-progress-fill" id="v38ProgressFill"></div></div><span class="v38-progress-stars" id="v38ProgressStars">☆ ☆ ☆ ☆ ☆ ☆</span></div><div class="v38-world-map" id="v38WorldMap"><div class="v38-sun"></div><div class="v38-hills"></div><div class="v38-river"></div><div class="v38-forest"><span class="v38-tree t1">🌳</span><span class="v38-tree t2">🌲</span><span class="v38-tree t3">🌳</span><span class="v38-tree t4">🌲</span><span class="v38-tree t5">🌳</span></div><svg class="v38-path-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="17,84 43,72 76,62 58,47 27,34 68,18"></polyline></svg><div class="v38-player-pos" id="v38PlayerPos"><div class="v38-player" id="v38Player">🦆</div></div><div class="v38-map-help">Tik op de volgende gouden plek ✨</div><div class="v38-mission-overlay" id="v38MissionOverlay" aria-hidden="true"><div class="v38-mission-card" id="v38MissionCard"></div></div></div><div class="v38-world-tools"><button type="button" class="v38-world-info-btn" id="v38LearningBtn">Wat leer ik hier?</button><button type="button" class="v38-world-reset" id="v38ResetWorld">Avontuur opnieuw</button></div><div class="v38-learning" id="v38Learning" hidden><strong>🎓 Wat kinderen hier oefenen</strong><ul><li>goed kijken en luisteren;</li><li>dieren, planten, water en sporen herkennen;</li><li>veilig en respectvol omgaan met natuur;</li><li>bewegen en motoriek;</li><li>keuzes maken en eenvoudige problemen oplossen.</li></ul></div></div>`;document.body.appendChild(s);q38('#v38WorldBack').onclick=closeWorld38;s.addEventListener('click',e=>{if(e.target===s)closeWorld38();});q38('#v38LearningBtn').onclick=()=>{const el=q38('#v38Learning');el.hidden=!el.hidden;};q38('#v38ResetWorld').onclick=()=>{if(confirm('Snazzle Wereld opnieuw beginnen?')){setProgress38(0);renderWorld38();toast38('Avontuur opnieuw gestart');}};buildNodes38();}
+function ensureWorldSheet38(){if(q38('#v38WorldSheet'))return;const s=document.createElement('div');s.className='sheet';s.id='v38WorldSheet';s.innerHTML=`<div class="panel v38-world-panel"><div class="v38-world-topbar"><button type="button" id="v38WorldBack" aria-label="Sluiten">×</button><h2>Snazzle Ontdekkersbos<small>Kijk • denk • beweeg • zorg voor buiten</small></h2><div></div></div><div class="v38-world-intro"><strong>🌍 Welkom in de Snazzle Wereld</strong><p>Help Snazzle langs zes plekken. Iedere keer krijg je een andere natuurvraag of kijkmissie. Zoek niet alleen Snazzles: kijk ook naar wolken, blaadjes, sporen en insecten — en laat buiten netjes en rustig achter.</p></div><div class="v38-progress"><span>Avontuur</span><div class="v38-progress-track"><div class="v38-progress-fill" id="v38ProgressFill"></div></div><span class="v38-progress-stars" id="v38ProgressStars">☆ ☆ ☆ ☆ ☆ ☆</span></div><div class="v38-world-map" id="v38WorldMap"><div class="v38-sun"></div><div class="v38-hills"></div><div class="v38-river"></div><div class="v38-forest"><span class="v38-tree t1">🌳</span><span class="v38-tree t2">🌲</span><span class="v38-tree t3">🌳</span><span class="v38-tree t4">🌲</span><span class="v38-tree t5">🌳</span></div><svg class="v38-path-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="17,84 43,72 76,62 58,47 27,34 68,18"></polyline></svg><div class="v38-player-pos" id="v38PlayerPos"><div class="v38-player" id="v38Player">🦆</div></div><div class="v38-map-help">Tik op de volgende gouden plek ✨</div><div class="v38-mission-overlay" id="v38MissionOverlay" aria-hidden="true"><div class="v38-mission-card" id="v38MissionCard"></div></div></div><div class="v38-world-tools"><button type="button" class="v38-world-info-btn" id="v38LearningBtn">Wat leer ik hier?</button><button type="button" class="v38-world-reset" id="v38ResetWorld">Avontuur opnieuw</button></div><div class="v38-learning" id="v38Learning" hidden><strong>🎓 Wat kinderen hier oefenen</strong><ul><li>goed kijken en luisteren;</li><li>dieren, planten, water en sporen herkennen;</li><li>veilig en respectvol omgaan met natuur;</li><li>bewegen en motoriek;</li><li>keuzes maken en eenvoudige problemen oplossen.</li></ul></div></div>`;document.body.appendChild(s);q38('#v38WorldBack').onclick=closeWorld38;s.addEventListener('click',e=>{if(e.target===s)closeWorld38();});q38('#v38LearningBtn').onclick=()=>{const el=q38('#v38Learning');el.hidden=!el.hidden;};q38('#v38ResetWorld').onclick=()=>{if(confirm('Snazzle Wereld opnieuw beginnen?')){setProgress38(0);renderWorld38();toast38('Avontuur opnieuw gestart');}};buildNodes38();}
 function buildNodes38(){const map=q38('#v38WorldMap');if(!map)return;qa38('.v38-node',map).forEach(x=>x.remove());worldStages38.forEach((stage,i)=>{const b=document.createElement('button');b.type='button';b.className='v38-node';b.dataset.stage=String(i);b.style.left=stage.x+'%';b.style.top=stage.y+'%';b.setAttribute('aria-label',stage.title);b.innerHTML=`<span>${stage.icon}</span><small>${stage.title}</small>`;b.onclick=()=>visitStage38(i);map.appendChild(b);});}
 async function renderWorld38(){ensureWorldSheet38();const p=progress38();const fill=q38('#v38ProgressFill');if(fill)fill.style.width=(p/worldStages38.length*100)+'%';const stars=q38('#v38ProgressStars');if(stars)stars.textContent=worldStages38.map((_,i)=>i<p?'★':'☆').join(' ');qa38('.v38-node').forEach((b,i)=>{b.classList.toggle('locked',i>p);b.classList.toggle('done',i<p);b.classList.toggle('current',i===p&&p<worldStages38.length);b.disabled=i>p;});const bg=await get38('worldSceneBackground'),map=q38('#v38WorldMap');if(map){if(bg)map.style.setProperty('--v38-world-bg',`url("${bg}")`);else map.style.removeProperty('--v38-world-bg');}const playerSrc=await get38('worldPlayerCharacter'),player=q38('#v38Player');if(player)player.innerHTML=playerSrc?`<img src="${playerSrc}" alt="Wandelende Snazzle">`:'🦆';const playerPos=q38('#v38PlayerPos');if(playerPos){const anchor=p===0?{x:17,y:92}:worldStages38[Math.min(p-1,worldStages38.length-1)];playerPos.style.left=anchor.x+'%';playerPos.style.top=anchor.y+'%';}const help=q38('.v38-map-help');if(help)help.textContent=p===worldStages38.length?'🏆 Ontdekkersbos voltooid — alle sterren gevonden!':'Tik op de volgende gouden plek ✨';}
 async function openWorld38(){ensureWorldSheet38();await renderWorld38();const s=q38('#v38WorldSheet');s.classList.add('show');s.querySelector('.panel').scrollTop=0;}
 function closeWorld38(){q38('#v38WorldSheet')?.classList.remove('show');closeMission38();}
 function visitStage38(i){const p=progress38();if(i>p){toast38('Deze plek moet je eerst vrijspelen 🔒');return;}const stage=worldStages38[i],pos=q38('#v38PlayerPos');if(!pos)return;pos.classList.add('walking');pos.style.left=stage.x+'%';pos.style.top=stage.y+'%';pendingStage38=i;setTimeout(()=>{pos.classList.remove('walking');if(pendingStage38===i)openMission38(i);},880);}
-async function openMission38(i){const stage=worldStages38[i],overlay=q38('#v38MissionOverlay'),card=q38('#v38MissionCard');if(!stage||!overlay||!card)return;const img=await get38(stage.key);let body='';if(stage.question){body=`<div class="v38-question">${stage.question}</div><div class="v38-answer-list">${stage.answers.map((a,j)=>`<button type="button" class="v38-answer" data-answer="${j}">${a}</button>`).join('')}</div><div class="v38-feedback" id="v38Feedback"></div>`;}else{body=`<div class="v38-question">🏃 Beweegmissie</div><div class="v38-fact">${stage.action}</div><button type="button" class="v38-action-btn" id="v38ActionDone">${stage.actionButton}</button><div class="v38-feedback" id="v38Feedback"></div>`;}card.innerHTML=`<div class="v38-mission-head"><div class="v38-mission-art">${img?`<img src="${img}" alt="${stage.title}">`:stage.icon}</div><div><h3>${stage.title}</h3><small>${stage.short}</small></div><button type="button" class="v38-mission-close" aria-label="Sluiten">×</button></div><div class="v38-fact">${stage.fact}</div>${body}`;q38('.v38-mission-close',card).onclick=closeMission38;qa38('.v38-answer',card).forEach(b=>b.onclick=()=>answerStage38(i,Number(b.dataset.answer),b));q38('#v38ActionDone',card)?.addEventListener('click',()=>completeStage38(i));overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');}
+async function openMission38(i){
+  const stage=worldStages38[i],overlay=q38('#v38MissionOverlay'),card=q38('#v38MissionCard');
+  if(!stage||!overlay||!card)return;
+  const img=await get38(stage.key);
+  const natureRule=pickDifferent38(natureRules38,'nature-rule')||natureRules38[0];
+  let body='';
+  if(stage.questions?.length){
+    const challenge=pickDifferent38(stage.questions,'question-'+stage.id)||stage.questions[0];
+    activeChallenge38={stageIndex:i,correct:challenge.correct};
+    body=`<div class="v38-question">${challenge.question}</div><div class="v38-answer-list">${challenge.answers.map((a,j)=>`<button type="button" class="v38-answer" data-answer="${j}">${a}</button>`).join('')}</div><div class="v38-feedback" id="v38Feedback"></div>`;
+  }else{
+    const action=pickDifferent38(stage.actions||[],'action-'+stage.id)||stage.action||'Kijk 15 seconden rustig om je heen.';
+    activeChallenge38=null;
+    body=`<div class="v38-question">🏃 Beweeg- en kijkmissie</div><div class="v38-fact">${action}</div><button type="button" class="v38-action-btn" id="v38ActionDone">${stage.actionButton}</button><div class="v38-feedback" id="v38Feedback"></div>`;
+  }
+  card.innerHTML=`<div class="v38-mission-head"><div class="v38-mission-art">${img?`<img src="${img}" alt="${stage.title}">`:stage.icon}</div><div><h3>${stage.title}</h3><small>${stage.short}</small></div><button type="button" class="v38-mission-close" aria-label="Sluiten">×</button></div><div class="v38-fact">${stage.fact}</div><div style="margin:10px 0 12px;padding:11px 12px;border-radius:14px;background:#fff5c9;border:2px dashed #a67c3d;color:#4d371f;font-size:11px;font-weight:800;line-height:1.4"><strong>🦆 Snazzle-speurregel</strong><br>${natureRule}</div>${body}`;
+  q38('.v38-mission-close',card).onclick=closeMission38;
+  qa38('.v38-answer',card).forEach(b=>b.onclick=()=>answerStage38(i,Number(b.dataset.answer),b));
+  q38('#v38ActionDone',card)?.addEventListener('click',()=>completeStage38(i));
+  overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');
+}
 function closeMission38(){const o=q38('#v38MissionOverlay');if(o){o.classList.remove('show');o.setAttribute('aria-hidden','true');}pendingStage38=null;}
-function answerStage38(i,answer,button){const stage=worldStages38[i],feedback=q38('#v38Feedback');if(answer===stage.correct){if(feedback)feedback.textContent='Goed gezien! ⭐';qa38('.v38-answer').forEach(b=>b.disabled=true);setTimeout(()=>completeStage38(i),500);}else{button.classList.add('wrong');button.disabled=true;if(feedback)feedback.textContent='Bijna! Kijk nog eens naar de andere keuze.';}}
+function answerStage38(i,answer,button){
+  const feedback=q38('#v38Feedback');
+  const correct=activeChallenge38?.stageIndex===i?activeChallenge38.correct:-1;
+  if(answer===correct){
+    if(feedback)feedback.textContent='Goed gesnazzeld! ⭐ En vergeet niet: kijk ook even écht om je heen.';
+    qa38('.v38-answer').forEach(b=>b.disabled=true);
+    setTimeout(()=>completeStage38(i),650);
+  }else{
+    button.classList.add('wrong');button.disabled=true;
+    if(feedback)feedback.textContent='Oeps, Snazzle struikelde bijna over zijn eigen snavel 😄 Probeer de andere keuze.';
+  }
+}
 function completeStage38(i){const p=progress38();if(i===p)setProgress38(p+1);const isFinal=i===worldStages38.length-1,card=q38('#v38MissionCard');if(card){card.innerHTML=`<div class="v38-finish"><strong>${isFinal?'🏆 Snazzle Ontdekker!':'⭐ Plek ontdekt!'}</strong><p>${isFinal?'Je hebt gekeken, gedacht, bewogen en geleerd hoe je goed voor buiten zorgt. Alle zes sterren zijn van jou!':'De volgende plek is nu vrijgespeeld. Ga terug naar de wereld en wandel verder.'}</p></div><button type="button" class="v38-action-btn" id="v38ContinueWorld" style="margin-top:10px">${isFinal?'Bekijk mijn wereld':'Verder naar de wereld'}</button>`;q38('#v38ContinueWorld').onclick=()=>{closeMission38();renderWorld38();};}renderWorld38();}
 function addWorldMenu38(){const nav=q38('.quick-menu-list');if(!nav||q38('[data-v38-world]',nav))return;const b=document.createElement('button');b.type='button';b.dataset.v38World='1';b.innerHTML='<b>🌍</b><span><strong>Snazzle Wereld</strong><small>Interactief ontdekkersavontuur</small></span><i>›</i>';b.onclick=()=>{q38('#quickMenuOverlay')?.classList.remove('show');openWorld38();};const first=nav.querySelector('[data-snazzle-tv]');if(first)nav.insertBefore(b,first);else nav.appendChild(b);}
 function preview38(src){return src?`<img src="${src}" alt="Voorbeeld">`:'Standaard Snazzle-beeld';}
