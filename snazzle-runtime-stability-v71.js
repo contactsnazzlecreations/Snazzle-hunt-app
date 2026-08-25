@@ -1,5 +1,25 @@
-// Snazzle v71 — vloeiender laden en stabielere animaties zonder de speelse animaties te verwijderen.
-const V71='71.0.0';
+// Snazzle v71.1 — vloeiender laden, stabielere animaties en direct de gekozen intro-afbeelding.
+const V71='71.1.0';
+
+function readIntro71(){
+  try{return String(JSON.parse(localStorage.getItem('snazzleSettings')||'{}')?.introImage||'');}
+  catch{return '';}
+}
+function applyIntro71(root=document){
+  const mark=root.querySelector?.('#snV59Boot .sn-v59-boot-mark')||document.querySelector('#snV59Boot .sn-v59-boot-mark');
+  if(!mark) return;
+  const src=readIntro71();
+  if(!src) return;
+  if(mark.querySelector('img[data-sn-intro="1"]')) return;
+  mark.replaceChildren();
+  const img=document.createElement('img');
+  img.src=src;
+  img.alt='Snazzle intro';
+  img.dataset.snIntro='1';
+  img.decoding='async';
+  img.draggable=false;
+  mark.appendChild(img);
+}
 
 function installStyles71(){
   if(document.getElementById('snazzleRuntimeStabilityV71Styles')) return;
@@ -39,6 +59,10 @@ function installStyles71(){
 
     /* Afbeeldingen mogen pas na decoding zichtbaar worden zonder layout te veranderen. */
     img{image-rendering:auto}
+    #snV59Boot .sn-v59-boot-mark img[data-sn-intro="1"]{
+      width:88%;height:88%;object-fit:contain;display:block;border-radius:42%;
+      backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    }
 
     /* Geen plotselinge overgang wanneer de browser focus/touchstatus opnieuw tekent. */
     button,a,[role="button"]{-webkit-tap-highlight-color:transparent}
@@ -80,6 +104,7 @@ function waitForLocalStyles71(maxWait=1100){
 async function settle71(){
   installStyles71();
   prepareImages71();
+  applyIntro71();
   await waitForLocalStyles71();
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   document.documentElement.classList.add('sn-runtime-stable');
@@ -88,6 +113,7 @@ async function settle71(){
 
 installStyles71();
 prepareImages71();
+applyIntro71();
 
 const observer71=new MutationObserver(records=>{
   for(const record of records){
@@ -95,6 +121,7 @@ const observer71=new MutationObserver(records=>{
       if(node.nodeType!==1) return;
       if(node.tagName==='IMG') prepareImages71(node.parentElement||document);
       else if(node.querySelector?.('img')) prepareImages71(node);
+      if(node.id==='snV59Boot'||node.querySelector?.('#snV59Boot')) applyIntro71(node.parentElement||document);
     });
   }
 });
