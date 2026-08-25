@@ -75,3 +75,5 @@ jobs:
             echo 'Geen Firebase deployment credential gevonden.' >&2
             exit 1
           fi
+
+# v48 central assets + no-cache hosting deployment
