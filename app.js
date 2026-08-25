@@ -17,6 +17,12 @@ enchantedTheme.rel = 'stylesheet';
 enchantedTheme.href = fresh('./snazzle-enchanted-layer.css');
 document.head.appendChild(enchantedTheme);
 
+// v53: centrale premium afwerking voor consistentie, toegankelijkheid en gezinsgebruik.
+const professionalTheme = document.createElement('link');
+professionalTheme.rel = 'stylesheet';
+professionalTheme.href = fresh('./snazzle-professional-v53.css');
+document.head.appendChild(professionalTheme);
+
 // Belangrijk: lokaal alles met exact dezelfde runtimeVersion laden.
 await import(fresh('./app-core.js'));
 // v51: controleert automatisch op nieuwe GitHub-versies en vernieuwt veilig zonder oude cache.
@@ -70,6 +76,8 @@ await import(fresh('./snazzle-world-theme-v39.js'));
 await import(fresh('./snazzle-news-v46.js'));
 // v47: één rustige Snazzle Wereld-hub met privé kamer, missies, verhalen, badges, TV, mascotte, geheimen en seizoen.
 await import(fresh('./snazzle-world-hub-v47.js'));
+// v53: laatste professionele polish pas laden nadat de bestaande schermen zijn opgebouwd.
+await import(fresh('./snazzle-professional-v53.js'));
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
