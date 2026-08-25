@@ -1,4 +1,4 @@
-name: Fix Snazzle World launcher v47.2
+name: Update Snazzle World content v47.3
 
 on:
   push:
@@ -17,10 +17,10 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Remove overlapping launcher text and bust cache
+      - name: Add new adventures and expand story chapters
         run: python .github/scripts/fix_snazzle_world_launcher_v471.py
 
-      - name: Commit launcher fix
+      - name: Commit Snazzle World content update
         run: |
           if git diff --quiet; then
             echo "No changes needed"
@@ -28,6 +28,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add snazzle-world-hub-v47.css snazzle-world-hub-v47.js app.js index.html
-          git commit -m "Remove Snazzle World launcher overlap v47.2"
+          git add snazzle-world-hub-v47.js app.js index.html
+          git commit -m "Expand Snazzle World adventures and stories v47.3"
           git push
