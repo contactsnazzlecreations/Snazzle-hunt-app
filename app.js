@@ -129,6 +129,7 @@ const optionalModules=[
   './snazzle-game-menu-v62.js',
   './snazzle-listen-stories-v63.js',
   './snazzle-central-visuals-v54.js',
+  './snazzle-public-visual-publish-v64.js',
   './snazzle-image-recovery-v60.js',
   './snazzle-admin-close-v61.js',
   './snazzle-admin-access-v55.js',
