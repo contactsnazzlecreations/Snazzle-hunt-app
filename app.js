@@ -36,6 +36,9 @@ async function safeImport(path){
   }
 }
 
+// v71 wordt vroeg geladen: compositor-optimalisatie en beelddecoding zijn actief vóór de overige presentatielagen.
+await safeImport('./snazzle-runtime-stability-v71.js');
+
 // Presentatielaag: sprookjesachtige Magic Jungle stijl zonder app-logica te wijzigen.
 const magicTheme = document.createElement('link');
 magicTheme.rel = 'stylesheet';
@@ -61,16 +64,13 @@ finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
 document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-// Echte startbeleving vóór de zware modules. v53 gebruikt dezelfde sessievlag en maakt daardoor geen tweede splash.
+// Rustige laadlaag bij iedere start. De app wordt pas zichtbaar als de modules en lokale stylesheets zijn gezet.
+// Hierdoor ziet de gebruiker geen tussenstappen waarin kaarten, kleuren of knoppen nog verspringen.
 (function installEarlyBootV59(){
   const build=()=>{
     if(!document.body || document.getElementById('snV59Boot')) return;
     document.body.classList.add('sn-v59-booting');
-    if(sessionStorage.getItem('snazzleProSplashSeen')==='1'){
-      document.body.classList.remove('sn-v59-booting');
-      document.body.classList.add('sn-v59-ready');
-      return;
-    }
+    const seen=sessionStorage.getItem('snazzleProSplashSeen')==='1';
     sessionStorage.setItem('snazzleProSplashSeen','1');
     const splash=document.createElement('div');
     splash.id='snV59Boot';
@@ -78,13 +78,22 @@ refreshLocalStyles();
     splash.setAttribute('aria-hidden','true');
     splash.innerHTML='<div class="sn-v59-boot-inner"><div class="sn-v59-boot-mark">🦆</div><h1>Snazzle</h1><p>Samen naar buiten</p><small>Je avontuur wordt klaargezet…</small><div class="sn-v59-boot-line"></div></div>';
     document.body.appendChild(splash);
+    const born=performance.now();
+    let released=false;
+    window.__snazzleReleaseBoot=()=>{
+      if(released) return;
+      released=true;
+      const minVisible=seen ? 180 : 480;
+      const wait=Math.max(0,minVisible-(performance.now()-born));
+      setTimeout(()=>{
+        splash.classList.add('hide');
+        document.body.classList.remove('sn-v59-booting');
+        document.body.classList.add('sn-v59-ready');
+        setTimeout(()=>splash.remove(),350);
+      },wait);
+    };
     // Absolute noodrem: een presentatie-effect mag de app nooit blokkeren.
-    setTimeout(()=>{
-      splash.classList.add('hide');
-      document.body.classList.remove('sn-v59-booting');
-      document.body.classList.add('sn-v59-ready');
-      setTimeout(()=>splash.remove(),350);
-    },3200);
+    setTimeout(()=>window.__snazzleReleaseBoot?.(),5200);
   };
   if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
@@ -147,6 +156,11 @@ for(const modulePath of optionalModules){
   await safeImport(modulePath);
   refreshLocalStyles();
 }
+
+// Wacht één korte rendercyclus op de definitieve stylesheets voordat de laadlaag verdwijnt.
+// Animaties blijven behouden; de gebruiker ziet alleen niet meer hoe tientallen modules één voor één opbouwen.
+try{ await window.__snazzleRuntimeSettle71?.(); }catch(err){ console.warn('Snazzle settle v71',err); }
+window.__snazzleReleaseBoot?.();
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
