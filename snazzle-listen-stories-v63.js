@@ -17,7 +17,7 @@ const app=getApp(), auth=getAuth(app), db=getFirestore(app), storage=getStorage(
 const COLLECTION='villages', TYPE='snazzleAudioStory';
 // Deze bestaande, afgeschermde collectie wordt uitsluitend als fallback voor audioblokken gebruikt.
 // Zo werkt uploaden direct, ook zolang de Storage-regels nog niet via CI kunnen worden uitgerold.
-const CHUNK_COLLECTION='shopMailConfig', CHUNK_TYPE='snazzleAudioChunk';
+const CHUNK_COLLECTION='villages', CHUNK_TYPE='snazzleAudioChunk';
 const MAX_AUDIO_BYTES=60*1024*1024;
 const MAX_FALLBACK_AUDIO_BYTES=30*1024*1024;
 const MAX_IMAGE_BYTES=8*1024*1024;
