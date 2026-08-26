@@ -2,7 +2,7 @@
 
 // Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
 // maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
-const runtimeVersion = '20260826-stable-v102';
+const runtimeVersion = '20260826-stable-v103';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -31,8 +31,6 @@ async function safeImport(path){
   }
 }
 
-// Exact de bestaande stabiele volgorde. Geen massale modulepreload meer:
-// die overbelastte op sommige Android/4G-toestellen de browser en liet het laadscherm vaststaan.
 await safeImport('./snazzle-runtime-stability-v71.js');
 await safeImport('./snazzle-image-stability-v72.js');
 
@@ -57,9 +55,7 @@ finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
 document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-// Rustige laadlaag. De noodrem gebruikt directe inline styles en kan daardoor niet
-// door een later geladen stylesheet onbedoeld zichtbaar blijven.
-(function installEarlyBootV102(){
+(function installEarlyBootV103(){
   const build=()=>{
     if(!document.body || document.getElementById('snV59Boot')) return;
     document.body.classList.add('sn-v59-booting');
@@ -91,19 +87,13 @@ refreshLocalStyles();
     };
 
     window.__snazzleReleaseBoot=releaseBoot;
-
-    // Onafhankelijke harde noodrem: nooit langer dan 7 seconden een blokkerend laadscherm.
-    // Deze closure blijft werken ook als een latere module window.__snazzleReleaseBoot vervangt.
     setTimeout(releaseBoot,7000);
   };
   if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
 
-// De bestaande app-kern blijft ongewijzigd.
 await import(fresh('./app-core.js'));
 
-// Alle bestaande Snazzle-onderdelen blijven aanwezig en worden in exact dezelfde
-// bewezen volgorde uitgevoerd als vóór de snelheidsproeven.
 const optionalModules=[
   './snazzle-auto-update-v51.js',
   './snazzle-privacy-v52.js',
@@ -117,7 +107,7 @@ const optionalModules=[
   './snazzle-route.js',
   './snazzle-collection.js',
   './snazzle-ar-v80.js',
-  './snazzle-ar-safety-v82.js',
+  './snazzle-ar-safety-v82b.js',
   './snazzle-card-system-v2.js',
   './snazzle-card-worlds-v78.js',
   './snazzle-card-world-prompt-v79.js',
@@ -170,6 +160,13 @@ for(const modulePath of optionalModules){
 
 try{ await window.__snazzleRuntimeSettle71?.(); }catch(err){ console.warn('Snazzle settle v71',err); }
 window.__snazzleReleaseBoot?.();
+
+// AR-beheer hoort bij Beheer, niet bij het kritieke opstartpad. Het wordt daarom pas
+// na de zichtbare app geladen en kan de publieke home nooit meer blokkeren.
+setTimeout(()=>{
+  safeImport('./snazzle-ar-admin-v83.js');
+  safeImport('./snazzle-ar-admin-display-v84.js');
+},900);
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
