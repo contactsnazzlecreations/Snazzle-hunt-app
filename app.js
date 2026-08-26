@@ -66,7 +66,7 @@ finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
 document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-// Rustige laadlaag bij iedere start. Deze mag NOOIT langer dan enkele seconden boven de app blijven staan.
+// Rustige laadlaag bij iedere start. We tonen de app pas zodra ook de huidige home-laag is opgebouwd.
 (function installEarlyBootV59(){
   const build=()=>{
     if(!document.body || document.getElementById('snV59Boot')) return;
@@ -88,7 +88,6 @@ refreshLocalStyles();
       const minVisible=seen ? 120 : 350;
       const wait=Math.max(0,minVisible-(performance.now()-born));
       setTimeout(()=>{
-        // Inline waarden maken de noodstop onafhankelijk van latere CSS-lagen.
         splash.style.opacity='0';
         splash.style.visibility='hidden';
         splash.style.pointerEvents='none';
@@ -101,21 +100,15 @@ refreshLocalStyles();
 
     window.__snazzleReleaseBoot=releaseBoot;
 
-    // Harde noodrem: ook als een latere module faalt of de globale functie overschrijft,
-    // verdwijnt het laadscherm rechtstreeks via deze lokale functie.
-    setTimeout(releaseBoot,2800);
+    // Noodrem blijft bestaan, maar geeft de huidige home-laag eerst genoeg tijd.
+    // Zo verschijnt niet opnieuw de oude basis-layout terwijl de nieuwe lagen nog laden.
+    setTimeout(releaseBoot,8000);
   };
   if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
 
 // app-core is de enige kritieke module: zonder deze kern is er geen werkende Hunt-app.
 await import(fresh('./app-core.js'));
-
-// Zodra de kern werkt, mag de gebruiker de app zien. De extra lagen laden daarna verder.
-try{
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-}catch{}
-window.__snazzleReleaseBoot?.();
 
 // Alle aanvullende lagen worden geïsoleerd geladen. Eén toestel-specifieke fout kan de rest niet blokkeren.
 const optionalModules=[
@@ -179,10 +172,18 @@ const optionalModules=[
 for(const modulePath of optionalModules){
   await safeImport(modulePath);
   refreshLocalStyles();
+
+  // v31 is het omslagpunt waarop de huidige home-layout staat.
+  // Pas dán verdwijnt de splash, zodat de gebruiker nooit de oude basispagina ziet.
+  if(modulePath === './snazzle-clean-home-v31.js'){
+    try{ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))); }catch{}
+    window.__snazzleReleaseBoot?.();
+  }
 }
 
 // Na de extra modules nog één rustige rendercyclus; dit blokkeert het zichtbare opstartscherm niet meer.
 try{ await window.__snazzleRuntimeSettle71?.(); }catch(err){ console.warn('Snazzle settle v71',err); }
+window.__snazzleReleaseBoot?.();
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
