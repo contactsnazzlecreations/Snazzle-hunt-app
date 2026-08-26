@@ -2,8 +2,9 @@
 
 // Vaste buildversie voor lokale bestanden. index.html mag app.js zelf verversen,
 // maar de tientallen lokale modules hoeven niet bij IEDERE start opnieuw via 4G gedownload te worden.
-// Bij een volgende release verhogen we alleen deze buildversie.
-const runtimeVersion = '20260826-fastboot-v83';
+// BELANGRIJK: bij iedere release krijgt de volledige app een NIEUWE buildversie, zodat een telefoon
+// nooit een oudere GitHub-Pages kopie onder dezelfde cache-sleutel blijft gebruiken.
+const runtimeVersion = '20260826-current-v85';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
