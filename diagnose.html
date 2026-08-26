@@ -10,16 +10,13 @@
 <body><div class="diag-pre"><div><b>🦆 Snazzle</b><small>Diagnose wordt geopend…</small></div></div>
 <script type="module">
 try{
-  const response=await fetch('./index.html?diagnoseSource=103',{cache:'no-store'});
+  const response=await fetch('./index.html?diagnoseSource=104',{cache:'no-store'});
   const html=await response.text();
   const parsed=new DOMParser().parseFromString(html,'text/html');
-
-  // Neem alleen de bestaande Snazzle-stijlen en body over. Scripts uit index.html worden bewust niet uitgevoerd.
   [...parsed.head.querySelectorAll('style,link[rel="stylesheet"]')].forEach(node=>document.head.appendChild(node.cloneNode(true)));
   const nodes=[...parsed.body.childNodes].filter(node=>!(node.nodeType===1&&node.tagName==='SCRIPT'));
   document.body.replaceChildren(...nodes.map(node=>node.cloneNode(true)));
-
-  await import('./app-diagnostic-v103.js?v=103');
+  await import('./app-diagnostic-v104.js?v=104');
 }catch(err){
   console.error(err);
   document.body.innerHTML='<div class="diag-pre"><div><b>Diagnose kon niet starten</b><small>'+String(err?.message||err)+'</small></div></div>';
