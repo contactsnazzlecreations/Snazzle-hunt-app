@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#146b3a">
+<title>Snazzle diagnose</title>
+<style>html,body{margin:0;min-height:100%;background:#0d6844;color:white;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.diag-pre{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px}.diag-pre b{font-size:26px}.diag-pre small{display:block;margin-top:10px}</style>
+</head>
+<body><div class="diag-pre"><div><b>🦆 Snazzle</b><small>Diagnose wordt geopend…</small></div></div>
+<script type="module">
+try{
+  const response=await fetch('./index.html?diagnoseSource=103',{cache:'no-store'});
+  const html=await response.text();
+  const parsed=new DOMParser().parseFromString(html,'text/html');
+
+  // Neem alleen de bestaande Snazzle-stijlen en body over. Scripts uit index.html worden bewust niet uitgevoerd.
+  [...parsed.head.querySelectorAll('style,link[rel="stylesheet"]')].forEach(node=>document.head.appendChild(node.cloneNode(true)));
+  const nodes=[...parsed.body.childNodes].filter(node=>!(node.nodeType===1&&node.tagName==='SCRIPT'));
+  document.body.replaceChildren(...nodes.map(node=>node.cloneNode(true)));
+
+  await import('./app-diagnostic-v103.js?v=103');
+}catch(err){
+  console.error(err);
+  document.body.innerHTML='<div class="diag-pre"><div><b>Diagnose kon niet starten</b><small>'+String(err?.message||err)+'</small></div></div>';
+}
+</script>
+</body>
+</html>
