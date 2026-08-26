@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#083a24">
+<title>Snazzle AR Test</title>
+<style>
+:root{--gold:#ffc83d;--lime:#b9f34a;--green:#16844b;--green2:#083a24;--cream:#fff8df;--ink:#2e2116;--wood:#70431f}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#083a24;color:var(--cream)}button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh;background:radial-gradient(circle at 18% 8%,rgba(190,244,79,.22),transparent 28%),linear-gradient(180deg,#1c8047,#0a4d31 52%,#052c1d)}
+.shell{width:min(560px,100%);min-height:100vh;margin:auto;padding:18px 16px calc(28px + env(safe-area-inset-bottom))}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{display:flex;align-items:center;gap:10px}.logo{width:58px;height:58px;border-radius:50%;background:linear-gradient(145deg,#ffd95b,#f1a824);border:4px solid #75451f;display:grid;place-items:center;overflow:hidden;box-shadow:0 6px 0 #4d2a18}.logo img{width:100%;height:100%;object-fit:cover;display:none}.logo svg{width:46px;height:46px}.brand strong{font-size:24px;line-height:.9;color:#ffd049;text-shadow:0 2px #4b2a18}.brand strong span{display:block;color:var(--lime);font-size:15px}.back{border:2px solid rgba(255,255,255,.24);background:rgba(0,0,0,.17);color:#fff;border-radius:14px;padding:10px 12px;font-weight:900}.card{margin-top:18px;border:4px solid #754820;border-radius:28px;padding:20px;background:linear-gradient(145deg,#fff1b6,#efd08a);color:var(--ink);box-shadow:0 8px 0 #442719,0 18px 36px rgba(0,0,0,.25)}.eyebrow{font-size:12px;font-weight:1000;letter-spacing:1.4px;text-transform:uppercase;color:#5b7d2a}.card h1{font-size:31px;line-height:1.02;margin:6px 0 10px}.card p{line-height:1.45;font-weight:700}.status{margin:15px 0;padding:12px 14px;border:2px solid #b69458;border-radius:15px;background:#fff8e7;font-weight:900}.privacy{font-size:12px;color:#6d5636}.primary{width:100%;border:0;border-radius:17px;padding:16px;background:linear-gradient(#76c844,#438f2b);color:white;font-weight:1000;font-size:17px;box-shadow:0 5px 0 #2d6b20}.primary:disabled{filter:grayscale(.7);opacity:.62;box-shadow:none}.secondary{width:100%;border:0;border-radius:15px;padding:13px;margin-top:10px;background:#d4ad66;color:#302216;font-weight:1000}.mini{font-size:12px;margin-top:10px;text-align:center;color:#6e583c}.collection{margin-top:16px;padding:14px;border-radius:18px;background:rgba(0,0,0,.18);border:2px solid rgba(255,255,255,.15)}.collection strong{display:block;font-size:18px}.collection span{color:#e7f7c6;font-weight:800;font-size:13px}
+.ar{position:fixed;inset:0;background:#020704;z-index:50;display:none}.ar.show{display:block}.camera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#101a13}.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.42),transparent 22%,transparent 72%,rgba(0,0,0,.58));pointer-events:none}.hud{position:absolute;left:0;right:0;top:0;padding:calc(14px + env(safe-area-inset-top)) 14px 0;display:flex;justify-content:space-between;align-items:flex-start;z-index:4}.hudbox{max-width:72%;background:rgba(6,36,22,.82);border:2px solid rgba(201,246,91,.7);border-radius:16px;padding:10px 12px;backdrop-filter:blur(4px)}.hudbox b{display:block;color:#d5ff68}.hudbox small{font-weight:800}.closeAr{width:46px;height:46px;border-radius:15px;border:2px solid rgba(255,255,255,.4);background:rgba(0,0,0,.55);color:#fff;font-size:22px;font-weight:1000}.reticle{position:absolute;left:50%;top:49%;width:min(78vw,360px);height:min(78vw,360px);transform:translate(-50%,-50%);border:2px dashed rgba(220,255,126,.34);border-radius:50%;z-index:2;pointer-events:none;animation:pulse 2.4s ease-in-out infinite}.snazzle{position:absolute;left:50%;top:48%;width:190px;height:190px;transform:translate(-50%,-50%);z-index:3;filter:drop-shadow(0 14px 8px rgba(0,0,0,.35));animation:bob 2.2s ease-in-out infinite;touch-action:manipulation}.snazzle button{border:0;background:transparent;width:100%;height:100%;padding:0}.snazzle img{width:100%;height:100%;object-fit:contain;display:none}.snazzle svg{width:100%;height:100%;overflow:visible}.spark{position:absolute;inset:-15%;border-radius:50%;background:radial-gradient(circle,rgba(255,221,77,.25),transparent 62%);animation:spark 1.8s ease-in-out infinite;pointer-events:none}.bottomHud{position:absolute;left:14px;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:4}.distance{padding:11px 14px;border-radius:16px;background:rgba(5,34,20,.86);border:2px solid rgba(255,255,255,.25);text-align:center;font-weight:950;margin-bottom:10px}.catchHint{width:100%;border:0;border-radius:17px;padding:15px;background:linear-gradient(#ffd953,#f2a728);color:#34220e;font-weight:1000;font-size:17px;box-shadow:0 5px 0 #935915}
+.result{position:fixed;inset:0;background:rgba(1,12,7,.86);z-index:80;display:none;align-items:center;padding:18px}.result.show{display:flex}.resultCard{width:min(420px,100%);margin:auto;border:5px solid #7a4b21;border-radius:30px;background:linear-gradient(145deg,#fff3bc,#efc767);color:#2c2116;padding:22px;text-align:center;box-shadow:0 12px 0 #452818,0 25px 60px rgba(0,0,0,.45);animation:pop .35s ease-out}.badge{display:inline-block;border-radius:99px;background:#241b16;color:#ffe16b;padding:7px 12px;font-size:11px;font-weight:1000;letter-spacing:1px}.resultDuck{width:190px;height:190px;margin:10px auto}.resultDuck img{width:100%;height:100%;object-fit:contain;display:none}.resultDuck svg{width:100%;height:100%}.result h2{font-size:31px;margin:5px 0}.result p{font-weight:800}.success{color:#38751f;font-weight:1000}
+@keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(3px) rotate(-2deg) scale(.97)}50%{transform:translate(-50%,-50%) translateY(-13px) rotate(2deg) scale(1.04)}}@keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(.94);opacity:.45}50%{transform:translate(-50%,-50%) scale(1.04);opacity:.85}}@keyframes spark{0%,100%{transform:scale(.9);opacity:.35}50%{transform:scale(1.08);opacity:.85}}@keyframes pop{from{transform:scale(.86);opacity:.3}to{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top"><div class="brand"><div class="logo"><img id="logoImg" alt="Snazzle"><svg id="logoSvg" viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="43" cy="61" rx="31" ry="22" fill="#35aee7"/><circle cx="67" cy="39" r="17" fill="#35aee7"/><path d="M80 35 L98 43 L80 51 Z" fill="#f39a24"/><circle cx="71" cy="35" r="3" fill="#17231b"/><path d="M19 55 6 44 11 66Z" fill="#35aee7"/></svg></div><strong>SNAZZLE<span>AR TEST</span></strong></div><button class="back" id="backBtn">← Hunt</button></div>
+  <section class="card">
+    <div class="eyebrow">Prototype · fase 1</div>
+    <h1>Vind een Snazzle met je camera 📷</h1>
+    <p>Deze eerste test gebruikt jouw huidige locatie als tijdelijke Snazzle-plek. Zo kunnen we camera, GPS en het digitaal vangen veilig testen voordat we echte huntlocaties instellen.</p>
+    <div class="status" id="status">Klaar om te testen.</div>
+    <button class="primary" id="start">Start AR-test op mijn locatie</button>
+    <button class="secondary" id="collectionBtn">Bekijk mijn digitale collectie</button>
+    <div class="mini">Camera en locatie werken alleen op HTTPS en na jouw toestemming.</div>
+    <p class="privacy">🔒 Je exacte GPS-positie wordt in deze test niet opgeslagen. De locatie wordt alleen tijdelijk gebruikt om te controleren of je op de Snazzle-plek bent.</p>
+  </section>
+  <div class="collection"><strong>Mijn AR-vondsten: <span id="count">0</span></strong><span id="lastCatch">Nog geen digitale Snazzle gevangen.</span></div>
+</div>
+
+<div class="ar" id="ar">
+  <video class="camera" id="camera" autoplay muted playsinline></video><div class="shade"></div><div class="reticle"></div>
+  <div class="hud"><div class="hudbox"><b>✨ SNAZZLE-SIGNAAL</b><small id="hudText">Locatie controleren…</small></div><button class="closeAr" id="closeAr">×</button></div>
+  <div class="snazzle" id="snazzle"><div class="spark"></div><button id="catchDuck" aria-label="Vang de Snazzle"><img id="arImg" alt="Snazzle"><svg id="arSvg" viewBox="0 0 220 220" aria-hidden="true"><ellipse cx="93" cy="137" rx="70" ry="49" fill="#31aee7" stroke="#fff0a8" stroke-width="7"/><circle cx="145" cy="86" r="43" fill="#31aee7" stroke="#fff0a8" stroke-width="7"/><path d="M178 79 L217 94 L178 108 Z" fill="#f6a323" stroke="#7b451c" stroke-width="5"/><circle cx="157" cy="76" r="7" fill="#17231b"/><circle cx="159" cy="73" r="2.5" fill="white"/><path d="M45 131 9 108 20 157Z" fill="#31aee7" stroke="#fff0a8" stroke-width="6"/><path d="M90 101c16 20 18 43 5 62" fill="none" stroke="#1789bd" stroke-width="6" stroke-linecap="round"/><circle cx="79" cy="124" r="8" fill="#ffd748" opacity=".9"/><circle cx="63" cy="144" r="5" fill="#ffd748" opacity=".75"/></svg></button></div>
+  <div class="bottomHud"><div class="distance" id="distance">Je bent op de juiste plek ✅</div><button class="catchHint" id="catchHint">Tik op de Snazzle om hem te vangen!</button></div>
+</div>
+
+<div class="result" id="result"><div class="resultCard"><div class="badge">FIRST AR CATCH · TEST EDITION</div><div class="resultDuck"><img id="resultImg" alt="Gevangen Snazzle"><svg id="resultSvg" viewBox="0 0 220 220" aria-hidden="true"><ellipse cx="93" cy="137" rx="70" ry="49" fill="#31aee7" stroke="#fff0a8" stroke-width="7"/><circle cx="145" cy="86" r="43" fill="#31aee7" stroke="#fff0a8" stroke-width="7"/><path d="M178 79 L217 94 L178 108 Z" fill="#f6a323" stroke="#7b451c" stroke-width="5"/><circle cx="157" cy="76" r="7" fill="#17231b"/><circle cx="159" cy="73" r="2.5" fill="white"/><path d="M45 131 9 108 20 157Z" fill="#31aee7" stroke="#fff0a8" stroke-width="6"/></svg></div><div class="success">🎉 GEVANGEN!</div><h2>Scout Snazzle</h2><p>#001 · RARE ⭐⭐⭐</p><p>Toegevoegd aan je digitale Snazzle-collectie.</p><button class="primary" id="done">Naar mijn collectie</button></div></div>
+
+<script>
+(()=>{
+  const $=s=>document.querySelector(s);
+  const status=$('#status'), ar=$('#ar'), camera=$('#camera'), result=$('#result');
+  let stream=null, userPosition=null, armed=false;
+  const key='snazzleARCollection';
+  const snazzle={id:'AR-001',number:'001',name:'Scout Snazzle',rarity:'RARE',stars:3,edition:'First AR Test Edition'};
+
+  function loadBrand(){
+    try{
+      const settings=JSON.parse(localStorage.getItem('snazzleSettings')||'{}');
+      if(settings.profileImage){['logoImg','arImg','resultImg'].forEach(id=>{const el=$('#'+id);el.src=settings.profileImage;el.style.display='block'});['logoSvg','arSvg','resultSvg'].forEach(id=>$('#'+id).style.display='none')}
+    }catch{}
+  }
+  function collection(){try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return[]}}
+  function renderCollection(){const c=collection();$('#count').textContent=c.length;$('#lastCatch').textContent=c.length?`Laatste: ${c[c.length-1].name} · ${c[c.length-1].rarity}`:'Nog geen digitale Snazzle gevangen.'}
+  function saveCatch(){const c=collection();if(!c.some(x=>x.id===snazzle.id)){c.push({...snazzle,caughtAt:new Date().toISOString(),village:localStorage.getItem('snazzleVillage')||'Montfort'});localStorage.setItem(key,JSON.stringify(c))}renderCollection()}
+  function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}ar.classList.remove('show');armed=false}
+  function getLocation(){return new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('GPS wordt niet ondersteund op dit toestel.'));navigator.geolocation.getCurrentPosition(p=>resolve(p),e=>reject(new Error(e.code===1?'Locatietoestemming is geweigerd.':'Je locatie kon niet worden bepaald.')), {enableHighAccuracy:true,timeout:12000,maximumAge:0})})}
+  async function getCamera(){if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera wordt niet ondersteund in deze browser.');return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false})}
+  async function start(){
+    $('#start').disabled=true;status.textContent='📍 GPS controleren…';
+    try{
+      const pos=await getLocation();userPosition={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy};
+      status.textContent=`✅ Locatie gevonden (nauwkeurigheid ±${Math.round(pos.coords.accuracy)} m). Camera openen…`;
+      stream=await getCamera();camera.srcObject=stream;await camera.play().catch(()=>{});
+      ar.classList.add('show');armed=true;$('#hudText').textContent=`Snazzle gevonden in jouw zone · GPS ±${Math.round(pos.coords.accuracy)} m`;$('#distance').textContent='Je bent op de juiste plek ✅';
+    }catch(err){status.textContent='⚠️ '+err.message;stopCamera()}finally{$('#start').disabled=false}
+  }
+  function catchSnazzle(){if(!armed)return;armed=false;if(navigator.vibrate)navigator.vibrate([80,50,120]);saveCatch();stopCamera();result.classList.add('show')}
+  $('#start').addEventListener('click',start);$('#catchDuck').addEventListener('click',catchSnazzle);$('#catchHint').addEventListener('click',catchSnazzle);$('#closeAr').addEventListener('click',stopCamera);$('#done').addEventListener('click',()=>{result.classList.remove('show');status.textContent='🏆 Scout Snazzle staat in je digitale collectie.'});$('#collectionBtn').addEventListener('click',()=>{const c=collection();alert(c.length?c.map(x=>`#${x.number} ${x.name} · ${x.rarity}`).join('\n'):'Je collectie is nog leeg. Vang eerst een Snazzle!')});$('#backBtn').addEventListener('click',()=>location.href='./');window.addEventListener('pagehide',stopCamera);
+  loadBrand();renderCollection();
+})();
+</script>
+</body>
+</html>
