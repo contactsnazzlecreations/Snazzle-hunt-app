@@ -2,7 +2,7 @@
 
 // Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
 // maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
-const runtimeVersion = '20260826-stable-v106-mapcam';
+const runtimeVersion = '20260827-v107-hero-quack';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -93,6 +93,59 @@ refreshLocalStyles();
 })();
 
 await import(fresh('./app-core.js'));
+
+(function installHeroQuack(){
+  const hero=document.getElementById('hero');
+  if(!hero) return;
+
+  let audioContext=null;
+  const hasSnazzleHero=()=>getComputedStyle(hero).backgroundImage.includes('url(');
+
+  const playQuack=()=>{
+    const AudioCtx=window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return;
+    audioContext ||= new AudioCtx();
+    if(audioContext.state==='suspended') audioContext.resume().catch(()=>{});
+
+    const now=audioContext.currentTime;
+    const master=audioContext.createGain();
+    const filter=audioContext.createBiquadFilter();
+    const osc1=audioContext.createOscillator();
+    const osc2=audioContext.createOscillator();
+
+    filter.type='bandpass';
+    filter.frequency.setValueAtTime(720,now);
+    filter.Q.setValueAtTime(0.75,now);
+
+    osc1.type='sawtooth';
+    osc2.type='square';
+    osc1.frequency.setValueAtTime(500,now);
+    osc1.frequency.exponentialRampToValueAtTime(255,now+0.16);
+    osc1.frequency.setValueAtTime(360,now+0.17);
+    osc1.frequency.exponentialRampToValueAtTime(215,now+0.31);
+    osc2.frequency.setValueAtTime(250,now);
+    osc2.frequency.exponentialRampToValueAtTime(135,now+0.30);
+
+    master.gain.setValueAtTime(0.0001,now);
+    master.gain.exponentialRampToValueAtTime(0.085,now+0.018);
+    master.gain.exponentialRampToValueAtTime(0.045,now+0.13);
+    master.gain.setValueAtTime(0.075,now+0.17);
+    master.gain.exponentialRampToValueAtTime(0.0001,now+0.34);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(master);
+    master.connect(audioContext.destination);
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now+0.35);
+    osc2.stop(now+0.35);
+  };
+
+  hero.addEventListener('click',()=>{
+    if(hasSnazzleHero()) playQuack();
+  });
+})();
 
 const optionalModules=[
   './snazzle-auto-update-v51.js',
