@@ -1,10 +1,11 @@
-// Snazzle AR Safety v82b — non-blocking Safe Walk layer.
+// Snazzle AR Safety v82c — robuuste Safe Walk laag voor mobiel.
 // Belangrijk: deze module doet bij app-start geen GPS/camera-werk en laadt geen Firebase-adminmodules.
 // Hij koppelt alleen de veiligheidslaag aan de bestaande AR-overlay zodra die aanwezig is.
 
 const qs=(s,r=document)=>r.querySelector(s);
 let installed=false;
 let acknowledgedStop=false;
+let arrivedLatched=false;
 let lastOverlayOpen=false;
 let overlayObserver=null;
 let bodyObserver=null;
@@ -15,14 +16,14 @@ function installSafetyStyles(){
   const style=document.createElement('style');
   style.id='snArSafetyV82bStyles';
   style.textContent=`
-    .sn-ar-safe-walk{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;padding:92px 22px 145px;background:linear-gradient(180deg,#123c25,#092719);color:#fff;text-align:center}
+    .sn-ar-safe-walk{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;padding:92px 22px 145px;background:linear-gradient(180deg,#123c25,#092719);color:#fff;text-align:center;pointer-events:auto;touch-action:manipulation}
     .sn-ar-safe-walk.show{display:flex}
-    .sn-ar-safe-card{width:min(430px,100%);padding:22px 18px;border-radius:26px;background:#f5e9bd;color:#2f2417;border:4px solid #7a562c;box-shadow:0 8px 0 #4d311b}
+    .sn-ar-safe-card{width:min(430px,100%);padding:22px 18px;border-radius:26px;background:#f5e9bd;color:#2f2417;border:4px solid #7a562c;box-shadow:0 8px 0 #4d311b;position:relative;z-index:1;pointer-events:auto}
     .sn-ar-safe-icon{font-size:54px;line-height:1;margin-bottom:8px}
     .sn-ar-safe-card h2{margin:4px 0 8px;font-size:30px;line-height:1;color:#8c201b}
     .sn-ar-safe-card p{margin:8px 0;font-weight:850;line-height:1.42;font-size:16px}
     .sn-ar-safe-distance{margin:15px 0 4px;padding:12px;border-radius:16px;background:#173b24;color:#fff;font-size:19px;font-weight:1000}
-    .sn-ar-safe-stop{display:none;width:100%;margin-top:14px;border:0;border-radius:16px;padding:15px;background:linear-gradient(#72c842,#438e2c);color:#fff;font-weight:1000;font-size:16px;box-shadow:0 5px 0 #2d6820}
+    .sn-ar-safe-stop{display:none;width:100%;margin-top:14px;border:0;border-radius:16px;padding:15px;background:linear-gradient(#72c842,#438e2c);color:#fff;font-weight:1000;font-size:16px;box-shadow:0 5px 0 #2d6820;position:relative;z-index:2;pointer-events:auto!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     .sn-ar-safe-stop.show{display:block}
     .sn-ar-safe-small{display:block;margin-top:10px;font-size:11px;font-weight:800;color:#71583a}
     .sn-ar-overlay.safe-walking .sn-ar-camera{visibility:hidden}
@@ -40,7 +41,7 @@ function isDuckAvailable(){
 function mirrorDistance(){
   const source=qs('#snArDistance');
   const target=qs('#snArSafeDistance');
-  if(source&&target&&!isDuckAvailable()) target.textContent=source.textContent||'Snazzle-signaal zoeken…';
+  if(source&&target&&!arrivedLatched) target.textContent=source.textContent||'Snazzle-signaal zoeken…';
 }
 
 function renderSafety(){
@@ -49,16 +50,22 @@ function renderSafety(){
   if(!overlay||!shield) return;
 
   const open=overlay.classList.contains('show');
-  if(open&&!lastOverlayOpen) acknowledgedStop=false;
+  if(open&&!lastOverlayOpen){
+    acknowledgedStop=false;
+    arrivedLatched=false;
+  }
   lastOverlayOpen=open;
 
   if(!open){
+    acknowledgedStop=false;
+    arrivedLatched=false;
     if(shield.classList.contains('show')) shield.classList.remove('show');
     if(overlay.classList.contains('safe-walking')) overlay.classList.remove('safe-walking');
     return;
   }
 
-  const arrived=isDuckAvailable();
+  if(isDuckAvailable()) arrivedLatched=true;
+  const arrived=arrivedLatched;
   const title=qs('#snArSafeTitle');
   const text=qs('#snArSafeText');
   const icon=qs('#snArSafeIcon');
@@ -93,6 +100,17 @@ function renderSafety(){
   button?.classList.remove('show');
 }
 
+function acknowledgeStop(e){
+  e?.preventDefault?.();
+  e?.stopPropagation?.();
+  arrivedLatched=true;
+  acknowledgedStop=true;
+  const button=qs('#snArSafeStop');
+  if(button) button.textContent='Camera openen… ✓';
+  renderSafety();
+  try{navigator.vibrate?.(70);}catch{}
+}
+
 function installOnOverlay(){
   if(installed) return true;
   const overlay=qs('#snArOverlay');
@@ -118,11 +136,13 @@ function installOnOverlay(){
     overlay.appendChild(shield);
   }
 
-  qs('#snArSafeStop')?.addEventListener('click',()=>{
-    acknowledgedStop=true;
-    renderSafety();
-    try{navigator.vibrate?.(70);}catch{}
-  },{passive:true});
+  const stopButton=qs('#snArSafeStop');
+  if(stopButton){
+    stopButton.onclick=acknowledgeStop;
+    stopButton.addEventListener('pointerup',e=>{
+      if(e.pointerType==='touch') acknowledgeStop(e);
+    },{passive:false});
+  }
 
   const duck=qs('#snArDuck');
   const distance=qs('#snArDistance');
