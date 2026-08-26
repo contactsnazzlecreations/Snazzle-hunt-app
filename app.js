@@ -1,7 +1,7 @@
-// Snazzle Hunt entrypoint — v88 startup recovery.
-// Doel: volledige huidige app behouden, maar geen enkele optionele module mag het laadscherm nog blokkeren.
+// Snazzle Hunt entrypoint — v89 startup recovery.
+// Volledige huidige app behouden, maar geen enkele optionele module mag het laadscherm blokkeren.
 
-const runtimeVersion='20260826-v88';
+const runtimeVersion='20260826-v89';
 const fresh=(path)=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -77,7 +77,6 @@ function refreshLocalStyles(){
     }catch{}
   });
 }
-
 const headObserver=new MutationObserver(refreshLocalStyles);
 headObserver.observe(document.head,{childList:true,subtree:true});
 
@@ -93,8 +92,6 @@ addTheme('snazzleProfessionalTheme','./snazzle-professional-v53.css');
 addTheme('snazzleFinalPolishTheme','./snazzle-final-polish-v59.css');
 refreshLocalStyles();
 
-// Start de merkintro vóór enige netwerk-wachtronde. De lokale closure is bewust onafhankelijk
-// van window.__snazzleReleaseBoot, zodat een latere module hem nooit meer kan uitschakelen.
 let releaseBootNow=()=>{};
 (function installBoot(){
   const build=()=>{
@@ -125,19 +122,16 @@ let releaseBootNow=()=>{};
     };
     releaseBootNow=release;
     window.__snazzleReleaseBoot=release;
-    // Absolute noodstop: ook bij een defecte/traag reagerende module is de app uiterlijk na 9 s zichtbaar.
-    setTimeout(release,9000);
+    // Lokale harde noodstop: kan niet door een latere module worden overschreven.
+    setTimeout(release,8500);
   };
   if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
 
-// Laat de browser alle lokale modules direct parallel binnenhalen. Uitvoering wordt hieronder nog
-// in de bestaande volgorde gestart, maar een trage module kan die volgorde niet oneindig blokkeren.
 function preloadModule(path){
   try{
-    const href=fresh(path);
     const link=document.createElement('link');
-    link.rel='modulepreload';link.href=href;
+    link.rel='modulepreload';link.href=fresh(path);
     document.head.appendChild(link);
   }catch{}
 }
@@ -148,24 +142,22 @@ async function safeImport(path){
   catch(err){console.error(`Snazzle module kon niet laden: ${path}`,err);return null;}
 }
 
-// Wacht per optionele module maar heel kort. De import zelf blijft op de achtergrond doorlopen.
-// Daardoor bereiken we ook op langzaam 4G altijd de latere huidige UI-lagen en v59.
-async function startWithBudget(path,budget=140){
+// BELANGRIJK: na het budget keren we echt terug. De import blijft zelfstandig doorlopen,
+// maar deze functie wacht er NIET alsnog op. Daardoor kan één trage module de hele app niet vastzetten.
+async function startWithBudget(path,budget=120){
   const task=safeImport(path);
   await Promise.race([
     task,
     new Promise(resolve=>setTimeout(resolve,budget))
   ]);
-  return task;
 }
 
-// Stabiliteitslagen krijgen iets meer ruimte maar mogen de boot niet blokkeren.
 await Promise.all([
-  startWithBudget('./snazzle-runtime-stability-v71.js',450),
-  startWithBudget('./snazzle-image-stability-v72.js',450)
+  startWithBudget('./snazzle-runtime-stability-v71.js',400),
+  startWithBudget('./snazzle-image-stability-v72.js',400)
 ]);
 
-// De app-kern is wél noodzakelijk. Zodra die binnen is kan de interface functioneren.
+// app-core is de enige kritieke module.
 try{
   await import(fresh('./app-core.js'));
 }catch(err){
@@ -174,9 +166,9 @@ try{
   throw err;
 }
 
-// Start de bestaande lagen in dezelfde volgorde. Een netwerkvertraging van één laag houdt de rest niet meer tegen.
+// De bestaande volgorde blijft de startvolgorde. Iedere laag krijgt maximaal 120 ms om de volgende tegen te houden.
 for(const modulePath of optionalModules){
-  await startWithBudget(modulePath,140);
+  await startWithBudget(modulePath,120);
   refreshLocalStyles();
 }
 
@@ -184,18 +176,22 @@ try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle 
 try{await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}catch{}
 releaseBootNow();
 
-// Shop pas na Firebase-auth, zoals voorheen.
-import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
-const auth=getAuth();
-let shopLoaded=false;
-onAuthStateChanged(auth,async user=>{
-  if(!user||shopLoaded) return;
-  shopLoaded=true;
-  preloadModule('./shop.js');
-  preloadModule('./shop-email-settings.js');
-  await startWithBudget('./shop.js',400);
-  await startWithBudget('./shop-email-settings.js',400);
-  refreshLocalStyles();
-});
+// Firebase-auth en Shop laden pas nadat de zichtbare app vrijgegeven kan worden.
+(async()=>{
+  try{
+    const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
+    const auth=getAuth();
+    let shopLoaded=false;
+    onAuthStateChanged(auth,async user=>{
+      if(!user||shopLoaded) return;
+      shopLoaded=true;
+      preloadModule('./shop.js');
+      preloadModule('./shop-email-settings.js');
+      await startWithBudget('./shop.js',400);
+      await startWithBudget('./shop-email-settings.js',400);
+      refreshLocalStyles();
+    });
+  }catch(err){console.warn('Snazzle auth/shop later laden',err);}
+})();
 
 setTimeout(()=>{refreshLocalStyles();headObserver.disconnect();},12000);
