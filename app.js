@@ -1,13 +1,109 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-// STABIELE cacheversie: verander alleen bij een echte release.
-// Voorheen kreeg iedere start een Date.now()-versie en moest de telefoon alle lokale JS/CSS opnieuw downloaden.
-const runtimeVersion = '20260826-stable-v101';
+// Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
+// maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
+const runtimeVersion = '20260826-stable-v102';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
 
-// Exact dezelfde aanvullende modules en exact dezelfde uitvoervolgorde als de bewezen complete versie.
+function refreshLocalStyles(){
+  document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link=>{
+    try{
+      const url=new URL(link.getAttribute('href'),location.href);
+      if(url.origin!==location.origin) return;
+      if(!url.pathname.includes('/Snazzle-hunt-app/')) return;
+      if(url.searchParams.get('fresh')===runtimeVersion) return;
+      url.searchParams.set('fresh',runtimeVersion);
+      link.href=url.href;
+    }catch{}
+  });
+}
+const headObserver=new MutationObserver(refreshLocalStyles);
+headObserver.observe(document.head,{childList:true,subtree:true});
+
+async function safeImport(path){
+  try{
+    return await import(fresh(path));
+  }catch(err){
+    console.error(`Snazzle module kon niet laden: ${path}`,err);
+    return null;
+  }
+}
+
+// Exact de bestaande stabiele volgorde. Geen massale modulepreload meer:
+// die overbelastte op sommige Android/4G-toestellen de browser en liet het laadscherm vaststaan.
+await safeImport('./snazzle-runtime-stability-v71.js');
+await safeImport('./snazzle-image-stability-v72.js');
+
+const magicTheme = document.createElement('link');
+magicTheme.rel = 'stylesheet';
+magicTheme.href = fresh('./snazzle-magic-theme.css');
+document.head.appendChild(magicTheme);
+
+const enchantedTheme = document.createElement('link');
+enchantedTheme.rel = 'stylesheet';
+enchantedTheme.href = fresh('./snazzle-enchanted-layer.css');
+document.head.appendChild(enchantedTheme);
+
+const professionalTheme = document.createElement('link');
+professionalTheme.rel = 'stylesheet';
+professionalTheme.href = fresh('./snazzle-professional-v53.css');
+document.head.appendChild(professionalTheme);
+
+const finalPolishTheme = document.createElement('link');
+finalPolishTheme.rel = 'stylesheet';
+finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
+document.head.appendChild(finalPolishTheme);
+refreshLocalStyles();
+
+// Rustige laadlaag. De noodrem gebruikt directe inline styles en kan daardoor niet
+// door een later geladen stylesheet onbedoeld zichtbaar blijven.
+(function installEarlyBootV102(){
+  const build=()=>{
+    if(!document.body || document.getElementById('snV59Boot')) return;
+    document.body.classList.add('sn-v59-booting');
+    const seen=sessionStorage.getItem('snazzleProSplashSeen')==='1';
+    sessionStorage.setItem('snazzleProSplashSeen','1');
+    const splash=document.createElement('div');
+    splash.id='snV59Boot';
+    splash.className='sn-v59-boot';
+    splash.setAttribute('aria-hidden','true');
+    splash.innerHTML='<div class="sn-v59-boot-inner"><div class="sn-v59-boot-mark">🦆</div><h1>Snazzle</h1><p>Samen naar buiten</p><small>Je avontuur wordt klaargezet…</small><div class="sn-v59-boot-line"></div></div>';
+    document.body.appendChild(splash);
+    const born=performance.now();
+    let released=false;
+
+    const releaseBoot=()=>{
+      if(released) return;
+      released=true;
+      const minVisible=seen ? 180 : 480;
+      const wait=Math.max(0,minVisible-(performance.now()-born));
+      setTimeout(()=>{
+        splash.classList.add('hide');
+        splash.style.setProperty('opacity','0','important');
+        splash.style.setProperty('visibility','hidden','important');
+        splash.style.setProperty('pointer-events','none','important');
+        document.body.classList.remove('sn-v59-booting');
+        document.body.classList.add('sn-v59-ready');
+        setTimeout(()=>splash.remove(),350);
+      },wait);
+    };
+
+    window.__snazzleReleaseBoot=releaseBoot;
+
+    // Onafhankelijke harde noodrem: nooit langer dan 7 seconden een blokkerend laadscherm.
+    // Deze closure blijft werken ook als een latere module window.__snazzleReleaseBoot vervangt.
+    setTimeout(releaseBoot,7000);
+  };
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
+})();
+
+// De bestaande app-kern blijft ongewijzigd.
+await import(fresh('./app-core.js'));
+
+// Alle bestaande Snazzle-onderdelen blijven aanwezig en worden in exact dezelfde
+// bewezen volgorde uitgevoerd als vóór de snelheidsproeven.
 const optionalModules=[
   './snazzle-auto-update-v51.js',
   './snazzle-privacy-v52.js',
@@ -67,136 +163,16 @@ const optionalModules=[
   './snazzle-bieb-locations-v77.js'
 ];
 
-// Alleen de DOWNLOADS worden vooruit gestart. De modules zelf worden verderop nog steeds
-// één voor één in de oorspronkelijke bewezen volgorde uitgevoerd. Hierdoor blijven alle functies intact,
-// maar hoeft 4G niet na iedere module pas aan de volgende download te beginnen.
-(function preloadLocalModules(){
-  const paths=[
-    './snazzle-runtime-stability-v71.js',
-    './snazzle-image-stability-v72.js',
-    './app-core.js',
-    ...optionalModules
-  ];
-  for(const path of paths){
-    try{
-      const href=fresh(path);
-      if(document.querySelector(`link[rel="modulepreload"][href="${href}"]`)) continue;
-      const link=document.createElement('link');
-      link.rel='modulepreload';
-      link.href=href;
-      document.head.appendChild(link);
-    }catch{}
-  }
-})();
-
-// Sommige oudere presentatiemodules voegen zelf CSS toe met een vast ?v= nummer.
-// Iedere lokale stylesheet krijgt dezelfde release-versie, zodat gewijzigde CSS klopt maar daarna wel cachebaar blijft.
-function refreshLocalStyles(){
-  document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link=>{
-    try{
-      const url=new URL(link.getAttribute('href'),location.href);
-      if(url.origin!==location.origin) return;
-      if(!url.pathname.includes('/Snazzle-hunt-app/')) return;
-      if(url.searchParams.get('fresh')===runtimeVersion) return;
-      url.searchParams.set('fresh',runtimeVersion);
-      link.href=url.href;
-    }catch{}
-  });
-}
-const headObserver=new MutationObserver(refreshLocalStyles);
-headObserver.observe(document.head,{childList:true,subtree:true});
-
-// Een optionele extra module mag nooit verhinderen dat alle nieuwere lagen daarna laden.
-async function safeImport(path){
-  try{
-    return await import(fresh(path));
-  }catch(err){
-    console.error(`Snazzle module kon niet laden: ${path}`,err);
-    return null;
-  }
-}
-
-// v71 + v72 worden vroeg geladen: compositor-optimalisatie, beelddecoding en bronbewaking zijn actief vóór app-core.
-await safeImport('./snazzle-runtime-stability-v71.js');
-await safeImport('./snazzle-image-stability-v72.js');
-
-// Presentatielaag: sprookjesachtige Magic Jungle stijl zonder app-logica te wijzigen.
-const magicTheme = document.createElement('link');
-magicTheme.rel = 'stylesheet';
-magicTheme.href = fresh('./snazzle-magic-theme.css');
-document.head.appendChild(magicTheme);
-
-// Extra rustige familiefilm-magie: lichtstralen, gloed en rijkere collectiepagina's.
-const enchantedTheme = document.createElement('link');
-enchantedTheme.rel = 'stylesheet';
-enchantedTheme.href = fresh('./snazzle-enchanted-layer.css');
-document.head.appendChild(enchantedTheme);
-
-// v53: centrale premium afwerking voor consistentie, toegankelijkheid en gezinsgebruik.
-const professionalTheme = document.createElement('link');
-professionalTheme.rel = 'stylesheet';
-professionalTheme.href = fresh('./snazzle-professional-v53.css');
-document.head.appendChild(professionalTheme);
-
-// v59: laatste gecontroleerde kwaliteitslaag. Deze CSS staat vroeg zodat ook de echte bootervaring direct klopt.
-const finalPolishTheme = document.createElement('link');
-finalPolishTheme.rel = 'stylesheet';
-finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
-document.head.appendChild(finalPolishTheme);
-refreshLocalStyles();
-
-// Rustige laadlaag bij iedere start. De app wordt pas zichtbaar als de modules en lokale stylesheets zijn gezet.
-(function installEarlyBootV59(){
-  const build=()=>{
-    if(!document.body || document.getElementById('snV59Boot')) return;
-    document.body.classList.add('sn-v59-booting');
-    const seen=sessionStorage.getItem('snazzleProSplashSeen')==='1';
-    sessionStorage.setItem('snazzleProSplashSeen','1');
-    const splash=document.createElement('div');
-    splash.id='snV59Boot';
-    splash.className='sn-v59-boot';
-    splash.setAttribute('aria-hidden','true');
-    splash.innerHTML='<div class="sn-v59-boot-inner"><div class="sn-v59-boot-mark">🦆</div><h1>Snazzle</h1><p>Samen naar buiten</p><small>Je avontuur wordt klaargezet…</small><div class="sn-v59-boot-line"></div></div>';
-    document.body.appendChild(splash);
-    const born=performance.now();
-    let released=false;
-    window.__snazzleReleaseBoot=()=>{
-      if(released) return;
-      released=true;
-      const minVisible=seen ? 180 : 480;
-      const wait=Math.max(0,minVisible-(performance.now()-born));
-      setTimeout(()=>{
-        splash.classList.add('hide');
-        document.body.classList.remove('sn-v59-booting');
-        document.body.classList.add('sn-v59-ready');
-        setTimeout(()=>splash.remove(),350);
-      },wait);
-    };
-    // Absolute noodrem blijft identiek aan de bewezen versie.
-    setTimeout(()=>window.__snazzleReleaseBoot?.(),5200);
-  };
-  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
-})();
-
-// app-core is de enige kritieke module: zonder deze kern is er geen werkende Hunt-app.
-await import(fresh('./app-core.js'));
-
-// Alle aanvullende lagen worden geïsoleerd geladen, exact in de bestaande volgorde.
 for(const modulePath of optionalModules){
   await safeImport(modulePath);
   refreshLocalStyles();
 }
 
-// Wacht één korte rendercyclus op de definitieve stylesheets voordat de laadlaag verdwijnt.
 try{ await window.__snazzleRuntimeSettle71?.(); }catch(err){ console.warn('Snazzle settle v71',err); }
 window.__snazzleReleaseBoot?.();
 
-// v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
-// De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
-
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
-// Load the shop only after Firebase has restored/created a signed-in user.
 const auth = getAuth();
 let shopLoaded = false;
 onAuthStateChanged(auth, async user => {
@@ -207,5 +183,4 @@ onAuthStateChanged(auth, async user => {
   refreshLocalStyles();
 });
 
-// Laat de observer nog even actief voor laat toegevoegde thema-CSS; daarna is de UI opgebouwd.
 setTimeout(()=>{refreshLocalStyles();headObserver.disconnect();},12000);
