@@ -1,4 +1,4 @@
-name: Patch Snazzle quick menu
+name: Patch Snazzle stable UI v100
 
 on:
   push:
@@ -16,8 +16,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Patch app.js
-        run: python .github/scripts/patch_quick_menu.py
+      - name: Patch stable Snazzle UI
+        run: python .github/scripts/patch_ui_v100.py
 
       - name: Commit patched app
         run: |
@@ -28,5 +28,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.js
-          git commit -m "Add Snazzle quick menu"
+          git commit -m "Apply stable premium Home v100 and Snazzle splash"
           git push
