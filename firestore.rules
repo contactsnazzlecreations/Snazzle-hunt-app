@@ -87,15 +87,10 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
     }
 
-    // Extra Hint: centraal wordt alleen starttijd + totaal geverifieerde meters bewaard.
-    // Exacte GPS-posities en wandelroutes worden nooit naar Firestore geschreven.
     match /snazzleHuntSessions/{sessionId} {
       allow read: if signedIn() && resource.data.userId == request.auth.uid;
-
       allow create: if signedIn() &&
-        request.resource.data.keys().hasOnly([
-          "userId", "huntId", "startedAt", "meters", "lastMoveAt", "hintOpenedAt"
-        ]) &&
+        request.resource.data.keys().hasOnly(["userId", "huntId", "startedAt", "meters", "lastMoveAt", "hintOpenedAt"]) &&
         request.resource.data.userId == request.auth.uid &&
         request.resource.data.huntId is string &&
         request.resource.data.huntId.size() >= 1 &&
@@ -107,15 +102,12 @@ service cloud.firestore {
         request.resource.data.meters == 0 &&
         request.resource.data.lastMoveAt == request.time &&
         request.resource.data.hintOpenedAt == null;
-
       allow update: if signedIn() &&
         resource.data.userId == request.auth.uid &&
         request.resource.data.userId == resource.data.userId &&
         request.resource.data.huntId == resource.data.huntId &&
         request.resource.data.startedAt == resource.data.startedAt &&
-        request.resource.data.keys().hasOnly([
-          "userId", "huntId", "startedAt", "meters", "lastMoveAt", "hintOpenedAt"
-        ]) &&
+        request.resource.data.keys().hasOnly(["userId", "huntId", "startedAt", "meters", "lastMoveAt", "hintOpenedAt"]) &&
         (
           (
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(["meters", "lastMoveAt"]) &&
@@ -138,85 +130,43 @@ service cloud.firestore {
             resource.data.meters >= get(/databases/$(database)/documents/hunts/$(resource.data.huntId)).data.extraHintMinMeters
           )
         );
-
-      allow delete: if isSuperAdmin() ||
-        (signedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isSuperAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
     }
 
-    // Snazzle Samen Buiten: alleen beheerders maken openbare Treffpunten.
-    // Er worden geen namen van kinderen, chatberichten of live locaties opgeslagen.
     match /snazzleMeetups/{meetupId} {
       allow read: if signedIn();
       allow create: if (isSuperAdmin() || isVillageAdmin(request.resource.data.village)) &&
-        request.resource.data.keys().hasOnly([
-          "title", "village", "locationName", "mapsUrl", "startsAt", "endsAt",
-          "note", "active", "createdBy", "updatedAt", "createdAt"
-        ]) &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() >= 2 &&
-        request.resource.data.title.size() <= 60 &&
-        request.resource.data.village is string &&
-        request.resource.data.village.size() >= 2 &&
-        request.resource.data.village.size() <= 60 &&
-        request.resource.data.locationName is string &&
-        request.resource.data.locationName.size() >= 2 &&
-        request.resource.data.locationName.size() <= 80 &&
-        request.resource.data.mapsUrl is string &&
-        request.resource.data.mapsUrl.size() <= 500 &&
-        request.resource.data.startsAt is string &&
-        request.resource.data.endsAt is string &&
-        request.resource.data.note is string &&
-        request.resource.data.note.size() <= 240 &&
-        request.resource.data.active is bool &&
-        request.resource.data.createdBy == request.auth.uid &&
-        request.resource.data.updatedAt is string &&
-        request.resource.data.createdAt is string;
+        request.resource.data.keys().hasOnly(["title", "village", "locationName", "mapsUrl", "startsAt", "endsAt", "note", "active", "createdBy", "updatedAt", "createdAt"]) &&
+        request.resource.data.title is string && request.resource.data.title.size() >= 2 && request.resource.data.title.size() <= 60 &&
+        request.resource.data.village is string && request.resource.data.village.size() >= 2 && request.resource.data.village.size() <= 60 &&
+        request.resource.data.locationName is string && request.resource.data.locationName.size() >= 2 && request.resource.data.locationName.size() <= 80 &&
+        request.resource.data.mapsUrl is string && request.resource.data.mapsUrl.size() <= 500 &&
+        request.resource.data.startsAt is string && request.resource.data.endsAt is string &&
+        request.resource.data.note is string && request.resource.data.note.size() <= 240 &&
+        request.resource.data.active is bool && request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.updatedAt is string && request.resource.data.createdAt is string;
       allow update: if (isSuperAdmin() || isVillageAdmin(resource.data.village)) &&
-        request.resource.data.keys().hasOnly([
-          "title", "village", "locationName", "mapsUrl", "startsAt", "endsAt",
-          "note", "active", "createdBy", "updatedAt", "createdAt"
-        ]) &&
-        request.resource.data.village == resource.data.village &&
-        request.resource.data.createdBy == resource.data.createdBy &&
-        request.resource.data.createdAt == resource.data.createdAt &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() >= 2 &&
-        request.resource.data.title.size() <= 60 &&
-        request.resource.data.locationName is string &&
-        request.resource.data.locationName.size() >= 2 &&
-        request.resource.data.locationName.size() <= 80 &&
-        request.resource.data.mapsUrl is string &&
-        request.resource.data.mapsUrl.size() <= 500 &&
-        request.resource.data.startsAt is string &&
-        request.resource.data.endsAt is string &&
-        request.resource.data.note is string &&
-        request.resource.data.note.size() <= 240 &&
-        request.resource.data.active is bool &&
-        request.resource.data.updatedAt is string;
+        request.resource.data.keys().hasOnly(["title", "village", "locationName", "mapsUrl", "startsAt", "endsAt", "note", "active", "createdBy", "updatedAt", "createdAt"]) &&
+        request.resource.data.village == resource.data.village && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.title is string && request.resource.data.title.size() >= 2 && request.resource.data.title.size() <= 60 &&
+        request.resource.data.locationName is string && request.resource.data.locationName.size() >= 2 && request.resource.data.locationName.size() <= 80 &&
+        request.resource.data.mapsUrl is string && request.resource.data.mapsUrl.size() <= 500 &&
+        request.resource.data.startsAt is string && request.resource.data.endsAt is string &&
+        request.resource.data.note is string && request.resource.data.note.size() <= 240 && request.resource.data.active is bool && request.resource.data.updatedAt is string;
       allow delete: if isSuperAdmin() || isVillageAdmin(resource.data.village);
     }
 
-    // Per Treffpunt wordt uitsluitend bijgehouden dat één anoniem account-gezin meedoet.
-    // Andere gebruikers zien alleen het totaal in de app; geen nickname of locatie wordt opgeslagen.
     match /snazzleMeetupJoins/{joinId} {
       allow read: if signedIn();
       allow create: if signedIn() &&
         request.resource.data.keys().hasOnly(["meetupId", "userId", "adultConfirmed", "createdAt"]) &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.meetupId is string &&
-        request.resource.data.meetupId.size() >= 1 &&
-        request.resource.data.meetupId.size() <= 160 &&
-        request.resource.data.adultConfirmed == true &&
-        request.resource.data.createdAt is string &&
+        request.resource.data.userId == request.auth.uid && request.resource.data.meetupId is string && request.resource.data.meetupId.size() >= 1 && request.resource.data.meetupId.size() <= 160 &&
+        request.resource.data.adultConfirmed == true && request.resource.data.createdAt is string &&
         exists(/databases/$(database)/documents/snazzleMeetups/$(request.resource.data.meetupId));
       allow update: if false;
-      allow delete: if isSuperAdmin() ||
-        (signedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isSuperAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
     }
 
-
-    // Het Snazzle Nieuws: openbare krant voor ingelogde/anonime appgebruikers.
-    // Alleen de hoofdbeheerder kan pagina's toevoegen, wijzigen, ordenen of verwijderen.
     match /snazzleNewsPages/{pageId} {
       allow read: if signedIn();
       allow create, update, delete: if isSuperAdmin();
@@ -234,54 +184,21 @@ service cloud.firestore {
 
     match /shopOrders/{orderId} {
       allow create: if signedIn() &&
-        request.resource.data.keys().hasOnly([
-          "userId", "orderNo", "productId", "productName", "unitPriceCents",
-          "quantity", "productTotalCents", "fulfillment", "contactName", "email",
-          "phone", "street", "houseNumber", "postalCode", "city",
-          "adultConfirmed", "privacyAcknowledged", "status", "createdAt"
-        ]) &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.orderNo is string &&
-        request.resource.data.productId is string &&
-        request.resource.data.productName is string &&
-        request.resource.data.unitPriceCents is int &&
-        request.resource.data.quantity is int &&
-        request.resource.data.quantity >= 1 &&
-        request.resource.data.quantity <= 10 &&
-        request.resource.data.productTotalCents is int &&
-        request.resource.data.fulfillment in ["pickup", "shipping"] &&
-        request.resource.data.contactName is string &&
-        request.resource.data.contactName.size() >= 2 &&
-        request.resource.data.contactName.size() <= 60 &&
-        request.resource.data.email is string &&
-        request.resource.data.email.size() >= 5 &&
-        request.resource.data.email.size() <= 120 &&
-        request.resource.data.phone is string &&
-        request.resource.data.phone.size() <= 30 &&
-        request.resource.data.street is string &&
-        request.resource.data.houseNumber is string &&
-        request.resource.data.postalCode is string &&
-        request.resource.data.city is string &&
-        request.resource.data.adultConfirmed == true &&
-        request.resource.data.privacyAcknowledged == true &&
-        request.resource.data.status == "new" &&
-        request.resource.data.createdAt is string &&
+        request.resource.data.keys().hasOnly(["userId", "orderNo", "productId", "productName", "unitPriceCents", "quantity", "productTotalCents", "fulfillment", "contactName", "email", "phone", "street", "houseNumber", "postalCode", "city", "adultConfirmed", "privacyAcknowledged", "status", "createdAt"]) &&
+        request.resource.data.userId == request.auth.uid && request.resource.data.orderNo is string && request.resource.data.productId is string && request.resource.data.productName is string &&
+        request.resource.data.unitPriceCents is int && request.resource.data.quantity is int && request.resource.data.quantity >= 1 && request.resource.data.quantity <= 10 &&
+        request.resource.data.productTotalCents is int && request.resource.data.fulfillment in ["pickup", "shipping"] &&
+        request.resource.data.contactName is string && request.resource.data.contactName.size() >= 2 && request.resource.data.contactName.size() <= 60 &&
+        request.resource.data.email is string && request.resource.data.email.size() >= 5 && request.resource.data.email.size() <= 120 &&
+        request.resource.data.phone is string && request.resource.data.phone.size() <= 30 &&
+        request.resource.data.street is string && request.resource.data.houseNumber is string && request.resource.data.postalCode is string && request.resource.data.city is string &&
+        request.resource.data.adultConfirmed == true && request.resource.data.privacyAcknowledged == true && request.resource.data.status == "new" && request.resource.data.createdAt is string &&
         get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.active != false &&
         request.resource.data.productName == get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.name &&
         request.resource.data.unitPriceCents == get(/databases/$(database)/documents/shopProducts/$(request.resource.data.productId)).data.priceCents &&
         request.resource.data.productTotalCents == request.resource.data.unitPriceCents * request.resource.data.quantity &&
-        (
-          request.resource.data.fulfillment == "pickup" ||
-          (
-            request.resource.data.street.size() >= 2 &&
-            request.resource.data.houseNumber.size() >= 1 &&
-            request.resource.data.postalCode.size() >= 4 &&
-            request.resource.data.city.size() >= 2
-          )
-        );
-
-      allow read: if isSuperAdmin() ||
-        (signedIn() && resource.data.userId == request.auth.uid);
+        (request.resource.data.fulfillment == "pickup" || (request.resource.data.street.size() >= 2 && request.resource.data.houseNumber.size() >= 1 && request.resource.data.postalCode.size() >= 4 && request.resource.data.city.size() >= 2));
+      allow read: if isSuperAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow update, delete: if isSuperAdmin();
     }
 
@@ -289,41 +206,25 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, update, delete: if isSuperAdmin();
     }
-
     match /mailUsers/{recipientId} {
       allow read: if false;
       allow create, update, delete: if isSuperAdmin();
     }
-
     match /mailTemplates/{templateId} {
       allow read: if isSuperAdmin();
       allow create, update, delete: if isSuperAdmin();
     }
-
     match /mail/{mailId} {
       allow create: if ownsShopOrder(request.resource.data.orderId) &&
         request.resource.data.keys().hasOnly(["orderId", "kind", "toUids", "to", "replyTo", "template"]) &&
-        (
-          (
-            request.resource.data.kind == "owner" &&
-            mailId == request.resource.data.orderId + "-owners" &&
-            request.resource.data.toUids == get(/databases/$(database)/documents/shopMailConfig/current).data.recipientUids &&
-            request.resource.data.replyTo == get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email &&
-            request.resource.data.template.name == "shop-owner-order"
-          ) ||
-          (
-            request.resource.data.kind == "customer" &&
-            mailId == request.resource.data.orderId + "-customer" &&
-            request.resource.data.to == [get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email] &&
-            request.resource.data.template.name == "shop-customer-confirmation"
-          )
-        );
+        ((request.resource.data.kind == "owner" && mailId == request.resource.data.orderId + "-owners" && request.resource.data.toUids == get(/databases/$(database)/documents/shopMailConfig/current).data.recipientUids && request.resource.data.replyTo == get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email && request.resource.data.template.name == "shop-owner-order") ||
+         (request.resource.data.kind == "customer" && mailId == request.resource.data.orderId + "-customer" && request.resource.data.to == [get(/databases/$(database)/documents/shopOrders/$(request.resource.data.orderId)).data.email] && request.resource.data.template.name == "shop-customer-confirmation"));
       allow read: if isSuperAdmin();
       allow update, delete: if false;
     }
 
-    // Centrale Snazzle app-afbeeldingen: iedereen die de app gebruikt mag ze lezen.
-    // Alleen de hoofdbeheerder mag het gedeelde uiterlijk aanpassen.
+    // Centrale Snazzle app-assets, inclusief de vaste AR-wereld.
+    // Ingelogde appgebruikers mogen lezen; alleen de actieve hoofdbeheerder mag wijzigen.
     match /snazzleAppAssets/{assetId} {
       allow read: if signedIn();
       allow create, update, delete: if isSuperAdmin();
