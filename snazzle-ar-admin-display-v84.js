@@ -9,6 +9,7 @@ if(!document.getElementById('snArAdminDisplayV85')){
 
 const fresh=window.__snazzleFresh||((p)=>`${p}?v=${Date.now()}`);
 Promise.all([
+  import(fresh('./snazzle-ar-admin-guard-v85.js')),
   import(fresh('./snazzle-ar-admin-v85.js')),
   import(fresh('./snazzle-ar-world-v85.js'))
 ]).catch(err=>console.warn('Snazzle AR v85 kon niet volledig laden',err));
