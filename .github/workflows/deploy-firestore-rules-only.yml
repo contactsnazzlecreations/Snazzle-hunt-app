@@ -1,3 +1,4 @@
+# AR-beheer: forceer herpublicatie van de actuele Firestore-regels (2026-08-26)
 name: Deploy Firestore Rules Only
 
 on:
