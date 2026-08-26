@@ -1,15 +1,15 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-// Gebruik de versie uit de app.js-URL als centrale cache-buster voor ALLE lokale bestanden.
-// De refresh-pagina geeft bij iedere start een nieuwe waarde mee, zodat nooit een mix van oude en nieuwe modules wordt geladen.
-const runtimeVersion = new URL(import.meta.url).searchParams.get('v') || Date.now().toString();
+// Vaste buildversie voor lokale bestanden. index.html mag app.js zelf verversen,
+// maar de tientallen lokale modules hoeven niet bij IEDERE start opnieuw via 4G gedownload te worden.
+// Bij een volgende release verhogen we alleen deze buildversie.
+const runtimeVersion = '20260826-fastboot-v83';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
 
 // Sommige oudere presentatiemodules voegen zelf CSS toe met een vast ?v= nummer.
-// Op andere telefoons kon daardoor alsnog een oude stylesheet blijven hangen, terwijl app.js al nieuw was.
-// Iedere lokale stylesheet krijgt daarom dezelfde unieke runtime-versie als de JavaScript-modules.
+// Iedere lokale stylesheet krijgt daarom dezelfde buildversie als de JavaScript-modules.
 function refreshLocalStyles(){
   document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link=>{
     try{
@@ -25,8 +25,7 @@ function refreshLocalStyles(){
 const headObserver=new MutationObserver(refreshLocalStyles);
 headObserver.observe(document.head,{childList:true,subtree:true});
 
-// Een optionele extra module mag nooit meer verhinderen dat alle nieuwere lagen daarna laden.
-// Op een schoon toestel kon één fout anders de laadketen halverwege stoppen en precies de oude paspoort-layout achterlaten.
+// Een optionele extra module mag nooit verhinderen dat alle nieuwere lagen daarna laden.
 async function safeImport(path){
   try{
     return await import(fresh(path));
@@ -36,9 +35,11 @@ async function safeImport(path){
   }
 }
 
-// v71 + v72 worden vroeg geladen: compositor-optimalisatie, beelddecoding en bronbewaking zijn actief vóór app-core.
-await safeImport('./snazzle-runtime-stability-v71.js');
-await safeImport('./snazzle-image-stability-v72.js');
+// v71 + v72 vroeg laden. Parallel scheelt een extra netwerk-wachtronde op mobiel.
+await Promise.all([
+  safeImport('./snazzle-runtime-stability-v71.js'),
+  safeImport('./snazzle-image-stability-v72.js')
+]);
 
 // Presentatielaag: sprookjesachtige Magic Jungle stijl zonder app-logica te wijzigen.
 const magicTheme = document.createElement('link');
@@ -65,8 +66,7 @@ finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
 document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-// Rustige laadlaag bij iedere start. De app wordt pas zichtbaar als de modules en lokale stylesheets zijn gezet.
-// Hierdoor ziet de gebruiker geen tussenstappen waarin kaarten, kleuren of knoppen nog verspringen.
+// Rustige laadlaag bij iedere start. Deze mag NOOIT langer dan enkele seconden boven de app blijven staan.
 (function installEarlyBootV59(){
   const build=()=>{
     if(!document.body || document.getElementById('snV59Boot')) return;
@@ -81,20 +81,29 @@ refreshLocalStyles();
     document.body.appendChild(splash);
     const born=performance.now();
     let released=false;
-    window.__snazzleReleaseBoot=()=>{
+
+    const releaseBoot=()=>{
       if(released) return;
       released=true;
-      const minVisible=seen ? 180 : 480;
+      const minVisible=seen ? 120 : 350;
       const wait=Math.max(0,minVisible-(performance.now()-born));
       setTimeout(()=>{
+        // Inline waarden maken de noodstop onafhankelijk van latere CSS-lagen.
+        splash.style.opacity='0';
+        splash.style.visibility='hidden';
+        splash.style.pointerEvents='none';
         splash.classList.add('hide');
         document.body.classList.remove('sn-v59-booting');
         document.body.classList.add('sn-v59-ready');
-        setTimeout(()=>splash.remove(),350);
+        setTimeout(()=>splash.remove(),320);
       },wait);
     };
-    // Absolute noodrem: een presentatie-effect mag de app nooit blokkeren.
-    setTimeout(()=>window.__snazzleReleaseBoot?.(),5200);
+
+    window.__snazzleReleaseBoot=releaseBoot;
+
+    // Harde noodrem: ook als een latere module faalt of de globale functie overschrijft,
+    // verdwijnt het laadscherm rechtstreeks via deze lokale functie.
+    setTimeout(releaseBoot,2800);
   };
   if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
@@ -102,7 +111,13 @@ refreshLocalStyles();
 // app-core is de enige kritieke module: zonder deze kern is er geen werkende Hunt-app.
 await import(fresh('./app-core.js'));
 
-// Alle aanvullende lagen worden geïsoleerd geladen. Eén toestel-specifieke fout kan de rest niet meer blokkeren.
+// Zodra de kern werkt, mag de gebruiker de app zien. De extra lagen laden daarna verder.
+try{
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+}catch{}
+window.__snazzleReleaseBoot?.();
+
+// Alle aanvullende lagen worden geïsoleerd geladen. Eén toestel-specifieke fout kan de rest niet blokkeren.
 const optionalModules=[
   './snazzle-auto-update-v51.js',
   './snazzle-privacy-v52.js',
@@ -166,10 +181,8 @@ for(const modulePath of optionalModules){
   refreshLocalStyles();
 }
 
-// Wacht één korte rendercyclus op de definitieve stylesheets voordat de laadlaag verdwijnt.
-// Animaties blijven behouden; de gebruiker ziet alleen niet meer hoe tientallen modules één voor één opbouwen.
+// Na de extra modules nog één rustige rendercyclus; dit blokkeert het zichtbare opstartscherm niet meer.
 try{ await window.__snazzleRuntimeSettle71?.(); }catch(err){ console.warn('Snazzle settle v71',err); }
-window.__snazzleReleaseBoot?.();
 
 // v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
 // De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
