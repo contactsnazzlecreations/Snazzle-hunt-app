@@ -1,8 +1,14 @@
-// Snazzle v71.1 — vloeiender laden, stabielere animaties en direct de gekozen intro-afbeelding.
-const V71='71.1.0';
+// Snazzle v71.2 — vloeiender laden, stabielere animaties en direct de gekozen intro-afbeelding.
+const V71='71.2.0';
+
+// V100 is alleen de premium hoofdpagina. Het raakt het vaste v98-menu niet aan.
+import((window.__snazzleFresh||((p)=>p))('./snazzle-ui-v100.js')).catch(err=>console.warn('Snazzle Home v100 kon niet laden',err));
 
 function readIntro71(){
-  try{return String(JSON.parse(localStorage.getItem('snazzleSettings')||'{}')?.introImage||'');}
+  try{
+    const s=JSON.parse(localStorage.getItem('snazzleSettings')||'{}');
+    return String(s?.introImage||s?.profileImage||'');
+  }
   catch{return '';}
 }
 function applyIntro71(root=document){
@@ -28,49 +34,13 @@ function installStyles71(){
   style.textContent=`
     html,body{overflow-x:clip!important}
     body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-
-    /* Houd bewegende lagen op hun eigen compositorlaag. Dit voorkomt vooral op Android
-       dat tekst en randen mee gaan knipperen wanneer een decoratie beweegt. */
-    .hero::before,
-    .hero::after,
-    .main-action::after,
-    .go,
-    .photo>.live,
-    .found.ready,
-    .snazzle-duck-logo,
-    #v37Moon,
-    .sn59-media-shell.sn59-waiting::before{
-      backface-visibility:hidden;
-      -webkit-backface-visibility:hidden;
-      will-change:transform,opacity;
-    }
-
-    .hero,.hunt,.main-action,.home-card,.panel,.quick button{
-      backface-visibility:hidden;
-      -webkit-backface-visibility:hidden;
-    }
-
-    /* Tekst blijft op een vaste rasterlaag terwijl omliggende decoraties bewegen. */
-    .title-logo,.title-logo span,.hero h1,.hero p,.huntbody h3,.huntbody p,
-    .main-action strong,.main-action small,.bottom button{
-      -webkit-font-smoothing:antialiased;
-      text-rendering:optimizeLegibility;
-    }
-
-    /* Afbeeldingen mogen pas na decoding zichtbaar worden zonder layout te veranderen. */
+    .hero::before,.hero::after,.main-action::after,.go,.photo>.live,.found.ready,.snazzle-duck-logo,#v37Moon,.sn59-media-shell.sn59-waiting::before{backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform,opacity}
+    .hero,.hunt,.main-action,.home-card,.panel,.quick button{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+    .title-logo,.title-logo span,.hero h1,.hero p,.huntbody h3,.huntbody p,.main-action strong,.main-action small,.bottom button{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
     img{image-rendering:auto}
-    #snV59Boot .sn-v59-boot-mark img[data-sn-intro="1"]{
-      width:88%;height:88%;object-fit:contain;display:block;border-radius:42%;
-      backface-visibility:hidden;-webkit-backface-visibility:hidden;
-    }
-
-    /* Geen plotselinge overgang wanneer de browser focus/touchstatus opnieuw tekent. */
+    #snV59Boot .sn-v59-boot-mark img[data-sn-intro="1"]{width:88%;height:88%;object-fit:contain;display:block;border-radius:42%;backface-visibility:hidden;-webkit-backface-visibility:hidden}
     button,a,[role="button"]{-webkit-tap-highlight-color:transparent}
-
-    @media(prefers-reduced-motion:reduce){
-      .hero::before,.hero::after,.main-action::after,.go,.photo>.live,.found.ready,
-      .snazzle-duck-logo,#v37Moon,.sn59-media-shell.sn59-waiting::before{will-change:auto}
-    }
+    @media(prefers-reduced-motion:reduce){.hero::before,.hero::after,.main-action::after,.go,.photo>.live,.found.ready,.snazzle-duck-logo,#v37Moon,.sn59-media-shell.sn59-waiting::before{will-change:auto}}
   `;
   document.head.appendChild(style);
 }
@@ -79,7 +49,6 @@ function prepareImages71(root=document){
   root.querySelectorAll('img').forEach(img=>{
     img.decoding='async';
     img.draggable=false;
-    // Alleen niet-kritieke afbeeldingen onder de hoofdsectie lazy laden.
     if(img.closest('.home-images,.list,.friends-list,.sn-news-page,.shop-product')) img.loading='lazy';
   });
 }
@@ -108,6 +77,7 @@ async function settle71(){
   await waitForLocalStyles71();
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   document.documentElement.classList.add('sn-runtime-stable');
+  window.SnazzleHomeV100?.restore?.();
   return true;
 }
 
