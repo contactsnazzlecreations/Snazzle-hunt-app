@@ -1,4 +1,4 @@
-// Snazzle AR World v85.1 — gebruikt permanent door beheer geplaatste AR-punten.
+// Snazzle AR World v85.2 — gebruikt permanent door beheer geplaatste AR-punten.
 // Exacte punten worden alleen tijdens de actieve AR-zoekactie gelezen; de route van het kind wordt niet opgeslagen.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -44,15 +44,32 @@ function setVisible(on){
   armed=on;
   window.SnazzleArSafetyV82b?.refresh?.();
 }
+function resetPlacementVisual(){
+  const duck=$('#snArDuck'),catchBtn=$('#snArCatchDuck');
+  if(duck){duck.style.left='';duck.style.top='';duck.style.width='';duck.style.height='';}
+  if(catchBtn)catchBtn.style.transform='';
+}
+function applySavedPlacement(){
+  resetPlacementVisual();
+  if(!target?.placement||target.placement.mode!=='camera-composed')return;
+  const duck=$('#snArDuck'),catchBtn=$('#snArCatchDuck');if(!duck)return;
+  const x=Math.max(.06,Math.min(.94,Number(target.placement.x||.5)));
+  const y=Math.max(.12,Math.min(.9,Number(target.placement.y||.48)));
+  const size=Math.max(.18,Math.min(.62,Number(target.placement.size||.5)));
+  const rot=Math.max(-180,Math.min(180,Number(target.placement.rotation||0)));
+  duck.style.left=`${x*100}%`;duck.style.top=`${y*100}%`;duck.style.width=`${size*100}vw`;duck.style.height=`${size*100}vw`;
+  if(catchBtn)catchBtn.style.transform=`rotate(${rot}deg)`;
+}
 function setTargetVisual(){
   if(!target)return;
   const catchBtn=$('#snArCatchDuck');
   if(catchBtn&&target.imageUrl){catchBtn.innerHTML=`<img src="${String(target.imageUrl).replace(/"/g,'&quot;')}" alt="${String(target.name||'Snazzle').replace(/"/g,'&quot;')}" style="width:100%;height:100%;object-fit:contain">`;}
+  applySavedPlacement();
 }
 function stop(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
   if(watchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(watchId);watchId=null;}
-  $('#snArOverlay')?.classList.remove('show');setVisible(false);target=null;currentAccuracy=0;
+  $('#snArOverlay')?.classList.remove('show');setVisible(false);resetPlacementVisual();target=null;currentAccuracy=0;
 }
 
 function update(pos){
@@ -61,7 +78,7 @@ function update(pos){
   const reveal=remaining<=radius;
   setVisible(reveal);
   const hud=$('#snArHudText'),box=$('#snArDistance');
-  if(reveal){if(hud)hud.textContent=`${target.name||'Snazzle'} gevonden · GPS ±${currentAccuracy} m`;if(box)box.textContent='Je bent op de juiste plek ✅';}
+  if(reveal){if(hud)hud.textContent=`${target.name||'Snazzle'} gevonden · GPS ±${currentAccuracy} m`;if(box)box.textContent=target.placement?.mode==='camera-composed'?'Je bent op de juiste plek ✅ · kijk rond met de camera':'Je bent op de juiste plek ✅';}
   else{if(hud)hud.textContent=`Snazzle-signaal actief in ${target.village||'jouw dorp'} · GPS ±${currentAccuracy} m`;if(box)box.textContent=`Nog ongeveer ${Math.max(0,Math.round(remaining))} meter… 👣`;}
 }
 function startWatch(){if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=navigator.geolocation.watchPosition(update,()=>{const b=$('#snArDistance');if(b)b.textContent='GPS-signaal even kwijt… blijf buiten en wacht kort.';},{enableHighAccuracy:true,timeout:16000,maximumAge:1000});}
