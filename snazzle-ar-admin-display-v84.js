@@ -1,5 +1,5 @@
-// Snazzle AR admin display v85 compatibility.
-// Houdt het oude v83-paneel verborgen en laadt de centrale AR-beheer/player-laag v85.
+// Snazzle AR admin display v90 compatibility.
+// Houdt het oude v83-paneel verborgen en laadt centraal AR-beheer, player en plaatsstudio.
 if(!document.getElementById('snArAdminDisplayV85')){
   const s=document.createElement('style');
   s.id='snArAdminDisplayV85';
@@ -11,5 +11,6 @@ const fresh=window.__snazzleFresh||((p)=>`${p}?v=${Date.now()}`);
 Promise.all([
   import(fresh('./snazzle-ar-admin-guard-v85.js')),
   import(fresh('./snazzle-ar-admin-v85.js')),
-  import(fresh('./snazzle-ar-world-v85.js'))
-]).catch(err=>console.warn('Snazzle AR v85 kon niet volledig laden',err));
+  import(fresh('./snazzle-ar-world-v85.js')),
+  import(fresh('./snazzle-ar-place-studio-v90.js'))
+]).catch(err=>console.warn('Snazzle AR v90 kon niet volledig laden',err));
