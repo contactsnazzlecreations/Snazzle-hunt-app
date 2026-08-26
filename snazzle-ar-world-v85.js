@@ -1,11 +1,11 @@
-// Snazzle AR World v85 — gebruikt permanent door beheer geplaatste AR-punten.
+// Snazzle AR World v85.1 — gebruikt permanent door beheer geplaatste AR-punten.
 // Exacte punten worden alleen tijdens de actieve AR-zoekactie gelezen; de route van het kind wordt niet opgeslagen.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const auth=getAuth(), db=getFirestore();
-const WORLD_DOC=doc(db,'hunts','__snazzle_ar_world__');
+const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1');
 const $=s=>document.querySelector(s);
 const toRad=d=>d*Math.PI/180;
 let world=[],target=null,stream=null,watchId=null,armed=false,currentAccuracy=0;
