@@ -1,406 +1,358 @@
-// Snazzle Hunt v98 — fail-safe startup + permanent premium menu.
-// The app shell must stay usable and older modules may never replace the main menu styling.
+// Snazzle Hunt v98 — snelle fail-safe start + één vast premium menu.
+// Belangrijk: oudere modules mogen het hoofdmenu niet meer vervangen of er losse witte knoppen aan toevoegen.
 
 const runtimeVersion = new URL(import.meta.url).searchParams.get('v') || Date.now().toString();
 const fresh = path => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
 window.__snazzleCoreReady = false;
+window.__snazzleMenuVersion = 'v98';
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const loaded = new Map();
+let corePromise;
+let menuBusy = false;
 
 function addStylesheet(path){
+  if(document.querySelector(`link[data-snazzle-theme="${path}"]`)) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = fresh(path);
+  link.dataset.snazzleTheme = path;
   document.head.appendChild(link);
-  return link;
 }
 
-function refreshLocalStyles(){
-  document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link => {
-    try {
-      const url = new URL(link.getAttribute('href'), location.href);
-      if(url.origin !== location.origin) return;
-      if(!url.pathname.includes('/Snazzle-hunt-app/')) return;
-      if(url.searchParams.get('fresh') === runtimeVersion) return;
-      url.searchParams.set('fresh', runtimeVersion);
-      link.href = url.href;
-    } catch {}
-  });
-}
+// Alleen de bewezen visuele CSS vroeg laden. Dit blokkeert de app niet.
+[
+  './snazzle-magic-theme.css',
+  './snazzle-enchanted-layer.css',
+  './snazzle-professional-v53.css',
+  './snazzle-final-polish-v59.css'
+].forEach(addStylesheet);
 
-const headObserver = new MutationObserver(refreshLocalStyles);
-headObserver.observe(document.head, {childList:true, subtree:true});
-
-addStylesheet('./snazzle-magic-theme.css');
-addStylesheet('./snazzle-enchanted-layer.css');
-addStylesheet('./snazzle-professional-v53.css');
-addStylesheet('./snazzle-final-polish-v59.css');
-refreshLocalStyles();
-
-let bootBorn = performance.now();
-let bootReleased = false;
 let bootEl = null;
-
+let bootReleased = false;
 function buildBoot(){
   if(!document.body || document.getElementById('snV98Boot')) return;
-  bootBorn = performance.now();
   const splash = document.createElement('div');
   splash.id = 'snV98Boot';
   splash.setAttribute('aria-hidden','true');
-  splash.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:linear-gradient(180deg,#17684c,#083a31);color:#fff7df;text-align:center;font-family:system-ui,-apple-system,Segoe UI,sans-serif;transition:opacity .22s ease';
-  splash.innerHTML = '<div style="padding:24px;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,.28)"><div style="width:104px;height:104px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#ffd35e;border:5px solid #76502d;box-shadow:0 8px 0 #4a2b18;font-size:52px">🦆</div><div style="font-size:44px;font-weight:1000;color:#ffd35e">Snazzle</div><div style="margin-top:12px;font-size:20px">Samen naar buiten</div><div style="margin-top:20px;font-size:14px">Je avontuur wordt klaargezet…</div></div>';
+  splash.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:linear-gradient(180deg,#17684c,#083a31);color:#fff7df;text-align:center;font-family:system-ui,-apple-system,Segoe UI,sans-serif;transition:opacity .18s ease';
+  splash.innerHTML = '<div style="padding:24px;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,.28)"><div style="width:104px;height:104px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#ffd35e;border:5px solid #76502d;box-shadow:0 8px 0 #4a2b18;font-size:52px">🦆</div><div style="font-size:44px;font-weight:1000;color:#ffd35e">Snazzle</div><div style="margin-top:12px;font-size:20px">Samen naar buiten</div><div style="margin-top:18px;font-size:14px">Je avontuur wordt klaargezet…</div></div>';
   document.body.appendChild(splash);
   bootEl = splash;
 }
-
 function releaseBoot(){
   if(bootReleased) return;
   bootReleased = true;
-  const finish = () => {
-    const splash = bootEl || document.getElementById('snV98Boot') || document.getElementById('snV97Boot') || document.getElementById('snV59Boot');
-    if(splash){
-      splash.style.opacity = '0';
-      splash.style.pointerEvents = 'none';
-      setTimeout(() => splash.remove(), 260);
-    }
-    document.body?.classList.remove('sn-v59-booting');
-    document.body?.classList.add('sn-v98-ready');
-  };
-  const minVisible = 220;
-  const left = Math.max(0, minVisible - (performance.now() - bootBorn));
-  setTimeout(finish, left);
+  const splash = bootEl || document.getElementById('snV98Boot') || document.getElementById('snV97Boot') || document.getElementById('snV59Boot');
+  if(splash){
+    splash.style.opacity = '0';
+    splash.style.pointerEvents = 'none';
+    setTimeout(()=>splash.remove(),220);
+  }
+  document.body?.classList.remove('sn-v59-booting');
+  document.documentElement.dataset.snazzleBoot = 'v98';
 }
+if(document.body) buildBoot(); else document.addEventListener('DOMContentLoaded',buildBoot,{once:true});
+// Harde noodrem: een laadscherm mag nooit blijven hangen.
+setTimeout(releaseBoot,2800);
 
-if(document.body) buildBoot();
-else document.addEventListener('DOMContentLoaded', buildBoot, {once:true});
-setTimeout(releaseBoot, 3000);
-
-function showStartupMessage(message='Dit onderdeel wordt klaargezet…'){
+function showMessage(message){
   const toast = document.getElementById('toast');
   if(toast){
     toast.textContent = message;
     toast.classList.add('show');
-    clearTimeout(window.__snazzleStartupToast);
-    window.__snazzleStartupToast = setTimeout(() => toast.classList.remove('show'), 1900);
+    clearTimeout(window.__snV98Toast);
+    window.__snV98Toast = setTimeout(()=>toast.classList.remove('show'),2100);
   }
 }
 
-async function safeImport(path, timeoutMs=3500){
-  let timer;
-  try {
-    const modulePromise = import(fresh(path));
-    const timeoutPromise = new Promise(resolve => { timer = setTimeout(() => resolve(null), timeoutMs); });
-    const mod = await Promise.race([modulePromise, timeoutPromise]);
-    if(!mod) console.warn('Snazzle module overgeslagen wegens trage start:', path);
-    return mod;
-  } catch(err){
-    console.warn('Snazzle module kon niet laden:', path, err);
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-const premiumMenuItems = [
+const menuItems = [
   ['🏠','Home','Terug naar het begin','home'],
   ['🔎','Hunt zoeken','Bekijk de actieve Snazzle Hunt','hunt'],
   ['📍','Kies je dorp','Montfort en andere dorpen','village'],
   ['🎮','Snazzle Spel','Open jouw Snazzle Wereld','game'],
-  ['🎧','Luisterverhalen','Kies een verhaal en luister','listen'],
-  ['📚','De Bieb','Boeken, verhalen en leeshoek','bieb'],
-  ['✨','Mijn Collectie','Kaarten, Nest en jaarstand','collection'],
-  ['📷','Snazzle AR','Zoek Snazzles met camera en GPS','ar'],
+  ['🎧','Luisterverhalen','Luister naar Snazzle verhalen','listen'],
+  ['📚','De Bieb','Lezen en je leeshoek bouwen','bieb'],
+  ['✨','Mijn Collectie','Kaarten, Nest & jaarstand','collection'],
+  ['📷','Snazzle AR','Zoek met camera en GPS','ar'],
   ['🗞️','Snazzle Nieuws','Nieuws uit de Snazzle Wereld','news'],
   ['👥','Vrienden','Bekijk actieve Snazzlers','friends'],
-  ['🏆','Mijn vondsten','Jouw gevonden Hunts','findings'],
-  ['🎉','Actie & evenement','Bekijk de actuele poster','event'],
+  ['🏆','Mijn vondsten','Jouw gevonden hunts','findings'],
+  ['🎉','Actie & evenement','Open de actuele poster','event'],
   ['🛍️','Shop','Bekijk Snazzle items','shop'],
   ['👤','Mijn profiel','Naam of nickname aanpassen','profile'],
   ['👨‍👩‍👧','Voor ouders','Veiligheid, privacy en tips','parents']
 ];
 
 function installMenuStyles(){
-  if(document.getElementById('snPremiumMenuV98')) return;
+  if(document.getElementById('snPremiumMenuV98Styles')) return;
   const style = document.createElement('style');
-  style.id = 'snPremiumMenuV98';
+  style.id = 'snPremiumMenuV98Styles';
   style.textContent = `
-    #quickMenuBtn{width:58px!important;height:58px!important;flex:0 0 58px!important;border-radius:20px!important;border:3px solid #8e6739!important;background:linear-gradient(145deg,#397a45,#174f31)!important;color:#fff9df!important;font-size:31px!important;font-weight:1000!important;display:grid!important;place-items:center!important;box-shadow:0 6px 0 #4b301d,0 10px 22px rgba(0,0,0,.25)!important;touch-action:manipulation!important}
-    #quickMenuOverlay{position:fixed!important;inset:0!important;z-index:5000!important;background:rgba(2,15,8,.76)!important;display:none;justify-content:flex-end!important}
-    #quickMenuOverlay.show{display:flex!important}
-    #quickMenuPanel{width:min(91vw,405px)!important;height:100%!important;overflow:auto!important;-webkit-overflow-scrolling:touch!important;padding:calc(18px + env(safe-area-inset-top)) 15px calc(28px + env(safe-area-inset-bottom))!important;background:radial-gradient(circle at 85% 8%,rgba(222,199,87,.12),transparent 24%),linear-gradient(180deg,#1d6b3d 0%,#0e4d2d 54%,#07371f 100%)!important;border-left:4px solid #8d6637!important;color:#fff7df!important;box-sizing:border-box!important;box-shadow:-16px 0 38px rgba(0,0,0,.38)!important}
-    .sn-menu-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:3px 2px 16px;border-bottom:2px solid rgba(255,221,127,.22)}
-    .sn-menu-brand{display:flex;align-items:center;gap:11px;min-width:0}.sn-menu-duck{width:52px;height:52px;flex:0 0 52px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#ffe46c,#ffbd35);border:3px solid #754720;font-size:27px;box-shadow:0 5px 0 #4b2c18}.sn-menu-brand strong{display:block;color:#ffd34d;font-size:22px;line-height:1.05;text-shadow:0 2px rgba(0,0,0,.22)}.sn-menu-brand small{display:block;margin-top:5px;color:#cdef91;font-size:12px;font-weight:850}.sn-menu-close{width:46px;height:46px;flex:0 0 46px;border:0;border-radius:15px;background:linear-gradient(#825232,#603820);color:white;font-size:28px;font-weight:900;box-shadow:0 4px 0 #3b2317}.sn-menu-kicker{margin:15px 3px 10px;font-size:11px;font-weight:1000;text-transform:uppercase;letter-spacing:1.3px;color:#c9ef8a}
-    #quickMenuPanel .quick-menu-list{display:grid!important;gap:8px!important;margin:0!important;padding:0!important}
-    #quickMenuPanel .quick-menu-list>button{appearance:none!important;width:100%!important;min-height:66px!important;border:2px solid rgba(255,225,151,.22)!important;border-radius:18px!important;background:linear-gradient(135deg,rgba(255,255,255,.115),rgba(255,255,255,.055))!important;color:#fff8e2!important;padding:9px 11px!important;display:grid!important;grid-template-columns:44px 1fr 20px!important;align-items:center!important;gap:9px!important;text-align:left!important;box-shadow:0 4px 10px rgba(0,0,0,.12)!important}
-    #quickMenuPanel .quick-menu-list>button:active{background:rgba(255,215,86,.17)!important;transform:scale(.985)!important}
-    #quickMenuPanel .quick-menu-icon{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;background:rgba(255,223,116,.12);font-size:23px}.sn-menu-copy{min-width:0}.sn-menu-copy strong{display:block;font-size:16px;line-height:1.12;color:#fff8e2}.sn-menu-copy small{display:block;margin-top:4px;font-size:11px;line-height:1.25;color:#d4e8bd;font-weight:720}.sn-menu-arrow{font-style:normal;font-size:30px;color:#ffd24c;text-align:center}
-    #quickMenuAdminV98{width:100%!important;margin-top:14px!important;border:2px solid #9a7044!important;border-radius:18px!important;background:linear-gradient(135deg,#74472b,#50301f)!important;color:#fff1d2!important;padding:13px 14px!important;display:grid!important;grid-template-columns:42px 1fr!important;align-items:center!important;gap:9px!important;text-align:left!important;box-shadow:0 5px 0 #352117!important}.sn-admin-icon{font-size:24px}.sn-admin-copy strong{display:block;font-size:16px}.sn-admin-copy small{display:block;margin-top:3px;font-size:10px;color:#dec7a7;font-weight:700}.sn-menu-footer{text-align:center;color:#a9db75;font-size:11px;font-weight:900;margin:18px 0 2px;letter-spacing:.4px}
-    #quickMenuPanel button:not(.sn-menu-close):not(#quickMenuAdminV98):not([data-startup-action]){display:none!important}
+    #quickMenuBtn.sn-v98-menu-btn{width:58px!important;height:58px!important;flex:0 0 58px!important;border-radius:19px!important;border:3px solid #8b6538!important;background:linear-gradient(145deg,#397844,#1f5735)!important;color:#fff9e7!important;font-size:31px!important;font-weight:1000!important;display:grid!important;place-items:center!important;box-shadow:0 6px 0 #4c2f1d,0 10px 20px rgba(0,0,0,.22)!important;touch-action:manipulation!important;position:relative!important;z-index:50!important;padding:0!important}
+    #quickMenuOverlay.sn-v98-overlay{position:fixed!important;inset:0!important;z-index:12000!important;background:rgba(2,14,8,.76)!important;display:none!important;justify-content:flex-end!important;opacity:1!important;visibility:visible!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+    #quickMenuOverlay.sn-v98-overlay.show{display:flex!important}
+    #quickMenuPanel.sn-v98-panel{width:min(91vw,405px)!important;height:100%!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;padding:calc(17px + env(safe-area-inset-top)) 14px calc(26px + env(safe-area-inset-bottom))!important;background:linear-gradient(180deg,#17633a 0%,#0d4b2e 56%,#07331f 100%)!important;border-left:4px solid #9a7040!important;color:#fff8df!important;box-sizing:border-box!important;box-shadow:-16px 0 42px rgba(0,0,0,.42)!important;transform:none!important}
+    #quickMenuPanel .sn-v98-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding:2px 1px 15px!important;border-bottom:2px solid rgba(255,218,112,.22)!important}
+    #quickMenuPanel .sn-v98-brand{display:flex!important;align-items:center!important;gap:11px!important;min-width:0!important}
+    #quickMenuPanel .sn-v98-duck{width:52px!important;height:52px!important;flex:0 0 52px!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:linear-gradient(145deg,#ffe66d,#ffb72f)!important;border:3px solid #754720!important;font-size:27px!important;box-shadow:0 4px 0 #4a2b17!important}
+    #quickMenuPanel .sn-v98-brand strong{display:block!important;color:#ffd34b!important;font-size:22px!important;line-height:1.05!important;text-shadow:0 2px rgba(0,0,0,.24)!important}
+    #quickMenuPanel .sn-v98-brand small{display:block!important;margin-top:5px!important;color:#c9ef8a!important;font-size:12px!important;font-weight:850!important}
+    #quickMenuClose.sn-v98-close{width:45px!important;height:45px!important;flex:0 0 45px!important;border:0!important;border-radius:14px!important;background:#724328!important;color:#fff!important;font-size:28px!important;font-weight:900!important;box-shadow:0 4px 0 #432618!important;padding:0!important}
+    #quickMenuPanel .sn-v98-note{margin:14px 3px 10px!important;color:#c9ef8a!important;font-size:11px!important;font-weight:1000!important;text-transform:uppercase!important;letter-spacing:1.15px!important}
+    #quickMenuPanel #snV98MenuList{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;margin:0!important;padding:0!important}
+    #quickMenuPanel .sn-menu-item{width:100%!important;min-height:64px!important;border:2px solid rgba(255,226,154,.21)!important;border-radius:17px!important;background:linear-gradient(135deg,rgba(255,255,255,.115),rgba(255,255,255,.055))!important;color:#fff8df!important;padding:9px 10px!important;display:grid!important;grid-template-columns:43px minmax(0,1fr) 22px!important;align-items:center!important;gap:9px!important;text-align:left!important;box-shadow:0 4px 9px rgba(0,0,0,.13)!important;appearance:none!important;-webkit-appearance:none!important;white-space:normal!important}
+    #quickMenuPanel .sn-menu-item:active{background:rgba(255,211,75,.17)!important;transform:scale(.985)!important}
+    #quickMenuPanel .sn-menu-icon{width:42px!important;height:42px!important;border-radius:13px!important;display:grid!important;place-items:center!important;background:rgba(255,222,112,.13)!important;font-size:23px!important}
+    #quickMenuPanel .sn-menu-copy{display:block!important;min-width:0!important;line-height:1.12!important}
+    #quickMenuPanel .sn-menu-copy strong{display:block!important;color:#fff8df!important;font-size:16px!important;font-weight:900!important;line-height:1.15!important}
+    #quickMenuPanel .sn-menu-copy small{display:block!important;margin-top:4px!important;color:#d7e9bd!important;font-size:11px!important;font-weight:720!important;line-height:1.25!important}
+    #quickMenuPanel .sn-menu-arrow{font-style:normal!important;font-size:29px!important;color:#ffd34b!important;text-align:center!important}
+    #quickMenuPanel .sn-menu-admin{width:100%!important;min-height:62px!important;margin-top:12px!important;border:2px solid #9b7144!important;border-radius:17px!important;background:linear-gradient(135deg,#6b4329,#4b2d1d)!important;color:#fff2d4!important;padding:11px!important;display:grid!important;grid-template-columns:43px 1fr!important;align-items:center!important;gap:8px!important;text-align:left!important;box-shadow:0 4px 0 #352117!important;appearance:none!important;-webkit-appearance:none!important}
+    #quickMenuPanel .sn-menu-admin b{font-size:24px!important;text-align:center!important}.sn-menu-admin span strong{display:block!important;font-size:16px!important}.sn-menu-admin span small{display:block!important;margin-top:3px!important;color:#dfc7a5!important;font-size:10px!important}
+    #quickMenuPanel .sn-v98-footer{text-align:center!important;color:#a9dc72!important;font-size:11px!important;font-weight:900!important;margin:17px 0 3px!important}
+    /* STRIKTE MENUWACHT: alle oude/los toegevoegde knoppen in dit paneel verdwijnen. */
+    #quickMenuPanel button:not(.sn-menu-item):not(.sn-menu-admin):not(#quickMenuClose){display:none!important}
+    #quickMenuPanel .quick-menu-extra,#quickMenuPanel .quick-menu-parent-extra,#quickMenuPanel [data-quick-extra],#quickMenuPanel .sn-prof-menu-extra{display:none!important}
   `;
   document.head.appendChild(style);
 }
 
-function premiumMenuMarkup(){
-  const village = localStorage.getItem('snazzleVillage') || 'Montfort';
-  return `
-    <div class="sn-menu-head">
-      <div class="sn-menu-brand"><span class="sn-menu-duck">🦆</span><div><strong>Snazzle Menu</strong><small id="quickMenuVillage">📍 ${village}</small></div></div>
-      <button id="quickMenuClose" class="sn-menu-close" type="button" aria-label="Menu sluiten">×</button>
-    </div>
-    <div class="sn-menu-kicker">Alles van Snazzle</div>
-    <nav class="quick-menu-list" aria-label="Snazzle menu">
-      ${premiumMenuItems.map(([icon,title,sub,key]) => `<button type="button" data-startup-action="${key}"><b class="quick-menu-icon">${icon}</b><span class="sn-menu-copy"><strong>${title}</strong><small>${sub}</small></span><i class="sn-menu-arrow">›</i></button>`).join('')}
-    </nav>
-    <button id="quickMenuAdminV98" type="button" data-startup-action="admin"><span class="sn-admin-icon">🔒</span><span class="sn-admin-copy"><strong>Beheer</strong><small>Voor Snazzle beheerders</small></span></button>
-    <div class="sn-menu-footer">Samen naar buiten 🌿</div>`;
-}
-
-let menuGuardBusy = false;
-function restorePremiumMenu(){
-  const panel = document.getElementById('quickMenuPanel');
-  if(!panel || menuGuardBusy) return;
-  const list = panel.querySelector('.quick-menu-list');
-  const canonicalCount = list?.querySelectorAll(':scope > [data-startup-action]').length || 0;
-  const stray = [...panel.querySelectorAll('button')].some(b => b.id !== 'quickMenuClose' && b.id !== 'quickMenuAdminV98' && !b.matches('[data-startup-action]'));
-  if(canonicalCount === premiumMenuItems.length && !stray && document.getElementById('quickMenuAdminV98')) return;
-  menuGuardBusy = true;
-  panel.innerHTML = premiumMenuMarkup();
-  menuGuardBusy = false;
-}
-
-async function openPremiumFeature(action){
-  if(action === 'home'){ window.scrollTo({top:0, behavior:'auto'}); return; }
-  if(action === 'village'){ document.querySelector('.villages')?.scrollIntoView({block:'center'}); return; }
-  if(action === 'hunt'){ if(!window.__snazzleCoreReady) return showStartupMessage(); document.querySelector('#navHunt')?.click(); return; }
-  if(action === 'friends'){ if(!window.__snazzleCoreReady) return showStartupMessage(); document.querySelector('#navFriends')?.click(); return; }
-  if(action === 'findings'){ if(!window.__snazzleCoreReady) return showStartupMessage(); document.querySelector('#findsBtn')?.click(); return; }
-  if(action === 'shop'){ if(!window.__snazzleCoreReady) return showStartupMessage(); document.querySelector('#navShop')?.click(); return; }
-  if(action === 'profile'){ if(!window.__snazzleCoreReady) return showStartupMessage(); document.querySelector('#navProfile')?.click(); return; }
-  if(action === 'admin'){ if(!window.__snazzleCoreReady) return showStartupMessage(); document.querySelector('#adminBtn')?.click(); return; }
-  if(action === 'event'){ if(!window.__snazzleCoreReady) return showStartupMessage(); document.querySelector('.home-card:nth-child(2)')?.click(); return; }
-
-  showStartupMessage('Onderdeel openen…');
-  if(action === 'game'){
-    await safeImport('./snazzle-world-adventure-v38.js');
-    await safeImport('./snazzle-world-hub-v47.js');
-    await safeImport('./snazzle-game-menu-v62.js');
-    window.SnazzleGameMenuV62?.open?.();
-  } else if(action === 'listen'){
-    await safeImport('./snazzle-listen-stories-v63.js');
-    window.SnazzleListenStoriesV63?.open?.();
-  } else if(action === 'bieb'){
-    await safeImport('./snazzle-bieb-v73.js');
-    await safeImport('./snazzle-bieb-cloud-v74.js');
-    await safeImport('./snazzle-bieb-locations-v77.js');
-    window.SnazzleBiebV73?.open?.();
-  } else if(action === 'collection'){
-    await safeImport('./snazzle-collection.js');
-    await safeImport('./snazzle-card-system-v2.js');
-    await safeImport('./snazzle-card-worlds-v78.js');
-    document.querySelector('[data-snazzle-collection]')?.click() || document.querySelector('#collectionHomeCard')?.click();
-  } else if(action === 'ar'){
-    await safeImport('./snazzle-ar-v80.js');
-    await safeImport('./snazzle-ar-safety-v82.js');
-    document.querySelector('#snArLaunch')?.click();
-  } else if(action === 'news'){
-    await safeImport('./snazzle-news-v46.js');
-    document.querySelector('#snNewsLaunch')?.click();
-  } else if(action === 'parents'){
-    await safeImport('./snazzle-parent-hub-v65.js');
-    await safeImport('./snazzle-parent-close-fix-v76.js');
-    window.SnazzleParentHubV65?.open?.();
-  }
-  restorePremiumMenu();
-}
-
-function installStartupMenu(){
+function buildPremiumMenu(){
   installMenuStyles();
+  // Verwijder ieder ouder menu volledig. Er is vanaf v98 maar één eigenaar van het menu.
+  document.getElementById('quickMenuOverlay')?.remove();
+  document.getElementById('quickMenuBtn')?.remove();
   const top = document.querySelector('.top');
   if(!top) return;
   const oldAdmin = document.getElementById('adminBtn');
   if(oldAdmin) oldAdmin.style.display = 'none';
 
-  let btn = document.getElementById('quickMenuBtn');
-  if(!btn){
-    btn = document.createElement('button');
-    btn.id = 'quickMenuBtn';
-    btn.type = 'button';
-    btn.textContent = '☰';
-    btn.setAttribute('aria-label','Snazzle menu openen');
-    top.appendChild(btn);
-  }
+  const btn = document.createElement('button');
+  btn.id = 'quickMenuBtn';
+  btn.className = 'sn-v98-menu-btn';
+  btn.type = 'button';
+  btn.setAttribute('aria-label','Snazzle menu openen');
+  btn.setAttribute('aria-expanded','false');
+  btn.textContent = '☰';
+  top.appendChild(btn);
 
-  let overlay = document.getElementById('quickMenuOverlay');
-  if(!overlay){
-    overlay = document.createElement('div');
-    overlay.id = 'quickMenuOverlay';
-    const panel = document.createElement('aside');
-    panel.id = 'quickMenuPanel';
-    panel.innerHTML = premiumMenuMarkup();
-    overlay.appendChild(panel);
-    document.body.appendChild(overlay);
-  } else {
-    restorePremiumMenu();
-  }
+  const overlay = document.createElement('div');
+  overlay.id = 'quickMenuOverlay';
+  overlay.className = 'sn-v98-overlay';
+  overlay.setAttribute('aria-hidden','true');
+  overlay.innerHTML = `
+    <aside id="quickMenuPanel" class="sn-v98-panel" role="dialog" aria-modal="true" aria-label="Snazzle menu" data-menu-owner="v98">
+      <div class="sn-v98-head">
+        <div class="sn-v98-brand"><span class="sn-v98-duck">🦆</span><div><strong>Snazzle Menu</strong><small id="quickMenuVillage">📍 ${localStorage.getItem('snazzleVillage') || 'Montfort'}</small></div></div>
+        <button id="quickMenuClose" class="sn-v98-close" type="button" aria-label="Menu sluiten">×</button>
+      </div>
+      <div class="sn-v98-note">Alles van Snazzle</div>
+      <nav id="snV98MenuList" aria-label="Snazzle onderdelen">
+        ${menuItems.map(([icon,title,sub,key])=>`<button class="sn-menu-item" type="button" data-sn-action="${key}"><b class="sn-menu-icon">${icon}</b><span class="sn-menu-copy"><strong>${title}</strong><small>${sub}</small></span><i class="sn-menu-arrow">›</i></button>`).join('')}
+      </nav>
+      <button class="sn-menu-admin" type="button" data-sn-action="admin"><b>🔒</b><span><strong>Beheer</strong><small>Voor Snazzle beheerders</small></span></button>
+      <div class="sn-v98-footer">Samen naar buiten 🌿</div>
+    </aside>`;
+  document.body.appendChild(overlay);
 
   const closeMenu = () => {
     overlay.classList.remove('show');
-    overlay.style.display = 'none';
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    overlay.setAttribute('aria-hidden','true');
+    btn.setAttribute('aria-expanded','false');
+    document.documentElement.style.overflow='';
+    document.body.style.overflow='';
   };
   const openMenu = () => {
-    restorePremiumMenu();
     const village = document.getElementById('quickMenuVillage');
     if(village) village.textContent = '📍 ' + (localStorage.getItem('snazzleVillage') || 'Montfort');
-    overlay.style.display = 'flex';
     overlay.classList.add('show');
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    overlay.setAttribute('aria-hidden','false');
+    btn.setAttribute('aria-expanded','true');
+    document.documentElement.style.overflow='hidden';
+    document.body.style.overflow='hidden';
   };
+  btn.onclick = e => { e.preventDefault(); openMenu(); };
+  document.getElementById('quickMenuClose').onclick = e => { e.preventDefault(); closeMenu(); };
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) closeMenu(); });
+  overlay.querySelectorAll('[data-sn-action]').forEach(item=>item.onclick=async e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const action=item.dataset.snAction;
+    closeMenu();
+    await runMenuAction(action);
+  });
+}
 
-  btn.onclick = openMenu;
-  overlay.onclick = event => {
-    if(event.target === overlay){ closeMenu(); return; }
-    if(event.target.closest('#quickMenuClose')){ closeMenu(); return; }
-    const actionButton = event.target.closest('[data-startup-action]');
-    if(actionButton){
-      const action = actionButton.dataset.startupAction;
-      closeMenu();
-      setTimeout(() => openPremiumFeature(action), 20);
-    }
-  };
-
+function ensurePremiumMenu(){
   const panel = document.getElementById('quickMenuPanel');
-  if(panel && !window.__snazzleMenuGuardV98){
-    window.__snazzleMenuGuardV98 = new MutationObserver(() => restorePremiumMenu());
-    window.__snazzleMenuGuardV98.observe(panel, {childList:true, subtree:true});
+  const btn = document.getElementById('quickMenuBtn');
+  if(panel?.dataset.menuOwner === 'v98' && btn?.classList.contains('sn-v98-menu-btn')){
+    const village=document.getElementById('quickMenuVillage');
+    if(village) village.textContent='📍 '+(localStorage.getItem('snazzleVillage')||'Montfort');
+    return;
+  }
+  buildPremiumMenu();
+}
+
+async function loadModule(path,timeoutMs=5000){
+  if(loaded.has(path)) return loaded.get(path);
+  const promise = Promise.race([
+    import(fresh(path)),
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout '+path)),timeoutMs))
+  ]).catch(err=>{ loaded.delete(path); throw err; });
+  loaded.set(path,promise);
+  return promise;
+}
+async function ensureCore(){ return await corePromise; }
+async function feature(label,fn){
+  if(menuBusy) return;
+  menuBusy=true;
+  try{
+    showMessage(label);
+    await ensureCore();
+    await fn();
+  }catch(err){
+    console.warn('Snazzle onderdeel',err);
+    showMessage('Dit onderdeel kon nu niet openen. Probeer nog eens.');
+  }finally{ menuBusy=false; ensurePremiumMenu(); }
+}
+
+async function runMenuAction(action){
+  if(action==='home'){ window.scrollTo({top:0,behavior:'auto'}); return; }
+  if(action==='village'){ document.querySelector('.villages')?.scrollIntoView({block:'center',behavior:'smooth'}); return; }
+  if(action==='hunt'){ await feature('Hunt openen…',async()=>document.getElementById('navHunt')?.click()); return; }
+  if(action==='friends'){ await feature('Vrienden openen…',async()=>document.getElementById('navFriends')?.click()); return; }
+  if(action==='findings'){ await feature('Vondsten openen…',async()=>document.getElementById('findsBtn')?.click()); return; }
+  if(action==='event'){ await feature('Actie openen…',async()=>document.querySelector('.home-card:nth-child(2)')?.click()); return; }
+  if(action==='shop'){ await feature('Shop openen…',async()=>document.getElementById('navShop')?.click()); return; }
+  if(action==='profile'){ await feature('Profiel openen…',async()=>document.getElementById('navProfile')?.click()); return; }
+  if(action==='admin'){ await feature('Beheer openen…',async()=>document.getElementById('adminBtn')?.click()); return; }
+  if(action==='game'){
+    await feature('Snazzle Spel openen…',async()=>{
+      await loadModule('./snazzle-world-adventure-v38.js');
+      await loadModule('./snazzle-world-hub-v47.js');
+      await loadModule('./snazzle-game-menu-v62.js');
+      window.SnazzleGameMenuV62?.open?.();
+    }); return;
+  }
+  if(action==='listen'){
+    await feature('Luisterverhalen openen…',async()=>{
+      await loadModule('./snazzle-listen-stories-v63.js');
+      window.SnazzleListenStoriesV63?.open?.();
+    }); return;
+  }
+  if(action==='bieb'){
+    await feature('De Bieb openen…',async()=>{
+      await loadModule('./snazzle-bieb-v73.js');
+      await loadModule('./snazzle-bieb-cloud-v74.js');
+      await loadModule('./snazzle-bieb-locations-v77.js');
+      window.SnazzleBiebV73?.open?.();
+    }); return;
+  }
+  if(action==='collection'){
+    await feature('Collectie openen…',async()=>{
+      await loadModule('./snazzle-collection.js');
+      await loadModule('./snazzle-card-system-v2.js');
+      await loadModule('./snazzle-card-worlds-v78.js');
+      document.querySelector('[data-snazzle-collection]')?.click();
+      document.getElementById('collectionHomeCard')?.click();
+    }); return;
+  }
+  if(action==='ar'){
+    await feature('Snazzle AR openen…',async()=>{
+      await loadModule('./snazzle-ar-v80.js');
+      await loadModule('./snazzle-ar-safety-v82.js');
+      document.getElementById('snArLaunch')?.click();
+    }); return;
+  }
+  if(action==='news'){
+    await feature('Snazzle Nieuws openen…',async()=>{
+      await loadModule('./snazzle-news-v46.js');
+      document.getElementById('snNewsLaunch')?.click();
+    }); return;
+  }
+  if(action==='parents'){
+    await feature('Voor ouders openen…',async()=>{
+      await loadModule('./snazzle-parent-hub-v65.js');
+      await loadModule('./snazzle-parent-close-fix-v76.js');
+      window.SnazzleParentHubV65?.open?.();
+    });
   }
 }
 
-if(document.body) installStartupMenu();
-else document.addEventListener('DOMContentLoaded', installStartupMenu, {once:true});
+if(document.body) ensurePremiumMenu(); else document.addEventListener('DOMContentLoaded',ensurePremiumMenu,{once:true});
 
-function idleSlot(){
-  return new Promise(resolve => {
-    if('requestIdleCallback' in window) requestIdleCallback(() => resolve(), {timeout:600});
-    else setTimeout(resolve, 90);
-  });
-}
-
-const corePromise = import(fresh('./app-core.js'))
-  .then(mod => {
-    window.__snazzleCoreReady = true;
-    document.documentElement.dataset.snazzleCore = 'ready';
-    restorePremiumMenu();
+// Kern direct starten. Deze bevat Hunt, dorpen, profiel, vrienden, vondsten en beheer.
+corePromise = import(fresh('./app-core.js'))
+  .then(mod=>{
+    window.__snazzleCoreReady=true;
+    document.documentElement.dataset.snazzleCore='ready';
+    ensurePremiumMenu();
+    releaseBoot();
     return mod;
   })
-  .catch(err => {
-    console.error('Snazzle kern kon niet laden', err);
-    showStartupMessage('De verbinding is traag. Probeer de app opnieuw te openen.');
+  .catch(err=>{
+    console.error('Snazzle kern kon niet laden',err);
+    releaseBoot();
+    showMessage('De verbinding is traag. Open de app nog een keer.');
     return null;
   });
 
-(async function start(){
-  await Promise.race([corePromise, wait(2400)]);
-  releaseBoot();
+// Ook bij een trage Firebase/CDN-verbinding is het scherm uiterlijk snel zichtbaar.
+Promise.race([corePromise,wait(2300)]).then(releaseBoot);
 
-  const core = await corePromise;
+// Kleine selectie achtergrondmodules; zware onderdelen worden verder pas geladen wanneer je ze opent.
+(async()=>{
+  const core=await corePromise;
   if(!core) return;
-
-  await wait(500);
-  const optionalModules = [
+  await wait(700);
+  const background=[
     './snazzle-runtime-stability-v71.js',
     './snazzle-image-stability-v72.js',
     './snazzle-auto-update-v51.js',
     './snazzle-privacy-v52.js',
-    './snazzle-parent-hub-v65.js',
-    './snazzle-parent-close-fix-v76.js',
     './snazzle-central-assets-v48.js',
-    './snazzle-admin-reset-v49.js',
-    './snazzle-admin-backup-v50.js',
-    './shop-compat.js',
-    './kids-fun.js',
-    './snazzle-route.js',
-    './snazzle-collection.js',
-    './snazzle-ar-v80.js',
-    './snazzle-ar-safety-v82.js',
-    './snazzle-card-system-v2.js',
-    './snazzle-card-worlds-v78.js',
-    './snazzle-card-world-prompt-v79.js',
-    './snazzle-hunt-code-v2.js',
-    './snazzle-unlock.js',
-    './image-fit.js',
-    './snazzle-world.js',
-    './snazzle-home-magic.js',
-    './snazzle-home-magic-fix.js',
-    './village-access.js',
-    './snazzle-characters.js',
-    './snazzle-adventure-ui-v28.js',
-    './snazzle-clean-home-v31.js',
-    './snazzle-v32-guard.js',
-    './snazzle-image-control-v32.js',
-    './snazzle-village-admin-v33.js',
-    './snazzle-secret-characters-v34.js',
-    './snazzle-idle-hunt-duck-v35.js',
-    './snazzle-home-hunt-image-v36.js',
-    './snazzle-click-secrets-v37.js',
-    './snazzle-world-adventure-v38.js',
-    './snazzle-season-theme-v38.js',
-    './snazzle-world-theme-v39.js',
-    './snazzle-news-v46.js',
-    './snazzle-world-hub-v47.js',
-    './snazzle-game-menu-v62.js',
-    './snazzle-listen-stories-v63.js',
     './snazzle-central-visuals-v54.js',
     './snazzle-public-visual-publish-v64.js',
     './snazzle-image-recovery-v60.js',
-    './snazzle-admin-close-v61.js',
-    './snazzle-admin-access-v55.js',
-    './snazzle-professional-v53.js',
-    './snazzle-admin-access-v56.js',
-    './snazzle-safe-admin-v58.js',
-    './snazzle-final-polish-v59.js',
-    './snazzle-star-rewards-v67.js',
-    './snazzle-quiet-psst-v68.js',
-    './snazzle-input-visibility-v69.js',
     './snazzle-top-stability-v70.js',
-    './snazzle-bieb-v73.js',
-    './snazzle-bieb-cloud-v74.js',
-    './snazzle-bieb-locations-v77.js'
+    './snazzle-final-polish-v59.js'
   ];
-
-  for(const modulePath of optionalModules){
-    await idleSlot();
-    await safeImport(modulePath, 3000);
-    refreshLocalStyles();
-    restorePremiumMenu();
+  for(const path of background){
+    try{ await loadModule(path,4000); }catch(err){ console.warn('achtergrondmodule overgeslagen',path,err); }
+    ensurePremiumMenu();
+    await wait(60);
   }
 })();
 
-corePromise.then(async core => {
-  if(!core) return;
-  try {
-    const {getAuth, onAuthStateChanged} = await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
-    const auth = getAuth();
-    let shopLoaded = false;
-    onAuthStateChanged(auth, async user => {
-      if(!user || shopLoaded) return;
-      shopLoaded = true;
-      await safeImport('./shop.js', 4500);
-      await safeImport('./shop-email-settings.js', 4500);
-      refreshLocalStyles();
-      restorePremiumMenu();
-    });
-  } catch(err){
-    console.warn('Shop-auth achtergrondlader kon niet starten', err);
-  }
+// Menu integriteitswacht: als een oude module later probeert het menu te vervangen, wordt v98 teruggezet.
+let repairTimer;
+const menuObserver = new MutationObserver(()=>{
+  clearTimeout(repairTimer);
+  repairTimer=setTimeout(()=>{
+    const panel=document.getElementById('quickMenuPanel');
+    if(panel && panel.dataset.menuOwner!=='v98') ensurePremiumMenu();
+  },80);
 });
+function startMenuGuard(){ if(document.body) menuObserver.observe(document.body,{childList:true,subtree:true}); }
+if(document.body) startMenuGuard(); else document.addEventListener('DOMContentLoaded',startMenuGuard,{once:true});
 
-setTimeout(() => {
-  refreshLocalStyles();
-  restorePremiumMenu();
-  headObserver.disconnect();
-}, 30000);
+// Shop pas na auth, buiten het kritieke startpad.
+corePromise.then(async core=>{
+  if(!core) return;
+  try{
+    const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
+    const auth=getAuth();
+    let shopLoaded=false;
+    onAuthStateChanged(auth,async user=>{
+      if(!user||shopLoaded) return;
+      shopLoaded=true;
+      try{ await loadModule('./shop.js',6000); }catch{}
+      try{ await loadModule('./shop-email-settings.js',6000); }catch{}
+      ensurePremiumMenu();
+    });
+  }catch(err){ console.warn('shop achtergrondlader',err); }
+});
