@@ -48,8 +48,23 @@ function installTopStability70(){
   console.info(`Snazzle top stability ${V70} geladen`);
 }
 
+async function loadHomeFeaturesV99(){
+  try{
+    const url=window.__snazzleFresh
+      ? window.__snazzleFresh('./snazzle-home-features-v99.js')
+      : `./snazzle-home-features-v99.js?v=${Date.now()}`;
+    await import(url);
+  }catch(err){
+    console.warn('Snazzle Home Features v99 kon niet laden',err);
+  }
+}
+
 if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',installTopStability70,{once:true});
+  document.addEventListener('DOMContentLoaded',()=>{
+    installTopStability70();
+    loadHomeFeaturesV99();
+  },{once:true});
 }else{
   installTopStability70();
+  loadHomeFeaturesV99();
 }
