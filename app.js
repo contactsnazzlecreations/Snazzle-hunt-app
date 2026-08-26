@@ -1,7 +1,7 @@
-// Snazzle Hunt v93 — local-first startup.
-// De interface en het menu zijn niet langer afhankelijk van Firebase of tientallen modules.
+// Snazzle Hunt v94 — hardened local-first startup.
+// De interface en het menu zijn direct lokaal beschikbaar; Firebase en extra modules blokkeren ze niet.
 
-const runtimeVersion='20260826-v93';
+const runtimeVersion='20260826-v94';
 const fresh=(path)=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -15,7 +15,6 @@ function addTheme(id,path){
   document.head.appendChild(link);
 }
 
-// Huidige visuele lagen starten meteen. Geen van deze links blokkeert het menu.
 addTheme('snazzleAdventureThemeV28','./snazzle-reference-layout.css');
 addTheme('snazzleCleanHomeV31','./snazzle-clean-home-v31.css');
 addTheme('snazzleMagicTheme','./snazzle-magic-theme.css');
@@ -26,7 +25,7 @@ addTheme('snazzleFinalPolishTheme','./snazzle-final-polish-v59.css');
 let releaseBoot=()=>{};
 (function installBoot(){
   const build=()=>{
-    if(!document.body || document.getElementById('snV59Boot')) return;
+    if(!document.body||document.getElementById('snV59Boot'))return;
     const splash=document.createElement('div');
     splash.id='snV59Boot';
     splash.className='sn-v59-boot';
@@ -34,7 +33,7 @@ let releaseBoot=()=>{};
     document.body.appendChild(splash);
     let done=false;
     releaseBoot=()=>{
-      if(done) return;
+      if(done)return;
       done=true;
       splash.style.setProperty('display','none','important');
       splash.style.setProperty('visibility','hidden','important');
@@ -46,21 +45,20 @@ let releaseBoot=()=>{};
     window.__snazzleReleaseBoot=releaseBoot;
     setTimeout(releaseBoot,3500);
   };
-  if(document.body) build();
-  else document.addEventListener('DOMContentLoaded',build,{once:true});
+  if(document.body)build();else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
 
 async function safeImport(path){
-  try { return await import(fresh(path)); }
-  catch(err){ console.warn('Snazzle module overgeslagen:',path,err); return null; }
+  try{return await import(fresh(path));}
+  catch(err){console.warn('Snazzle module overgeslagen:',path,err);return null;}
 }
 
-// 1. ALTIJD eerst de volledig lokale shell: menu, knoppen, basis-home en lokale beelden.
+// Eerst de robuuste lokale shell. Deze bevat een Android-veilige menu-handler en gebruikt geen :scope.
 const shell=await safeImport('./snazzle-shell-v93.js');
-try { shell?.initShell?.(); } catch(err){ console.warn('Snazzle shell init',err); }
+try{shell?.initShell?.();}catch(err){console.warn('Snazzle shell init',err);}
 releaseBoot();
 
-// 2. Visuele home-uitbreidingen rustig op de achtergrond. De app is ondertussen al bruikbaar.
+// Visuele lagen daarna, zonder de bediening te blokkeren.
 const priorityVisuals=[
   './snazzle-adventure-ui-v28.js',
   './snazzle-clean-home-v31.js',
@@ -74,70 +72,22 @@ const priorityVisuals=[
   './snazzle-listen-stories-v63.js',
   './snazzle-star-rewards-v67.js'
 ];
-
-(async()=>{
+void(async()=>{
   for(const path of priorityVisuals){
     await safeImport(path);
+    try{shell?.ensureCurrentHome?.();}catch{}
     await new Promise(r=>setTimeout(r,35));
   }
 })().catch(()=>{});
 
-// 3. Firebase/app-core mag nooit meer de zichtbare app blokkeren.
-// Zodra Firebase beschikbaar is neemt app-core de live Hunts, profielen en beheerdersfuncties over.
+// Firebase/app-core blijft achtergrondwerk. De lokale menu- en homebediening blijft ondertussen actief.
 const corePromise=safeImport('./app-core.js');
-
 corePromise.then(async core=>{
-  if(!core) return;
-  try { shell?.ensureCurrentHome?.(); } catch{}
+  if(!core)return;
+  try{shell?.ensureCurrentHome?.();}catch{}
 
   const afterCore=[
-    './snazzle-runtime-stability-v71.js',
-    './snazzle-image-stability-v72.js',
-    './snazzle-auto-update-v51.js',
-    './snazzle-privacy-v52.js',
-    './snazzle-parent-hub-v65.js',
-    './snazzle-parent-close-fix-v76.js',
-    './snazzle-central-assets-v48.js',
-    './snazzle-admin-reset-v49.js',
-    './snazzle-admin-backup-v50.js',
-    './shop-compat.js',
-    './kids-fun.js',
-    './snazzle-route.js',
-    './snazzle-collection.js',
-    './snazzle-ar-v80.js',
-    './snazzle-ar-safety-v82.js',
-    './snazzle-card-system-v2.js',
-    './snazzle-card-worlds-v78.js',
-    './snazzle-card-world-prompt-v79.js',
-    './snazzle-hunt-code-v2.js',
-    './snazzle-unlock.js',
-    './image-fit.js',
-    './snazzle-world.js',
-    './snazzle-home-magic.js',
-    './snazzle-home-magic-fix.js',
-    './village-access.js',
-    './snazzle-characters.js',
-    './snazzle-v32-guard.js',
-    './snazzle-image-control-v32.js',
-    './snazzle-village-admin-v33.js',
-    './snazzle-secret-characters-v34.js',
-    './snazzle-idle-hunt-duck-v35.js',
-    './snazzle-click-secrets-v37.js',
-    './snazzle-central-visuals-v54.js',
-    './snazzle-public-visual-publish-v64.js',
-    './snazzle-image-recovery-v60.js',
-    './snazzle-admin-close-v61.js',
-    './snazzle-admin-access-v55.js',
-    './snazzle-professional-v53.js',
-    './snazzle-admin-access-v56.js',
-    './snazzle-safe-admin-v58.js',
-    './snazzle-final-polish-v59.js',
-    './snazzle-quiet-psst-v68.js',
-    './snazzle-input-visibility-v69.js',
-    './snazzle-top-stability-v70.js',
-    './snazzle-bieb-v73.js',
-    './snazzle-bieb-cloud-v74.js',
-    './snazzle-bieb-locations-v77.js'
+    './snazzle-runtime-stability-v71.js','./snazzle-image-stability-v72.js','./snazzle-auto-update-v51.js','./snazzle-privacy-v52.js','./snazzle-parent-hub-v65.js','./snazzle-parent-close-fix-v76.js','./snazzle-central-assets-v48.js','./snazzle-admin-reset-v49.js','./snazzle-admin-backup-v50.js','./shop-compat.js','./kids-fun.js','./snazzle-route.js','./snazzle-collection.js','./snazzle-ar-v80.js','./snazzle-ar-safety-v82.js','./snazzle-card-system-v2.js','./snazzle-card-worlds-v78.js','./snazzle-card-world-prompt-v79.js','./snazzle-hunt-code-v2.js','./snazzle-unlock.js','./image-fit.js','./snazzle-world.js','./snazzle-home-magic.js','./snazzle-home-magic-fix.js','./village-access.js','./snazzle-characters.js','./snazzle-v32-guard.js','./snazzle-image-control-v32.js','./snazzle-village-admin-v33.js','./snazzle-secret-characters-v34.js','./snazzle-idle-hunt-duck-v35.js','./snazzle-click-secrets-v37.js','./snazzle-central-visuals-v54.js','./snazzle-public-visual-publish-v64.js','./snazzle-image-recovery-v60.js','./snazzle-admin-close-v61.js','./snazzle-admin-access-v55.js','./snazzle-professional-v53.js','./snazzle-admin-access-v56.js','./snazzle-safe-admin-v58.js','./snazzle-final-polish-v59.js','./snazzle-quiet-psst-v68.js','./snazzle-input-visibility-v69.js','./snazzle-top-stability-v70.js','./snazzle-bieb-v73.js','./snazzle-bieb-cloud-v74.js','./snazzle-bieb-locations-v77.js'
   ];
   for(const path of afterCore){
     await safeImport(path);
@@ -149,10 +99,10 @@ corePromise.then(async core=>{
     const auth=getAuth();
     let shopLoaded=false;
     onAuthStateChanged(auth,async user=>{
-      if(!user || shopLoaded) return;
+      if(!user||shopLoaded)return;
       shopLoaded=true;
       await safeImport('./shop.js');
       await safeImport('./shop-email-settings.js');
     });
-  }catch(err){ console.warn('Snazzle shop later laden',err); }
+  }catch(err){console.warn('Snazzle shop later laden',err);}
 }).catch(()=>{});
