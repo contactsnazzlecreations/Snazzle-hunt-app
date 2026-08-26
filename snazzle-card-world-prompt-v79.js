@@ -1,3 +1,5 @@
+import './snazzle-card-draft-link-v107.js';
+
 // Snazzle Card World Prompt v79 — bestaande spelers krijgen één keer duidelijk de WILD / SPARK / MIX-keuze.
 const VERSION='79.0.0';
 const PREF_KEY='snazzleCardWorldPreference';
