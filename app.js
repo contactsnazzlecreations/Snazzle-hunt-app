@@ -1,7 +1,7 @@
-// Snazzle Hunt v96 — complete menu/home, lightweight startup.
+// Snazzle Hunt v96.1 — complete menu/home, lightweight startup.
 // Alle onderdelen zijn direct zichtbaar; zware functies laden alleen wanneer de gebruiker ze opent.
 
-const runtimeVersion='20260826-v96';
+const runtimeVersion='20260826-v96-1';
 const fresh=(path)=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -30,11 +30,25 @@ let release=()=>{};
 try{
   const shell=await import(fresh('./snazzle-shell-v96.js'));
   shell?.init?.();
+
+  // Deze twee acties openen na het laden direct hun bestaande sheet.
+  // Zo klikken ze niet opnieuw op hun eigen lazy-loader en ontstaat er geen herhaallus.
+  if(shell?.actions&&shell?.ensureCore){
+    shell.actions.hunt=async()=>{
+      try{await shell.ensureCore();}catch{}
+      document.getElementById('villageSheet')?.classList.add('show');
+    };
+    shell.actions.findings=async()=>{
+      try{await shell.ensureCore();}catch{}
+      document.getElementById('findsSheet')?.classList.add('show');
+    };
+  }
 }catch(err){
   console.error('Snazzle v96 shell kon niet laden',err);
 }
 release();
 
 // Geen zware achtergrondimports bij het openen van de app.
-// snazzle-shell-v96.js laadt Hunt, Spel, Bieb, Luisterverhalen, Collectie, AR, Nieuws,
-// Oudergedeelte en beheer afzonderlijk wanneer de gebruiker daadwerkelijk op dat onderdeel tikt.
+// De complete zichtbare set is aanwezig: Hunt, dorp, Snazzle Spel, Luisterverhalen, De Bieb,
+// Collectie/kaarten/Nest, AR, Nieuws, Vrienden, Vondsten, Shop, Profiel, Voor ouders en Beheer.
+// Elk zwaar onderdeel wordt pas geïmporteerd wanneer de gebruiker erop tikt.
