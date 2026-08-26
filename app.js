@@ -1,108 +1,125 @@
-// Snazzle Hunt v94 — hardened local-first startup.
-// De interface en het menu zijn direct lokaal beschikbaar; Firebase en extra modules blokkeren ze niet.
+// Snazzle Hunt v95 — ultra-light stable shell.
+// Doel: eerst een volledig scrollbare, klikbare home + menu op Android.
+// Firebase en alle zware uitbreidingsmodules zijn tijdelijk uit het opstartpad gehaald.
 
-const runtimeVersion='20260826-v94';
+const runtimeVersion='20260826-v95';
 const fresh=(path)=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
+window.__snazzleSafeMode='v95';
 
-function addTheme(id,path){
-  if(document.getElementById(id)) return;
-  const link=document.createElement('link');
-  link.id=id;
-  link.rel='stylesheet';
-  link.href=fresh(path);
-  document.head.appendChild(link);
-}
-
-addTheme('snazzleAdventureThemeV28','./snazzle-reference-layout.css');
-addTheme('snazzleCleanHomeV31','./snazzle-clean-home-v31.css');
-addTheme('snazzleMagicTheme','./snazzle-magic-theme.css');
-addTheme('snazzleEnchantedTheme','./snazzle-enchanted-layer.css');
-addTheme('snazzleProfessionalTheme','./snazzle-professional-v53.css');
-addTheme('snazzleFinalPolishTheme','./snazzle-final-polish-v59.css');
+// Android-safe performance guard: de oude index bevat veel oneindige animaties.
+// Die kosten op sommige mobiele browsers zoveel compositor/main-thread tijd dat scroll en taps vastlopen.
+const perfStyle=document.createElement('style');
+perfStyle.id='snazzleV95PerfGuard';
+perfStyle.textContent=`
+  *,*::before,*::after{
+    animation:none!important;
+    transition:none!important;
+    scroll-behavior:auto!important;
+  }
+  html,body{
+    overscroll-behavior:auto!important;
+    touch-action:pan-y pinch-zoom!important;
+  }
+  body{
+    overflow-x:hidden!important;
+  }
+  .app{
+    contain:layout style!important;
+  }
+  .bottom{
+    transform:translateX(-50%) translateZ(0)!important;
+  }
+`;
+document.head.appendChild(perfStyle);
 
 let releaseBoot=()=>{};
 (function installBoot(){
   const build=()=>{
-    if(!document.body||document.getElementById('snV59Boot'))return;
+    if(!document.body||document.getElementById('snV95Boot'))return;
     const splash=document.createElement('div');
-    splash.id='snV59Boot';
-    splash.className='sn-v59-boot';
-    splash.innerHTML='<div class="sn-v59-boot-inner"><div class="sn-v59-boot-mark">🦆</div><h1>Snazzle</h1><p>Samen naar buiten</p><small>Je avontuur wordt klaargezet…</small><div class="sn-v59-boot-line"></div></div>';
+    splash.id='snV95Boot';
+    splash.setAttribute('aria-hidden','true');
+    splash.style.cssText='position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:linear-gradient(180deg,#0d6944,#043b2c);color:#fff7df;text-align:center;font-family:system-ui,-apple-system,Segoe UI,sans-serif';
+    splash.innerHTML='<div style="padding:24px"><div style="width:104px;height:104px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:#ffd15c;border:5px solid #775026;font-size:50px">🦆</div><div style="font-size:42px;font-weight:1000;color:#ffd35e">Snazzle</div><div style="margin-top:10px;font-size:19px;font-weight:900">Samen naar buiten</div></div>';
     document.body.appendChild(splash);
     let done=false;
     releaseBoot=()=>{
       if(done)return;
       done=true;
-      splash.style.setProperty('display','none','important');
-      splash.style.setProperty('visibility','hidden','important');
-      splash.style.setProperty('pointer-events','none','important');
+      splash.remove();
       document.body.classList.remove('sn-v59-booting');
-      document.body.classList.add('sn-v59-ready');
-      setTimeout(()=>splash.remove(),30);
+      document.body.classList.add('sn-v59-ready','sn-v95-ready');
     };
     window.__snazzleReleaseBoot=releaseBoot;
-    setTimeout(releaseBoot,3500);
+    setTimeout(releaseBoot,2200);
   };
   if(document.body)build();else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
 
 async function safeImport(path){
   try{return await import(fresh(path));}
-  catch(err){console.warn('Snazzle module overgeslagen:',path,err);return null;}
+  catch(err){console.warn('Snazzle safe shell kon niet laden:',path,err);return null;}
 }
 
-// Eerst de robuuste lokale shell. Deze bevat een Android-veilige menu-handler en gebruikt geen :scope.
+// Alleen de lokale shell. Geen Firebase, geen AR, geen kaartwereld, geen observers uit extra modules.
 const shell=await safeImport('./snazzle-shell-v93.js');
-try{shell?.initShell?.();}catch(err){console.warn('Snazzle shell init',err);}
+try{
+  shell?.initShell?.();
+  shell?.ensureCurrentHome?.();
+}catch(err){
+  console.warn('Snazzle v95 shell init',err);
+}
+
+// Extra harde fallback: als de shell om welke reden ook geen menuknop plaatste,
+// maak hier een simpele knop die rechtstreeks de bestaande sheets opent.
+if(!document.getElementById('quickMenuBtn')){
+  const top=document.querySelector('.top');
+  if(top){
+    const oldAdmin=document.getElementById('adminBtn');
+    if(oldAdmin)oldAdmin.style.display='none';
+    const btn=document.createElement('button');
+    btn.id='quickMenuBtn';
+    btn.type='button';
+    btn.textContent='☰';
+    btn.setAttribute('aria-label','Menu openen');
+    btn.style.cssText='width:54px;height:54px;border-radius:16px;border:3px solid #8a6539;background:#285e35;color:white;font-size:28px;font-weight:900;position:relative;z-index:10001';
+    top.appendChild(btn);
+
+    const menu=document.createElement('div');
+    menu.id='snV95FallbackMenu';
+    menu.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(2,16,9,.72);display:none;align-items:flex-start;justify-content:flex-end';
+    menu.innerHTML='<div style="width:min(88vw,380px);height:100%;overflow:auto;background:#0b4c31;color:#fff;padding:22px 16px"><button id="snV95Close" style="float:right;width:44px;height:44px;border:0;border-radius:12px;font-size:24px">×</button><h2 style="margin:8px 0 22px;color:#ffd45a">Snazzle Menu</h2><div id="snV95Items" style="display:grid;gap:10px"></div></div>';
+    document.body.appendChild(menu);
+    const items=[['🏠 Home','home'],['🔎 Hunt','villageSheet'],['👥 Vrienden','friendsSheet'],['🏆 Mijn vondsten','findsSheet'],['🛍️ Shop','shopSheet'],['👤 Profiel','profileSheet'],['🔒 Beheer','adminLogin']];
+    const box=document.getElementById('snV95Items');
+    items.forEach(([label,target])=>{
+      const b=document.createElement('button');
+      b.type='button';
+      b.textContent=label;
+      b.style.cssText='width:100%;min-height:58px;border:1px solid rgba(255,255,255,.25);border-radius:14px;background:rgba(255,255,255,.1);color:#fff;text-align:left;padding:12px;font-size:16px;font-weight:800';
+      b.onclick=()=>{
+        menu.style.display='none';
+        document.body.style.overflow='';
+        if(target==='home'){window.scrollTo(0,0);return;}
+        document.getElementById(target)?.classList.add('show');
+      };
+      box.appendChild(b);
+    });
+    const open=()=>{menu.style.display='flex';document.body.style.overflow='hidden';};
+    btn.onclick=open;
+    btn.addEventListener('touchend',e=>{e.preventDefault();open();},{passive:false});
+    document.getElementById('snV95Close').onclick=()=>{menu.style.display='none';document.body.style.overflow='';};
+  }
+}
+
+// Zorg dat bestaande sluitknoppen werken, zelfs zonder app-core.
+document.querySelectorAll('[data-close]').forEach(btn=>{
+  btn.onclick=()=>document.getElementById(btn.dataset.close)?.classList.remove('show');
+});
+
 releaseBoot();
 
-// Visuele lagen daarna, zonder de bediening te blokkeren.
-const priorityVisuals=[
-  './snazzle-adventure-ui-v28.js',
-  './snazzle-clean-home-v31.js',
-  './snazzle-home-hunt-image-v36.js',
-  './snazzle-world-adventure-v38.js',
-  './snazzle-season-theme-v38.js',
-  './snazzle-world-theme-v39.js',
-  './snazzle-news-v46.js',
-  './snazzle-world-hub-v47.js',
-  './snazzle-game-menu-v62.js',
-  './snazzle-listen-stories-v63.js',
-  './snazzle-star-rewards-v67.js'
-];
-void(async()=>{
-  for(const path of priorityVisuals){
-    await safeImport(path);
-    try{shell?.ensureCurrentHome?.();}catch{}
-    await new Promise(r=>setTimeout(r,35));
-  }
-})().catch(()=>{});
-
-// Firebase/app-core blijft achtergrondwerk. De lokale menu- en homebediening blijft ondertussen actief.
-const corePromise=safeImport('./app-core.js');
-corePromise.then(async core=>{
-  if(!core)return;
-  try{shell?.ensureCurrentHome?.();}catch{}
-
-  const afterCore=[
-    './snazzle-runtime-stability-v71.js','./snazzle-image-stability-v72.js','./snazzle-auto-update-v51.js','./snazzle-privacy-v52.js','./snazzle-parent-hub-v65.js','./snazzle-parent-close-fix-v76.js','./snazzle-central-assets-v48.js','./snazzle-admin-reset-v49.js','./snazzle-admin-backup-v50.js','./shop-compat.js','./kids-fun.js','./snazzle-route.js','./snazzle-collection.js','./snazzle-ar-v80.js','./snazzle-ar-safety-v82.js','./snazzle-card-system-v2.js','./snazzle-card-worlds-v78.js','./snazzle-card-world-prompt-v79.js','./snazzle-hunt-code-v2.js','./snazzle-unlock.js','./image-fit.js','./snazzle-world.js','./snazzle-home-magic.js','./snazzle-home-magic-fix.js','./village-access.js','./snazzle-characters.js','./snazzle-v32-guard.js','./snazzle-image-control-v32.js','./snazzle-village-admin-v33.js','./snazzle-secret-characters-v34.js','./snazzle-idle-hunt-duck-v35.js','./snazzle-click-secrets-v37.js','./snazzle-central-visuals-v54.js','./snazzle-public-visual-publish-v64.js','./snazzle-image-recovery-v60.js','./snazzle-admin-close-v61.js','./snazzle-admin-access-v55.js','./snazzle-professional-v53.js','./snazzle-admin-access-v56.js','./snazzle-safe-admin-v58.js','./snazzle-final-polish-v59.js','./snazzle-quiet-psst-v68.js','./snazzle-input-visibility-v69.js','./snazzle-top-stability-v70.js','./snazzle-bieb-v73.js','./snazzle-bieb-cloud-v74.js','./snazzle-bieb-locations-v77.js'
-  ];
-  for(const path of afterCore){
-    await safeImport(path);
-    await new Promise(r=>setTimeout(r,25));
-  }
-
-  try{
-    const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
-    const auth=getAuth();
-    let shopLoaded=false;
-    onAuthStateChanged(auth,async user=>{
-      if(!user||shopLoaded)return;
-      shopLoaded=true;
-      await safeImport('./shop.js');
-      await safeImport('./shop-email-settings.js');
-    });
-  }catch(err){console.warn('Snazzle shop later laden',err);}
-}).catch(()=>{});
+// Bewust GEEN app-core/Firebase/extra modules in v95.
+// Eerst bevestigen dat scrollen en menu stabiel zijn; daarna functies gefaseerd terugzetten.
