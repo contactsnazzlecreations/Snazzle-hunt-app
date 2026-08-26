@@ -1,7 +1,8 @@
-// Snazzle Hunt entrypoint — v91 reliable current-home boot.
-// De huidige Snazzle-home wordt eerst zichtbaar gemaakt. De zware functies laden daarna door.
+// Snazzle Hunt entrypoint — v92 functional-first boot.
+// Belangrijk: de app wordt pas zichtbaar nadat app-core volledig is uitgevoerd.
+// Daardoor werken menu, knoppen en sheets meteen wanneer het laadscherm verdwijnt.
 
-const runtimeVersion = '20260826-v91';
+const runtimeVersion = '20260826-v92';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -17,7 +18,7 @@ function addTheme(id, path) {
   return link;
 }
 
-// De actuele home-stijlen starten meteen, vóór Firebase en alle extra functies.
+// De huidige visuele laag start direct met downloaden.
 addTheme('snazzleAdventureThemeV28', './snazzle-reference-layout.css');
 addTheme('snazzleCleanHomeV31', './snazzle-clean-home-v31.css');
 addTheme('snazzleMagicTheme', './snazzle-magic-theme.css');
@@ -29,6 +30,8 @@ function cleanVillageName(text) {
   return String(text || '').replace(/^\s*📍\s*/, '').trim();
 }
 
+// Lichtgewicht bescherming van de actuele home-structuur.
+// app-core blijft eigenaar van alle echte functies en knoppen.
 function ensureCurrentHome() {
   try {
     const top = document.querySelector('.top');
@@ -53,9 +56,7 @@ function ensureCurrentHome() {
       const slot = passport.querySelector('.passport-welcome-slot');
       if (slot && welcome.parentElement !== slot) slot.appendChild(welcome);
       const village = document.getElementById('passportVillage');
-      if (village) {
-        village.textContent = cleanVillageName(document.getElementById('chosenVillageLabel')?.textContent) || 'Kies dorp';
-      }
+      if (village) village.textContent = cleanVillageName(document.getElementById('chosenVillageLabel')?.textContent) || 'Kies dorp';
     }
 
     const hero = document.getElementById('hero');
@@ -78,11 +79,9 @@ function ensureCurrentHome() {
 
       const small = hero.querySelector(':scope > small') || wrap.querySelector(':scope > small');
       const paragraph = hero.querySelector(':scope > p') || wrap.querySelector(':scope > p');
-
       if (small && small.parentElement !== wrap) wrap.appendChild(small);
       if (title.parentElement !== wrap) wrap.appendChild(title);
       if (paragraph && paragraph.parentElement !== wrap) wrap.appendChild(paragraph);
-
       if (small) small.textContent = 'Snazzle avontuur';
       title.textContent = 'Klaar voor avontuur?';
       if (paragraph) paragraph.textContent = 'Vind een Snazzle en ontdek jouw dorp.';
@@ -99,13 +98,14 @@ function ensureCurrentHome() {
       button.appendChild(label);
     });
 
-    document.documentElement.dataset.snazzleCurrentHome = 'v91';
+    document.documentElement.dataset.snazzleCurrentHome = 'v92';
   } catch (err) {
-    console.warn('Snazzle current home kon niet worden opgebouwd', err);
+    console.warn('Snazzle current home', err);
   }
 }
 
 let releaseBoot = () => {};
+let showBootError = () => {};
 (function installBoot() {
   const build = () => {
     if (!document.body || document.getElementById('snV59Boot')) return;
@@ -114,13 +114,13 @@ let releaseBoot = () => {};
     const splash = document.createElement('div');
     splash.id = 'snV59Boot';
     splash.className = 'sn-v59-boot';
-    splash.setAttribute('aria-hidden', 'true');
+    splash.setAttribute('aria-hidden', 'false');
     splash.innerHTML = `
       <div class="sn-v59-boot-inner">
         <div class="sn-v59-boot-mark">🦆</div>
         <h1>Snazzle</h1>
         <p>Samen naar buiten</p>
-        <small>Je avontuur wordt klaargezet…</small>
+        <small id="snBootStatus">Je avontuur wordt klaargezet…</small>
         <div class="sn-v59-boot-line"></div>
       </div>`;
     document.body.appendChild(splash);
@@ -145,14 +145,19 @@ let releaseBoot = () => {};
       splash.style.setProperty('display', 'none', 'important');
       splash.style.setProperty('visibility', 'hidden', 'important');
       splash.style.setProperty('pointer-events', 'none', 'important');
+      splash.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('sn-v59-booting');
       document.body.classList.add('sn-v59-ready');
       setTimeout(() => splash.remove(), 40);
     };
     window.__snazzleReleaseBoot = releaseBoot;
 
-    // Absolute noodstop: nooit meer eindeloos op het laadscherm.
-    setTimeout(releaseBoot, 5000);
+    showBootError = () => {
+      const status = document.getElementById('snBootStatus');
+      if (status) status.textContent = 'De verbinding duurt wat langer…';
+    };
+    // Geen oude/incomplete app meer tonen als internet even traag is.
+    setTimeout(showBootError, 7000);
   };
 
   if (document.body) build();
@@ -169,27 +174,27 @@ async function safeImport(path) {
 }
 
 function afterPaint() {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(resolve));
-  });
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 }
 
 void (async () => {
-  // Start de werkende kern meteen, maar laat die de zichtbare home niet blokkeren.
-  const coreTask = safeImport('./app-core.js');
+  // DE KRITIEKE FIX VAN v92:
+  // app-core bevat alle click-bindings, het snelmenu, bottom-nav, sheets en Firebase-start.
+  // We wachten nu echt totdat deze module volledig uitgevoerd is voordat de app zichtbaar wordt.
+  const core = await safeImport('./app-core.js');
+  if (!core) {
+    const status = document.getElementById('snBootStatus');
+    if (status) status.textContent = 'Snazzle kon niet verbinden. Vernieuw de pagina.';
+    return;
+  }
 
-  // De twee modules die de oude basis-home werkelijk ombouwen krijgen absolute voorrang.
+  // app-core heeft nu renderAll() uitgevoerd en ALLE basisknoppen zijn gebonden.
+  ensureCurrentHome();
+
+  // De twee actuele home-lagen mogen nog vóór de eerste zichtbare render hun presentatie zetten.
   await Promise.allSettled([
     safeImport('./snazzle-adventure-ui-v28.js'),
     safeImport('./snazzle-clean-home-v31.js')
-  ]);
-
-  ensureCurrentHome();
-
-  // Geef app-core maximaal 2,5 s voor de eerste zichtbare start.
-  await Promise.race([
-    coreTask,
-    new Promise((resolve) => setTimeout(resolve, 2500))
   ]);
 
   ensureCurrentHome();
@@ -197,13 +202,7 @@ void (async () => {
   ensureCurrentHome();
   releaseBoot();
 
-  // Als Firebase iets later klaar is, zet de actuele home nogmaals netjes vast.
-  coreTask.finally(() => {
-    ensureCurrentHome();
-    setTimeout(ensureCurrentHome, 250);
-    setTimeout(ensureCurrentHome, 900);
-  });
-
+  // Nieuwere functies laden daarna rustig door; de app is ondertussen volledig bedienbaar.
   const backgroundModules = [
     './snazzle-runtime-stability-v71.js',
     './snazzle-image-stability-v72.js',
@@ -263,7 +262,6 @@ void (async () => {
     './snazzle-bieb-locations-v77.js'
   ];
 
-  // Functies rustig één voor één laden, nadat de home al bruikbaar is.
   for (const modulePath of backgroundModules) {
     await safeImport(modulePath);
   }
@@ -271,10 +269,9 @@ void (async () => {
   try { await window.__snazzleRuntimeSettle71?.(); } catch {}
   ensureCurrentHome();
 
-  // Shop blijft gekoppeld aan bestaande Firebase-auth.
+  // Shop gebruikt de auth die app-core inmiddels al heeft gestart.
   try {
-    const { getAuth, onAuthStateChanged } =
-      await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
+    const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
     const auth = getAuth();
     let shopLoaded = false;
     onAuthStateChanged(auth, async (user) => {
@@ -288,6 +285,6 @@ void (async () => {
   }
 })().catch((err) => {
   console.error('Snazzle startupfout', err);
-  ensureCurrentHome();
-  releaseBoot();
+  const status = document.getElementById('snBootStatus');
+  if (status) status.textContent = 'Snazzle kon niet starten. Vernieuw de pagina.';
 });
