@@ -17,27 +17,31 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear
 <body>
 <div class="load"><span class="duck">🦆✨</span>De nieuwste Snazzle Hunt wordt geladen…</div>
 <script>
-(async()=>{
+(()=>{
   const stamp=Date.now();
-  try{
-    // Verwijder oude browsercaches en eventuele oude service workers.
-    if('caches' in window){
-      const keys=await caches.keys();
-      await Promise.all(keys.map(key=>caches.delete(key)));
-    }
-    if('serviceWorker' in navigator){
-      const regs=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(reg=>reg.unregister()));
-    }
+  let moved=false;
+  const go=()=>{
+    if(moved) return;
+    moved=true;
+    location.replace('./?fresh='+encodeURIComponent(stamp));
+  };
 
-    // Niet langer index.html met document.write herschrijven.
-    // index.html laadt app.js zelf al met een unieke Date.now()-versie.
-    // Een unieke query op de hoofdpagina voorkomt daarnaast een oude HTML-cache.
-    location.replace('./?fresh='+encodeURIComponent(stamp));
-  }catch(err){
-    console.error(err);
-    location.replace('./?fresh='+encodeURIComponent(stamp));
-  }
+  // Absolute guarantee: the refresh page itself can never get stuck.
+  setTimeout(go,900);
+
+  (async()=>{
+    try{
+      const cleanup=[];
+      if('caches' in window){
+        cleanup.push(caches.keys().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{}));
+      }
+      if('serviceWorker' in navigator){
+        cleanup.push(navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.map(reg=>reg.unregister()))).catch(()=>{}));
+      }
+      await Promise.race([Promise.all(cleanup),new Promise(resolve=>setTimeout(resolve,650))]);
+    }catch(err){ console.warn(err); }
+    go();
+  })();
 })();
 </script>
 </body>
