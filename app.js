@@ -1,7 +1,7 @@
-// Snazzle Hunt v96.1 — complete menu/home, lightweight startup.
+// Snazzle Hunt v96.2 — complete menu/home, lightweight startup.
 // Alle onderdelen zijn direct zichtbaar; zware functies laden alleen wanneer de gebruiker ze opent.
 
-const runtimeVersion='20260826-v96-1';
+const runtimeVersion='20260826-v96-2';
 const fresh=(path)=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -31,8 +31,8 @@ try{
   const shell=await import(fresh('./snazzle-shell-v96.js'));
   shell?.init?.();
 
-  // Deze twee acties openen na het laden direct hun bestaande sheet.
-  // Zo klikken ze niet opnieuw op hun eigen lazy-loader en ontstaat er geen herhaallus.
+  // Hunt en Vondsten openen na core direct hun bestaande scherm.
+  // Geen klik-op-eigen-lazy-loader lus meer.
   if(shell?.actions&&shell?.ensureCore){
     shell.actions.hunt=async()=>{
       try{await shell.ensureCore();}catch{}
@@ -42,6 +42,12 @@ try{
       try{await shell.ensureCore();}catch{}
       document.getElementById('findsSheet')?.classList.add('show');
     };
+    const navHunt=document.getElementById('navHunt');
+    const bigStart=document.getElementById('bigStart');
+    const findsBtn=document.getElementById('findsBtn');
+    if(navHunt)navHunt.onclick=shell.actions.hunt;
+    if(bigStart)bigStart.onclick=shell.actions.hunt;
+    if(findsBtn)findsBtn.onclick=shell.actions.findings;
   }
 }catch(err){
   console.error('Snazzle v96 shell kon niet laden',err);
