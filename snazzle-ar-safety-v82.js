@@ -140,4 +140,8 @@ else bootSafety();
 
 // Load the persistent AR placement admin only after the safety layer is present.
 const arAdminUrl = window.__snazzleFresh ? window.__snazzleFresh('./snazzle-ar-admin-v83.js') : `./snazzle-ar-admin-v83.js?v=${Date.now()}`;
-import(arAdminUrl).catch(err=>console.warn('AR admin kon niet laden',err));
+const arAdminDisplayUrl = window.__snazzleFresh ? window.__snazzleFresh('./snazzle-ar-admin-display-v84.js') : `./snazzle-ar-admin-display-v84.js?v=${Date.now()}`;
+Promise.all([
+  import(arAdminUrl),
+  import(arAdminDisplayUrl)
+]).catch(err=>console.warn('AR admin kon niet laden',err));
