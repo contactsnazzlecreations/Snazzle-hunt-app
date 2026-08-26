@@ -116,6 +116,7 @@ const optionalModules=[
   './snazzle-route.js',
   './snazzle-collection.js',
   './snazzle-ar-v80.js',
+  './snazzle-ar-safety-v82.js',
   './snazzle-card-system-v2.js',
   './snazzle-card-worlds-v78.js',
   './snazzle-card-world-prompt-v79.js',
