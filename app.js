@@ -1,13 +1,15 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-// Vaste buildversie voor lokale bestanden. index.html mag app.js zelf verversen,
-// maar de tientallen lokale modules hoeven niet bij IEDERE start opnieuw via 4G gedownload te worden.
-// Bij iedere release verhogen we deze buildversie, zodat gewijzigde bestanden nooit onder een oude cache-sleutel blijven hangen.
-const runtimeVersion = '20260826-current-v86';
+// Gebruik de versie uit de app.js-URL als centrale cache-buster voor ALLE lokale bestanden.
+// De refresh-pagina geeft bij iedere start een nieuwe waarde mee, zodat nooit een mix van oude en nieuwe modules wordt geladen.
+const runtimeVersion = new URL(import.meta.url).searchParams.get('v') || Date.now().toString();
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
 
+// Sommige oudere presentatiemodules voegen zelf CSS toe met een vast ?v= nummer.
+// Op andere telefoons kon daardoor alsnog een oude stylesheet blijven hangen, terwijl app.js al nieuw was.
+// Iedere lokale stylesheet krijgt daarom dezelfde unieke runtime-versie als de JavaScript-modules.
 function refreshLocalStyles(){
   document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link=>{
     try{
@@ -23,6 +25,8 @@ function refreshLocalStyles(){
 const headObserver=new MutationObserver(refreshLocalStyles);
 headObserver.observe(document.head,{childList:true,subtree:true});
 
+// Een optionele extra module mag nooit meer verhinderen dat alle nieuwere lagen daarna laden.
+// Op een schoon toestel kon één fout anders de laadketen halverwege stoppen en precies de oude paspoort-layout achterlaten.
 async function safeImport(path){
   try{
     return await import(fresh(path));
@@ -32,45 +36,37 @@ async function safeImport(path){
   }
 }
 
-// Stabiliteit en beelddecoding eerst.
-await Promise.all([
-  safeImport('./snazzle-runtime-stability-v71.js'),
-  safeImport('./snazzle-image-stability-v72.js')
-]);
+// v71 + v72 worden vroeg geladen: compositor-optimalisatie, beelddecoding en bronbewaking zijn actief vóór app-core.
+await safeImport('./snazzle-runtime-stability-v71.js');
+await safeImport('./snazzle-image-stability-v72.js');
 
-function addTheme(id,path){
-  if(document.getElementById(id)) return document.getElementById(id);
-  const link=document.createElement('link');
-  link.id=id;
-  link.rel='stylesheet';
-  link.href=fresh(path);
-  document.head.appendChild(link);
-  return link;
-}
+// Presentatielaag: sprookjesachtige Magic Jungle stijl zonder app-logica te wijzigen.
+const magicTheme = document.createElement('link');
+magicTheme.rel = 'stylesheet';
+magicTheme.href = fresh('./snazzle-magic-theme.css');
+document.head.appendChild(magicTheme);
 
-// De zichtbare huidige home-stijlen starten meteen met laden.
-// v28 + v31 zijn de lagen die de oude basis-home ombouwen naar de actuele rustige Snazzle-home.
-const adventureTheme=addTheme('snazzleAdventureThemeV28','./snazzle-reference-layout.css');
-const cleanHomeTheme=addTheme('snazzleCleanHomeV31','./snazzle-clean-home-v31.css');
-addTheme('snazzleMagicTheme','./snazzle-magic-theme.css');
-addTheme('snazzleEnchantedTheme','./snazzle-enchanted-layer.css');
-addTheme('snazzleProfessionalTheme','./snazzle-professional-v53.css');
-addTheme('snazzleFinalPolishTheme','./snazzle-final-polish-v59.css');
+// Extra rustige familiefilm-magie: lichtstralen, gloed en rijkere collectiepagina's.
+const enchantedTheme = document.createElement('link');
+enchantedTheme.rel = 'stylesheet';
+enchantedTheme.href = fresh('./snazzle-enchanted-layer.css');
+document.head.appendChild(enchantedTheme);
+
+// v53: centrale premium afwerking voor consistentie, toegankelijkheid en gezinsgebruik.
+const professionalTheme = document.createElement('link');
+professionalTheme.rel = 'stylesheet';
+professionalTheme.href = fresh('./snazzle-professional-v53.css');
+document.head.appendChild(professionalTheme);
+
+// v59: laatste gecontroleerde kwaliteitslaag. Deze CSS staat vroeg zodat ook de echte bootervaring direct klopt.
+const finalPolishTheme = document.createElement('link');
+finalPolishTheme.rel = 'stylesheet';
+finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
+document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-function waitStyle(link,maxWait=1800){
-  try{ if(link?.sheet) return Promise.resolve(); }catch{}
-  return new Promise(resolve=>{
-    if(!link) return resolve();
-    let done=false;
-    const finish=()=>{ if(done) return; done=true; resolve(); };
-    link.addEventListener('load',finish,{once:true});
-    link.addEventListener('error',finish,{once:true});
-    setTimeout(finish,maxWait);
-  });
-}
-
-// Rustige laadlaag bij iedere start.
+// Rustige laadlaag bij iedere start. De app wordt pas zichtbaar als de modules en lokale stylesheets zijn gezet.
+// Hierdoor ziet de gebruiker geen tussenstappen waarin kaarten, kleuren of knoppen nog verspringen.
 (function installEarlyBootV59(){
   const build=()=>{
     if(!document.body || document.getElementById('snV59Boot')) return;
@@ -85,44 +81,28 @@ function waitStyle(link,maxWait=1800){
     document.body.appendChild(splash);
     const born=performance.now();
     let released=false;
-
-    const releaseBoot=()=>{
+    window.__snazzleReleaseBoot=()=>{
       if(released) return;
       released=true;
-      const minVisible=seen ? 120 : 350;
+      const minVisible=seen ? 180 : 480;
       const wait=Math.max(0,minVisible-(performance.now()-born));
       setTimeout(()=>{
-        splash.style.opacity='0';
-        splash.style.visibility='hidden';
-        splash.style.pointerEvents='none';
         splash.classList.add('hide');
         document.body.classList.remove('sn-v59-booting');
         document.body.classList.add('sn-v59-ready');
-        setTimeout(()=>splash.remove(),320);
+        setTimeout(()=>splash.remove(),350);
       },wait);
     };
-
-    window.__snazzleReleaseBoot=releaseBoot;
-    // Alleen als er echt iets misgaat tonen we na 8 seconden alsnog de werkende kern.
-    setTimeout(releaseBoot,8000);
+    // Absolute noodrem: een presentatie-effect mag de app nooit blokkeren.
+    setTimeout(()=>window.__snazzleReleaseBoot?.(),5200);
   };
   if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
 })();
 
-// Eerst de werkende Hunt-kern.
+// app-core is de enige kritieke module: zonder deze kern is er geen werkende Hunt-app.
 await import(fresh('./app-core.js'));
 
-// KRITIEKE FIX: bouw de actuele home NU op, vóór alle zware extra functies.
-// Voorheen stonden v28/v31 pas na ruim twintig modules. Op 4G verdween de splash dan al
-// en bleef de oude basis-home in beeld. Deze twee lagen staan nu direct achter app-core.
-await safeImport('./snazzle-adventure-ui-v28.js');
-await safeImport('./snazzle-clean-home-v31.js');
-refreshLocalStyles();
-await Promise.allSettled([waitStyle(adventureTheme),waitStyle(cleanHomeTheme)]);
-try{ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))); }catch{}
-window.__snazzleReleaseBoot?.();
-
-// De overige functies laden daarna door. Ze blokkeren de zichtbare home niet meer.
+// Alle aanvullende lagen worden geïsoleerd geladen. Eén toestel-specifieke fout kan de rest niet meer blokkeren.
 const optionalModules=[
   './snazzle-auto-update-v51.js',
   './snazzle-privacy-v52.js',
@@ -148,6 +128,8 @@ const optionalModules=[
   './snazzle-home-magic-fix.js',
   './village-access.js',
   './snazzle-characters.js',
+  './snazzle-adventure-ui-v28.js',
+  './snazzle-clean-home-v31.js',
   './snazzle-v32-guard.js',
   './snazzle-image-control-v32.js',
   './snazzle-village-admin-v33.js',
@@ -184,10 +166,18 @@ for(const modulePath of optionalModules){
   refreshLocalStyles();
 }
 
+// Wacht één korte rendercyclus op de definitieve stylesheets voordat de laadlaag verdwijnt.
+// Animaties blijven behouden; de gebruiker ziet alleen niet meer hoe tientallen modules één voor één opbouwen.
 try{ await window.__snazzleRuntimeSettle71?.(); }catch(err){ console.warn('Snazzle settle v71',err); }
+window.__snazzleReleaseBoot?.();
+
+// v45 recovery: Samen Buiten, Extra Hints en alle latere mobiele fixlagen zijn tijdelijk uitgeschakeld.
+// De bestanden blijven in de repository zodat we ze gecontroleerd één voor één terug kunnen plaatsen.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
+// Load the shop only after Firebase has restored/created a signed-in user.
+// This prevents a first-load permission race on mobile browsers.
 const auth = getAuth();
 let shopLoaded = false;
 onAuthStateChanged(auth, async user => {
@@ -198,4 +188,5 @@ onAuthStateChanged(auth, async user => {
   refreshLocalStyles();
 });
 
+// Laat de observer nog even actief voor laat toegevoegde thema-CSS; daarna is de UI opgebouwd.
 setTimeout(()=>{refreshLocalStyles();headObserver.disconnect();},12000);
