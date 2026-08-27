@@ -1,6 +1,6 @@
-// Snazzle Hunt v132 — snelle start + kaart-herstel + compleet compact hoofdmenu.
+// Snazzle Hunt v133 — herstelde WILD- en SPARK-kaarten + compact hoofdmenu.
 
-const runtimeVersion = '20260827-v132-card-rescue';
+const runtimeVersion = '20260828-v133-card-restore';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
