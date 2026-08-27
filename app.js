@@ -2,7 +2,7 @@
 
 // Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
 // maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
-const runtimeVersion = '20260827-v113-ar-statistics';
+const runtimeVersion = '20260827-v114-single-start-guard';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -55,11 +55,21 @@ finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
 document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-// v110: geen late splash meer. De HTML is al zichtbaar wanneer app.js start; een splash
-// die daarna pas verschijnt leek op Android exact op een tweede volledige app-start.
-document.body?.classList.remove('sn-v59-booting');
-document.body?.classList.add('sn-v59-ready');
+// Eén zichtbare start op mobiel. Oudere polish-lagen bevatten nog eigen intro's die pas
+// later worden geïmporteerd; daardoor leek de app na de eerste tik opnieuw te starten.
+function suppressLateStartupOverlays(){
+  try{ sessionStorage.setItem('snazzleProSplashSeen','1'); }catch{}
+  document.body?.classList.remove('sn-v59-booting');
+  document.body?.classList.add('sn-v59-ready');
+  document.querySelectorAll('#snV59Boot,.sn-pro-splash').forEach(el=>el.remove());
+}
+suppressLateStartupOverlays();
 window.__snazzleReleaseBoot=()=>{};
+
+// Bescherm alleen de eerste opstartfase tegen oude laat-ingeladen splashmodules.
+const startupOverlayGuard=new MutationObserver(()=>suppressLateStartupOverlays());
+if(document.body) startupOverlayGuard.observe(document.body,{childList:true,attributes:true,attributeFilter:['class']});
+setTimeout(()=>startupOverlayGuard.disconnect(),15000);
 
 await import(fresh('./app-core.js'));
 
@@ -182,6 +192,7 @@ for(const modulePath of optionalModules){
 
 try{ await window.__snazzleRuntimeSettle71?.(); }catch(err){ console.warn('Snazzle settle v71',err); }
 window.__snazzleReleaseBoot?.();
+suppressLateStartupOverlays();
 
 // AR-beheer hoort bij Beheer, niet bij het kritieke opstartpad. Het wordt daarom pas
 // na de zichtbare app geladen en kan de publieke home nooit meer blokkeren.
