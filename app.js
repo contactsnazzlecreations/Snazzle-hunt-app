@@ -1,6 +1,6 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-const runtimeVersion = '20260827-v1251-ar-collection';
+const runtimeVersion = '20260827-v1260-ar-findings';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -71,6 +71,8 @@ for(const modulePath of optionalModules){await safeImport(modulePath);refreshLoc
 
 // AR-vondsten worden direct in de persoonlijke digitale collectie zichtbaar en centraal bewaard.
 await safeImport('./snazzle-ar-collection-bridge-v125.js');
+// Het bestaande venster 'Mijn vondsten' toont dezelfde AR-vangsten direct mee.
+await safeImport('./snazzle-ar-findings-bridge-v126.js');
 
 try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
 window.__snazzleReleaseBoot?.();suppressLateStartupOverlays();
