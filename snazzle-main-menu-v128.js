@@ -16,8 +16,9 @@ function classifyButton(btn){
   const text=norm(`${btn.id||''} ${btn.className||''} ${btn.dataset?.quickAction||''} ${btn.getAttribute('aria-label')||''} ${btn.textContent||''}`);
 
   if(/ouder|parent|veilig|safety|privacy|toestemming|locatie.*uitleg/.test(text)) return 'safety';
-  if(/collect|kaart|card|vondst|finding|badge|beloning|reward|ster/.test(text)) return 'collection';
+  // Spelen eerst controleren: "luister" bevat de letters "ster" en werd anders foutief als collectie gezien.
   if(/spel|game|bieb|boek|lees|luister|audio|verhaal|story|wereld|world|avontuur|mission|missie/.test(text)) return 'play';
+  if(/collect|kaart|card|vondst|finding|badge|beloning|reward|\bster(?:ren)?\b/.test(text)) return 'collection';
   if(/profiel|profile|vriend|friend|shop|winkel|account/.test(text)) return 'profile';
   if(/hunt|zoeken|zoek|\bar\b|camera|route|dorp|village|kaart zoeken|gps/.test(text)) return 'search';
   if(/home|nieuws|news|evenement|event|actie|poster/.test(text)) return 'home';
