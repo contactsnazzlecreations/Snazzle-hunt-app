@@ -1,6 +1,6 @@
-// Snazzle AR Safety v82c — robuuste Safe Walk laag voor mobiel.
-// Belangrijk: deze module doet bij app-start geen GPS/camera-werk en laadt geen Firebase-adminmodules.
-// Hij koppelt alleen de veiligheidslaag aan de bestaande AR-overlay zodra die aanwezig is.
+// Snazzle AR Safety v82f — stabiele Safe Walk laag voor mobiel.
+// Geen blokkade meer op Android: bij aankomst opent de camera automatisch na een korte veiligheidsmelding.
+// De groene knop blijft bestaan en opent de camera direct als aanraken wel wordt geregistreerd.
 
 const qs=(s,r=document)=>r.querySelector(s);
 let installed=false;
@@ -10,6 +10,7 @@ let lastOverlayOpen=false;
 let overlayObserver=null;
 let bodyObserver=null;
 let distanceTimer=0;
+let arrivalTimer=0;
 
 function installSafetyStyles(){
   if(document.getElementById('snArSafetyV82bStyles')) return;
@@ -44,6 +45,34 @@ function mirrorDistance(){
   if(source&&target&&!arrivedLatched) target.textContent=source.textContent||'Snazzle-signaal zoeken…';
 }
 
+function clearArrivalTimer(){
+  if(arrivalTimer){clearTimeout(arrivalTimer);arrivalTimer=0;}
+}
+
+function acknowledgeStop(e){
+  try{if(e?.cancelable)e.preventDefault();e?.stopPropagation?.();}catch{}
+  if(acknowledgedStop) return;
+  clearArrivalTimer();
+  arrivedLatched=true;
+  acknowledgedStop=true;
+  const shield=qs('#snArSafeWalk');
+  const overlay=qs('#snArOverlay');
+  const button=qs('#snArSafeStop');
+  if(button) button.textContent='Camera openen… ✓';
+  shield?.classList.remove('show');
+  overlay?.classList.remove('safe-walking');
+  button?.classList.remove('show');
+  try{navigator.vibrate?.(70);}catch{}
+}
+
+function scheduleAutomaticRelease(){
+  if(arrivalTimer||acknowledgedStop) return;
+  arrivalTimer=window.setTimeout(()=>{
+    arrivalTimer=0;
+    acknowledgeStop();
+  },1800);
+}
+
 function renderSafety(){
   const overlay=qs('#snArOverlay');
   const shield=qs('#snArSafeWalk');
@@ -53,28 +82,30 @@ function renderSafety(){
   if(open&&!lastOverlayOpen){
     acknowledgedStop=false;
     arrivedLatched=false;
+    clearArrivalTimer();
   }
   lastOverlayOpen=open;
 
   if(!open){
     acknowledgedStop=false;
     arrivedLatched=false;
-    if(shield.classList.contains('show')) shield.classList.remove('show');
-    if(overlay.classList.contains('safe-walking')) overlay.classList.remove('safe-walking');
+    clearArrivalTimer();
+    shield.classList.remove('show');
+    overlay.classList.remove('safe-walking');
     return;
   }
 
   if(isDuckAvailable()) arrivedLatched=true;
-  const arrived=arrivedLatched;
   const title=qs('#snArSafeTitle');
   const text=qs('#snArSafeText');
   const icon=qs('#snArSafeIcon');
   const button=qs('#snArSafeStop');
 
-  if(!arrived){
+  if(!arrivedLatched){
     acknowledgedStop=false;
-    if(!shield.classList.contains('show')) shield.classList.add('show');
-    if(!overlay.classList.contains('safe-walking')) overlay.classList.add('safe-walking');
+    clearArrivalTimer();
+    shield.classList.add('show');
+    overlay.classList.add('safe-walking');
     if(icon) icon.textContent='👀';
     if(title) title.textContent='KIJK VOOR JE';
     if(text) text.textContent='Loop met je telefoon omlaag en let op je omgeving. De Snazzle verschijnt vanzelf wanneer je dichtbij genoeg bent.';
@@ -84,31 +115,25 @@ function renderSafety(){
   }
 
   if(!acknowledgedStop){
-    if(!shield.classList.contains('show')) shield.classList.add('show');
-    if(!overlay.classList.contains('safe-walking')) overlay.classList.add('safe-walking');
+    shield.classList.add('show');
+    overlay.classList.add('safe-walking');
     if(icon) icon.textContent='🛑';
     if(title) title.textContent='STOP MET LOPEN';
-    if(text) text.textContent='Je bent bij de Snazzle. Blijf staan, kijk eerst goed om je heen en open daarna pas de camera.';
+    if(text) text.textContent='Je bent bij de Snazzle. Blijf staan en kijk goed om je heen. De camera opent automatisch.';
     const d=qs('#snArSafeDistance');
     if(d) d.textContent='Snazzle gevonden! ✨';
-    button?.classList.add('show');
+    if(button){
+      button.classList.add('show');
+      button.disabled=false;
+      button.textContent='Ik sta stil en heb om me heen gekeken ✓';
+    }
+    scheduleAutomaticRelease();
     return;
   }
 
   shield.classList.remove('show');
   overlay.classList.remove('safe-walking');
   button?.classList.remove('show');
-}
-
-function acknowledgeStop(e){
-  e?.preventDefault?.();
-  e?.stopPropagation?.();
-  arrivedLatched=true;
-  acknowledgedStop=true;
-  const button=qs('#snArSafeStop');
-  if(button) button.textContent='Camera openen… ✓';
-  renderSafety();
-  try{navigator.vibrate?.(70);}catch{}
 }
 
 function installOnOverlay(){
@@ -125,7 +150,7 @@ function installOnOverlay(){
     shield.className='sn-ar-safe-walk';
     shield.setAttribute('role','status');
     shield.innerHTML=`
-      <div class="sn-ar-safe-card">
+      <div class="sn-ar-safe-card" id="snArSafeCard">
         <div class="sn-ar-safe-icon" id="snArSafeIcon">👀</div>
         <h2 id="snArSafeTitle">KIJK VOOR JE</h2>
         <p id="snArSafeText">Loop met je telefoon omlaag en let op je omgeving. Je hoeft tijdens het lopen niet naar de camera te kijken.</p>
@@ -137,11 +162,16 @@ function installOnOverlay(){
   }
 
   const stopButton=qs('#snArSafeStop');
+  const card=qs('#snArSafeCard');
   if(stopButton){
     stopButton.onclick=acknowledgeStop;
-    stopButton.addEventListener('pointerup',e=>{
-      if(e.pointerType==='touch') acknowledgeStop(e);
-    },{passive:false});
+    stopButton.addEventListener('touchstart',acknowledgeStop,{passive:false});
+    stopButton.addEventListener('pointerdown',acknowledgeStop,{passive:false});
+  }
+  if(card){
+    card.addEventListener('click',e=>{
+      if(arrivedLatched&&!acknowledgedStop) acknowledgeStop(e);
+    });
   }
 
   const duck=qs('#snArDuck');
@@ -167,7 +197,6 @@ function installOnOverlay(){
 
 function boot(){
   if(installOnOverlay()) return;
-  // Geen polling-loop: één MutationObserver wacht passief tot AR v80 de overlay toevoegt.
   if(bodyObserver||!document.body) return;
   bodyObserver=new MutationObserver(()=>installOnOverlay());
   bodyObserver.observe(document.body,{childList:true,subtree:true});
@@ -177,11 +206,14 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 else boot();
 
 window.SnazzleArSafetyV82b={
+  version:'82f-auto-release',
   refresh:renderSafety,
+  acknowledge:acknowledgeStop,
   installed:()=>installed,
   destroy(){
     overlayObserver?.disconnect();
     bodyObserver?.disconnect();
     if(distanceTimer) clearInterval(distanceTimer);
+    clearArrivalTimer();
   }
 };
