@@ -2,7 +2,7 @@
 
 // Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
 // maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
-const runtimeVersion = '20260827-v114-single-start-guard';
+const runtimeVersion = '20260827-v115-android-startup-fix';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -55,8 +55,8 @@ finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
 document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-// Eén zichtbare start op mobiel. Oudere polish-lagen bevatten nog eigen intro's die pas
-// later worden geïmporteerd; daardoor leek de app na de eerste tik opnieuw te starten.
+// Eén zichtbare start op mobiel. De oude professionele splash controleert deze
+// sessionStorage-vlag zelf, dus een observer op de hele pagina is niet nodig.
 function suppressLateStartupOverlays(){
   try{ sessionStorage.setItem('snazzleProSplashSeen','1'); }catch{}
   document.body?.classList.remove('sn-v59-booting');
@@ -65,11 +65,6 @@ function suppressLateStartupOverlays(){
 }
 suppressLateStartupOverlays();
 window.__snazzleReleaseBoot=()=>{};
-
-// Bescherm alleen de eerste opstartfase tegen oude laat-ingeladen splashmodules.
-const startupOverlayGuard=new MutationObserver(()=>suppressLateStartupOverlays());
-if(document.body) startupOverlayGuard.observe(document.body,{childList:true,attributes:true,attributeFilter:['class']});
-setTimeout(()=>startupOverlayGuard.disconnect(),15000);
 
 await import(fresh('./app-core.js'));
 
