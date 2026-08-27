@@ -147,7 +147,7 @@ function migrateOldGroupedMenu(list){
   oldRoot.remove();
 }
 
-function makeProxy(source,root){
+function makeProxy(source){
   const proxy=document.createElement('button');
   proxy.type='button';
   proxy.className='sn-main-proxy';
@@ -173,9 +173,7 @@ function placeProxy(source,root){
 
   let proxy=root.querySelector(`.sn-main-proxy[data-source-key="${source.__snMainKey}"]`);
   if(!proxy){
-    proxy=makeProxy(source,root);
-  }else{
-    proxy.innerHTML=source.innerHTML;
+    proxy=makeProxy(source);
   }
   proxy.dataset.rank=String(optionRank(source));
 
@@ -236,17 +234,6 @@ function install(){
     const obs=new MutationObserver(queueSync);
     obs.observe(list,{childList:true,subtree:false});
     list.__snMainObserverV129=obs;
-  }
-
-  // Sommige modules veranderen na plaatsing nog de tekst/inhoud van hun knop.
-  if(!list.__snMainContentObserverV129){
-    let timer=0;
-    const obs=new MutationObserver(()=>{
-      clearTimeout(timer);
-      timer=setTimeout(()=>syncSources(list,root),40);
-    });
-    obs.observe(list,{subtree:true,childList:true,characterData:true});
-    list.__snMainContentObserverV129=obs;
   }
 
   return true;
