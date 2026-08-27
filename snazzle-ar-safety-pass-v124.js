@@ -1,6 +1,13 @@
 // Snazzle AR Safety pass v124 — herstel klikbaarheid op Android.
 // Deze module maakt de oude blokkerende STOP-laag volledig onschadelijk.
 // De AR-camera/knoppen blijven door de bestaande AR-module bestuurd.
+// Voor de daaropvolgende kaartmodule wordt eerst de veilige V1 -> V2 kaartmigratie uitgevoerd.
+
+try{
+  await import(`./snazzle-card-migration-v2.js?migration=20260827-1`);
+}catch(err){
+  console.warn('Snazzle Cards migratie kon niet vooraf laden',err);
+}
 
 function cleanupSafetyBlockers(){
   try{
@@ -31,7 +38,7 @@ else document.addEventListener('DOMContentLoaded',()=>{
 },{once:true});
 
 window.SnazzleArSafetyV124={
-  version:'124-click-pass',
+  version:'124-click-pass-card-migration',
   cleanup:cleanupSafetyBlockers,
   destroy(){observer.disconnect();}
 };
