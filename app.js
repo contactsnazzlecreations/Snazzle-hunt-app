@@ -1,6 +1,6 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-const runtimeVersion = '20260827-v1280-six-main-menu';
+const runtimeVersion = '20260827-v1281-listen-under-play';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
