@@ -1,4 +1,4 @@
-// Snazzle v120.5 — dorpzichtbaarheid direct in Dorpen-beheer + centrale Home-filter.
+// Snazzle v120.6 — dorpzichtbaarheid direct in Dorpen-beheer + centrale Home-filter zonder polling.
 import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
@@ -16,11 +16,8 @@ function villageNameFromDoc(d){const data=d.data()||{};return norm(data.name||da
 function publicVisible(d){return (d?.data?.()||{}).publicVisible!==false;}
 function docForName(name){return villageDocs.find(d=>keyName(villageNameFromDoc(d))===keyName(name))||null;}
 function hiddenKeys(){return new Set(villageDocs.filter(d=>!publicVisible(d)).map(d=>keyName(villageNameFromDoc(d))));}
-
 function toast(text){const t=document.getElementById('toast');if(!t)return;t.textContent=text;t.classList.add('show');clearTimeout(window.__snVillageToast120);window.__snVillageToast120=setTimeout(()=>t.classList.remove('show'),2600);}
 
-// Home is in verschillende lagen opgebouwd. Daarom zoeken we de dorpsknoppen niet
-// alleen onder #villages, maar centraal op de publieke Home. Admin-kaarten vallen af.
 function homeVillageButtons(){
   return [...document.querySelectorAll('.village')].filter(btn=>
     !btn.closest('#adminSheet,#adminVillageList,.admin-sheet,.sheet.admin') &&
@@ -80,12 +77,11 @@ function syncAll(){applyPublicVisibility();syncAdminCards();}
 function startVillageListener(){stopVillageListener?.();stopVillageListener=onSnapshot(collection(db,'villages'),snap=>{villageDocs=snap.docs;syncAll();setTimeout(applyPublicVisibility,150);setTimeout(applyPublicVisibility,600);},err=>console.warn('Dorpzichtbaarheid kon niet laden',err));}
 onAuthStateChanged(auth,async user=>{isSuperAdmin=false;if(!user){stopVillageListener?.();stopVillageListener=null;return;}startVillageListener();if(!user.isAnonymous){try{const s=await getDoc(doc(db,'adminUsers',user.uid));const d=s.data()||{};isSuperAdmin=s.exists()&&d.active===true&&d.role==='superadmin';}catch{}}syncAdminCards();});
 
-// Bewaak de hele publieke DOM, omdat v31 en latere lagen de dorpenbalk opnieuw kunnen maken.
+// Alleen reageren op echte DOM-wijzigingen; geen permanente timer meer die elke 1,2 s draait.
 let queued=false;
 const observer=new MutationObserver(()=>{if(queued)return;queued=true;setTimeout(()=>{queued=false;syncAdminCards();applyPublicVisibility();},80);});
 function beginObserve(){observer.observe(document.body,{childList:true,subtree:true});}
 if(document.body)beginObserve();else document.addEventListener('DOMContentLoaded',beginObserve,{once:true});
 document.addEventListener('click',e=>{if(e.target.closest?.('#quickMenuBtn,#adminBtn,.admin,[data-tab],#homeBtn,.village'))setTimeout(syncAll,120);},{passive:true});
-setInterval(applyPublicVisibility,1200);
 setTimeout(syncAll,400);setTimeout(syncAll,1200);setTimeout(applyPublicVisibility,2400);
 window.SnazzleVillageVisibilityV120={apply:applyPublicVisibility,sync:syncAdminCards};
