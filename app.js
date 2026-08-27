@@ -1,6 +1,6 @@
-// Snazzle Hunt v131 — snelle start + compleet compact hoofdmenu.
+// Snazzle Hunt v132 — snelle start + kaart-herstel + compleet compact hoofdmenu.
 
-const runtimeVersion = '20260827-v131-complete-menu';
+const runtimeVersion = '20260827-v132-card-rescue';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -143,8 +143,10 @@ const backgroundBundles=[
   // Kaarten + AR: volgorde binnen deze keten behouden.
   [
     './snazzle-ar-v80.js',
+    './snazzle-card-rescue-v132.js',
     './snazzle-ar-safety-pass-v124.js',
     './snazzle-card-system-v2.js',
+    './snazzle-card-draft-link-v107.js',
     './snazzle-card-worlds-v78.js',
     './snazzle-card-world-prompt-v79.js',
     './snazzle-hunt-code-v2.js',
