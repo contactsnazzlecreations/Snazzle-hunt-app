@@ -2,7 +2,7 @@
 
 // Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
 // maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
-const runtimeVersion = '20260827-v109-no-mid-session-reload';
+const runtimeVersion = '20260827-v110-single-start';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -55,42 +55,11 @@ finalPolishTheme.href = fresh('./snazzle-final-polish-v59.css');
 document.head.appendChild(finalPolishTheme);
 refreshLocalStyles();
 
-(function installEarlyBootV103(){
-  const build=()=>{
-    if(!document.body || document.getElementById('snV59Boot')) return;
-    document.body.classList.add('sn-v59-booting');
-    const seen=sessionStorage.getItem('snazzleProSplashSeen')==='1';
-    sessionStorage.setItem('snazzleProSplashSeen','1');
-    const splash=document.createElement('div');
-    splash.id='snV59Boot';
-    splash.className='sn-v59-boot';
-    splash.setAttribute('aria-hidden','true');
-    splash.innerHTML='<div class="sn-v59-boot-inner"><div class="sn-v59-boot-mark">🦆</div><h1>Snazzle</h1><p>Samen naar buiten</p><small>Je avontuur wordt klaargezet…</small><div class="sn-v59-boot-line"></div></div>';
-    document.body.appendChild(splash);
-    const born=performance.now();
-    let released=false;
-
-    const releaseBoot=()=>{
-      if(released) return;
-      released=true;
-      const minVisible=seen ? 180 : 480;
-      const wait=Math.max(0,minVisible-(performance.now()-born));
-      setTimeout(()=>{
-        splash.classList.add('hide');
-        splash.style.setProperty('opacity','0','important');
-        splash.style.setProperty('visibility','hidden','important');
-        splash.style.setProperty('pointer-events','none','important');
-        document.body.classList.remove('sn-v59-booting');
-        document.body.classList.add('sn-v59-ready');
-        setTimeout(()=>splash.remove(),350);
-      },wait);
-    };
-
-    window.__snazzleReleaseBoot=releaseBoot;
-    setTimeout(releaseBoot,7000);
-  };
-  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build,{once:true});
-})();
+// v110: geen late splash meer. De HTML is al zichtbaar wanneer app.js start; een splash
+// die daarna pas verschijnt leek op Android exact op een tweede volledige app-start.
+document.body?.classList.remove('sn-v59-booting');
+document.body?.classList.add('sn-v59-ready');
+window.__snazzleReleaseBoot=()=>{};
 
 await import(fresh('./app-core.js'));
 
