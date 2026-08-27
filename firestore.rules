@@ -64,6 +64,32 @@ service cloud.firestore {
         isVillageAdmin(resource.data.village);
     }
 
+    // Anonieme AR-vondstenteller. Dezelfde ingelogde speler kan per AR-punt maar één document maken.
+    // Er worden geen naam, e-mail of GPS-gegevens van de speler opgeslagen.
+    match /snazzleArFindings/{findingId} {
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(["pointId", "snazzleName", "number", "rarity", "village", "foundAt"]) &&
+        request.resource.data.pointId is string &&
+        request.resource.data.pointId.size() >= 3 &&
+        request.resource.data.pointId.size() <= 120 &&
+        findingId == request.resource.data.pointId + "_" + request.auth.uid &&
+        request.resource.data.snazzleName is string &&
+        request.resource.data.snazzleName.size() >= 1 &&
+        request.resource.data.snazzleName.size() <= 60 &&
+        request.resource.data.number is string &&
+        request.resource.data.number.size() <= 20 &&
+        request.resource.data.rarity in ["COMMON", "UNCOMMON", "RARE", "EPIC", "GOLD", "PLATINUM", "BLACK", "LEGENDARY", "SECRET"] &&
+        request.resource.data.village is string &&
+        request.resource.data.village.size() >= 2 &&
+        request.resource.data.village.size() <= 60 &&
+        request.resource.data.foundAt == request.time;
+      allow read: if isSuperAdmin() ||
+        isVillageAdmin(resource.data.village) ||
+        (signedIn() && findingId == resource.data.pointId + "_" + request.auth.uid);
+      allow update: if false;
+      allow delete: if isSuperAdmin() || isVillageAdmin(resource.data.village);
+    }
+
     // Geheime Hunt-codes zijn nooit rechtstreeks vanuit de app leesbaar of schrijfbaar.
     // Ook de hoofdbeheerder beheert ze via de beveiligde callable Functions.
     match /huntSecrets/{huntId} {
