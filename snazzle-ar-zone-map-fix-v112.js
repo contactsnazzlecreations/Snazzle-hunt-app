@@ -1,5 +1,5 @@
 // Snazzle AR zone map fix v112 — stabiele kaarttegels op mobiel zonder hoofdmenu/Beheer te raken.
-// Laadt Leaflet vooraf, corrigeert verborgen/gewijzigde kaartmaten en gebruikt een reserve-tegellaag bij storingen.
+// Laadt Leaflet vooraf, corrigeert verborgen/gewijzigde kaartmaten en gebruikt alleen voor de zonekaart een reserve-tegellaag.
 
 let readyPromise=null,patched=false;
 const $=s=>document.querySelector(s);
@@ -9,8 +9,8 @@ function installCss(){
     const s=document.createElement('style');
     s.id='snArZoneMapFix112Style';
     s.textContent=`
+      #snArZoneMap.leaflet-container{background:#dce9d7}
       #snArZoneMap .leaflet-tile-pane img.leaflet-tile{max-width:none!important;max-height:none!important;image-rendering:auto!important}
-      #snArZoneMap .leaflet-container{background:#dce9d7}
     `;
     document.head.appendChild(s);
   }
@@ -67,6 +67,8 @@ function attachResizeFix(map){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)stabilizeMap(map);});
 }
 
+function isZoneMap(map){return map?.getContainer?.()?.id==='snArZoneMap';}
+
 function installLeafletPatches(L){
   if(patched||!L?.map||!L?.tileLayer)return;
   patched=true;
@@ -87,7 +89,7 @@ function installLeafletPatches(L){
 
   const originalTileLayer=L.tileLayer.bind(L);
   const makeFallback=(map)=>{
-    if(!map||map.__snFallback112)return;
+    if(!isZoneMap(map)||map.__snFallback112)return;
     map.__snFallback112=true;
     try{if(map.__snPrimaryTiles112&&map.hasLayer(map.__snPrimaryTiles112))map.removeLayer(map.__snPrimaryTiles112);}catch{}
     const fallback=originalTileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
@@ -104,31 +106,30 @@ function installLeafletPatches(L){
   };
 
   const wrappedTileLayer=function(url,options={}){
-    const isZoneOsm=String(url||'').includes('tile.openstreetmap.org');
-    const finalUrl=isZoneOsm?'https://tile.openstreetmap.org/{z}/{x}/{y}.png':url;
-    const finalOptions=isZoneOsm?{
-      ...options,
-      maxZoom:19,
-      updateWhenIdle:false,
-      updateWhenZooming:true,
-      keepBuffer:4,
-      detectRetina:false
-    }:options;
-    const layer=originalTileLayer(finalUrl,finalOptions);
-    if(isZoneOsm){
-      let errors=0,loaded=0;
-      layer.on('tileload',()=>{loaded++;});
-      layer.on('tileerror',()=>{
-        errors++;
-        if(errors>=3)makeFallback(window.__snazzleZoneMap112);
-      });
+    const osm=String(url||'').includes('tile.openstreetmap.org');
+    const layer=originalTileLayer(url,options);
+    if(osm){
+      let errors=0,loaded=0,zoneActive=false;
       layer.on('add',()=>{
-        const map=window.__snazzleZoneMap112;
-        if(map)map.__snPrimaryTiles112=layer;
+        const map=layer._map;
+        if(!isZoneMap(map))return;
+        zoneActive=true;
+        map.__snPrimaryTiles112=layer;
+        layer.options.updateWhenIdle=false;
+        layer.options.updateWhenZooming=true;
+        layer.options.keepBuffer=4;
+        layer.options.detectRetina=false;
+        try{layer.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png');}catch{}
         stabilizeMap(map);
         setTimeout(()=>{
-          if(map&&!loaded&&$('#snArZoneModal')?.classList.contains('show'))makeFallback(map);
+          if(isZoneMap(map)&&!loaded&&$('#snArZoneModal')?.classList.contains('show'))makeFallback(map);
         },1800);
+      });
+      layer.on('tileload',()=>{if(zoneActive)loaded++;});
+      layer.on('tileerror',()=>{
+        if(!zoneActive)return;
+        errors++;
+        if(errors>=3)makeFallback(layer._map);
       });
     }
     return layer;
