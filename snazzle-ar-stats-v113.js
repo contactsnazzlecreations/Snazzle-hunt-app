@@ -2,7 +2,7 @@
 // Per account telt dezelfde AR-Snazzle maximaal één keer mee. Geen naam, e-mail of gebruikerslocatie wordt opgeslagen.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, query, where } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const auth=getAuth(),db=getFirestore();
 const FINDINGS='snazzleArFindings';
@@ -33,7 +33,7 @@ async function submitFinding(item){
       number:String(item.number||'—').slice(0,20),
       rarity:String(item.rarity||'COMMON').toUpperCase().slice(0,20),
       village:String(item.village||localStorage.getItem('snazzleVillage')||'Onbekend').slice(0,60),
-      foundAt:String(item.caughtAt||new Date().toISOString()).slice(0,40)
+      foundAt:serverTimestamp()
     });
   }catch(err){
     // create-only beveiliging weigert een tweede telling van dezelfde speler; dat is normaal.
@@ -45,8 +45,6 @@ async function syncLocalCollection(){
   for(const item of list){await submitFinding(item);}
 }
 
-// De bestaande AR-speler stopt click-propagation zodra een vangst slaagt.
-// Daarom onthouden we vóór de tik de lokale collectie en controleren we kort erna of er echt een nieuwe vangst bij is gekomen.
 document.addEventListener('click',e=>{
   const trigger=e.target?.closest?.('#snArCatchDuck,#snArCatchHint');if(!trigger)return;
   const before=new Set(caughtList().map(x=>String(x?.id||'')));
@@ -94,7 +92,9 @@ function watchInstall(){
   installObserver.observe(document.body,{childList:true,subtree:true});
 }
 function startOfToday(){const d=new Date();d.setHours(0,0,0,0);return d.getTime();}
-function parseTime(v){const n=new Date(v||0).getTime();return Number.isFinite(n)?n:0;}
+function parseTime(v){
+  try{if(v?.toDate)return v.toDate().getTime();const n=new Date(v||0).getTime();return Number.isFinite(n)?n:0;}catch{return 0;}
+}
 async function refreshStats(){
   if(refreshBusy||!$('#snArStatList113'))return;refreshBusy=true;
   const list=$('#snArStatList113');if(list)list.innerHTML='<div class="sn-ar-stat-empty">Statistieken laden…</div>';
