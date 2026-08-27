@@ -1,4 +1,4 @@
-// Snazzle v120.2 — dorpzichtbaarheid direct in het bestaande Dorpen-beheer.
+// Snazzle v120.3 — dorpzichtbaarheid direct in Dorpen-beheer + hard toepassen op Home.
 import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, collection, doc, getDoc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
@@ -22,31 +22,39 @@ function toast(text){
   window.__snVillageToast120=setTimeout(()=>t.classList.remove('show'),2600);
 }
 
+function buttonVillageName(btn){
+  return norm(btn.querySelector('.v31-village-label')?.textContent||btn.getAttribute('data-village')||btn.textContent||'');
+}
+
 function applyPublicVisibility(){
   const hidden=hiddenKeys();
   const buttons=[...document.querySelectorAll('#villages .village')];
   if(!buttons.length)return;
   buttons.forEach(btn=>{
-    const label=btn.querySelector('.v31-village-label')?.textContent||btn.textContent;
-    const hide=hidden.has(keyName(label));
-    btn.style.display=hide?'none':'';
-    btn.setAttribute('aria-hidden',hide?'true':'false');
+    const hide=hidden.has(keyName(buttonVillageName(btn)));
+    if(hide){
+      btn.hidden=true;
+      btn.setAttribute('aria-hidden','true');
+      btn.style.setProperty('display','none','important');
+      btn.style.setProperty('visibility','hidden','important');
+      btn.style.setProperty('pointer-events','none','important');
+    }else{
+      btn.hidden=false;
+      btn.setAttribute('aria-hidden','false');
+      btn.style.removeProperty('display');
+      btn.style.removeProperty('visibility');
+      btn.style.removeProperty('pointer-events');
+    }
   });
-  const shown=buttons.filter(b=>b.style.display!=='none');
-  if(!shown.length){
-    buttons.forEach(b=>{b.style.display='';b.setAttribute('aria-hidden','false');});
-    return;
-  }
+  const shown=buttons.filter(b=>!b.hidden);
+  if(!shown.length)return;
   const chosen=norm(document.getElementById('chosenVillageLabel')?.textContent||localStorage.getItem('snazzleVillage')||'');
   if(hidden.has(keyName(chosen))){
-    const first=shown[0];
-    const next=norm(first.querySelector('.v31-village-label')?.textContent||first.textContent);
+    const next=buttonVillageName(shown[0]);
     if(next&&next!==chosen){
       try{localStorage.setItem('snazzleVillage',next);}catch{}
-      if(!sessionStorage.getItem('snVillageVisibilityReloaded120')){
-        sessionStorage.setItem('snVillageVisibilityReloaded120','1');
-        location.reload();
-      }
+      const label=document.getElementById('chosenVillageLabel');
+      if(label)label.textContent='📍 '+next;
     }
   }
 }
@@ -110,6 +118,8 @@ function syncAdminCards(){
         const ok=await setVisible(name,wanted);
         if(!ok)input.checked=!wanted;
         input.disabled=!isSuperAdmin;
+        setTimeout(applyPublicVisibility,0);
+        setTimeout(applyPublicVisibility,250);
       });
     }
     const input=row.querySelector('input');
@@ -125,6 +135,8 @@ function syncAll(){applyPublicVisibility();syncAdminCards();}
 onSnapshot(collection(db,'villages'),snap=>{
   villageDocs=snap.docs;
   syncAll();
+  setTimeout(applyPublicVisibility,150);
+  setTimeout(applyPublicVisibility,600);
 },err=>console.warn('Dorpzichtbaarheid kon niet laden',err));
 
 onAuthStateChanged(auth,async user=>{
@@ -139,17 +151,29 @@ onAuthStateChanged(auth,async user=>{
   syncAdminCards();
 });
 
+function watchVillageStrip(){
+  const strip=document.getElementById('villages');
+  if(!strip||strip.dataset.snVisibilityWatch120==='1')return;
+  strip.dataset.snVisibilityWatch120='1';
+  let timer=0;
+  new MutationObserver(()=>{
+    clearTimeout(timer);
+    timer=setTimeout(applyPublicVisibility,40);
+  }).observe(strip,{childList:true,subtree:true,characterData:true});
+}
+
 let queued=false;
 const observer=new MutationObserver(()=>{
+  watchVillageStrip();
   if(queued)return;queued=true;
-  setTimeout(()=>{queued=false;syncAll();},120);
+  setTimeout(()=>{queued=false;syncAdminCards();applyPublicVisibility();},120);
 });
-if(document.body)observer.observe(document.body,{childList:true,subtree:true});
-else document.addEventListener('DOMContentLoaded',()=>observer.observe(document.body,{childList:true,subtree:true}),{once:true});
+if(document.body){observer.observe(document.body,{childList:true,subtree:true});watchVillageStrip();}
+else document.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{childList:true,subtree:true});watchVillageStrip();},{once:true});
 
 document.addEventListener('click',e=>{
-  if(e.target.closest?.('#quickMenuBtn,#adminBtn,.admin,[data-tab]'))setTimeout(syncAll,180);
+  if(e.target.closest?.('#quickMenuBtn,#adminBtn,.admin,[data-tab],#homeBtn'))setTimeout(syncAll,180);
 },{passive:true});
 
-setTimeout(syncAll,600);setTimeout(syncAll,1600);
+setTimeout(syncAll,600);setTimeout(syncAll,1600);setTimeout(applyPublicVisibility,2800);
 window.SnazzleVillageVisibilityV120={apply:applyPublicVisibility,sync:syncAdminCards};
