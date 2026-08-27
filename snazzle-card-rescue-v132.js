@@ -1,113 +1,77 @@
-// Snazzle Cards v132 — herstel oudere/lokale kaartuploads en zet ze veilig klaar voor V2.
-// Doel: kaartuploads niet kwijtraken bij versiewissels. Alleen kaartachtige records worden meegenomen.
-
+// Snazzle Cards v133 — herstelt de teruggevonden WILD- en SPARK-kaarten in de app.
 import { getApps,getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth,onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore,doc,getDoc,setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import { assets } from './snazzle-card-assets-v133.js';
 
-const VERSION='132-card-rescue';
+const VERSION='133-card-restore';
 const TARGET_KEY='snazzleCardCatalogV2';
-const KNOWN_KEYS=['snazzleCardCatalogV1','snazzleCardCatalogV2'];
+const namesWild=['Trail Blazer','Jungle Jax','Mud Runner','Storm Scout','Boulder Buddy','Night Tracker','River Rush','Forest Flash','Thunder Trek','Shadow Scout','Wild Guardian','Alpha Snazzle'];
+const namesSpark=['Star Sprinkle','Moon Glow','Dream Dancer','Crystal Pop','Bubble Bloom','Glitter Glide','Comet Dash','Rainbow Rush','Starlight Hug','Aurora Whirl','Sparkle Sprout','Nova Shine'];
 
-function readJson(key){
-  try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}
+function readLocal(){try{const v=JSON.parse(localStorage.getItem(TARGET_KEY)||'[]');return Array.isArray(v)?v:[]}catch{return []}}
+function loadImage(src){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src;});}
+const imageCache=new Map();
+async function imageFor(key){if(!imageCache.has(key))imageCache.set(key,loadImage(assets[key]));return imageCache.get(key);}
+async function crop(key,col,row,cols,rows){
+  const im=await imageFor(key);
+  const sx=Math.round(im.naturalWidth*col/cols),sy=Math.round(im.naturalHeight*row/rows);
+  const sw=Math.max(1,Math.round(im.naturalWidth/cols)),sh=Math.max(1,Math.round(im.naturalHeight/rows));
+  const c=document.createElement('canvas');
+  c.width=240;c.height=300;
+  const ctx=c.getContext('2d');ctx.fillStyle='#132f27';ctx.fillRect(0,0,c.width,c.height);
+  ctx.drawImage(im,sx,sy,sw,sh,0,0,c.width,c.height);
+  return c.toDataURL('image/jpeg',.78);
 }
-function stableHash(value){
-  let h=2166136261;
-  for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
-  return (h>>>0).toString(36);
+function baseCard({id,number,name,world,rarity,threshold,imageData}){
+  const now=new Date().toISOString();
+  return {id,number,name,series:world==='wild'?'WILD Series 01':'SPARK Series 01',description:world==='wild'?'Avontuur & actie':'Glans & fantasie',rarity,unlockType:'milestone',huntId:'',threshold,world,active:true,secretName:false,imageData,seedVersion:VERSION,createdAt:now,updatedAt:now};
 }
-function slug(value){
-  return String(value||'snazzle').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,64)||'snazzle';
-}
-function looksLikeUploadedCard(c){
-  if(!c||typeof c!=='object'||Array.isArray(c)) return false;
-  const hasImage=typeof c.imageData==='string'&&c.imageData.length>40;
-  const signals=[c.number,c.name,c.series,c.rarity,c.unlockType].filter(v=>typeof v==='string'&&v.trim()).length;
-  return hasImage&&signals>=2;
-}
-function arraysFrom(value){
+async function buildSeeds(){
   const out=[];
-  if(Array.isArray(value)) out.push(value);
-  if(value&&typeof value==='object'){
-    for(const k of ['cards','catalog','items','snazzleCards']) if(Array.isArray(value[k])) out.push(value[k]);
+  for(let i=0;i<12;i++){
+    const c=i%4,r=Math.floor(i/4);
+    out.push(baseCard({id:`seed-wild-${String(i+1).padStart(2,'0')}`,number:`S01-W${String(i+1).padStart(2,'0')}`,name:namesWild[i],world:'wild',rarity:i<8?'core':'rare',threshold:i+1,imageData:await crop('wild',c,r,4,3)}));
+  }
+  for(let i=0;i<12;i++){
+    const c=i%6,r=Math.floor(i/6);
+    out.push(baseCard({id:`seed-spark-${String(i+1).padStart(2,'0')}`,number:`S01-S${String(i+1).padStart(2,'0')}`,name:namesSpark[i],world:'spark',rarity:i<8?'core':'rare',threshold:i+1,imageData:await crop('spark',c,r,6,2)}));
   }
   return out;
 }
-function normalize(c,index,sourceKey){
-  const x={...c};
-  x.number=String(x.number||`SNZ-${index+1}`).trim().toUpperCase();
-  x.name=String(x.name||'Snazzle Card').trim();
-  x.series=String(x.series||'Snazzle Series 01').trim();
-  x.rarity=['core','rare','silver','gold','platinum'].includes(String(x.rarity||'').toLowerCase())?String(x.rarity).toLowerCase():'core';
-  x.unlockType=['hunt','event','shop','milestone','special','draft'].includes(x.unlockType)?x.unlockType:'draft';
-  x.huntId=String(x.huntId||'');
-  x.threshold=Math.max(0,Number(x.threshold)||0);
-  x.active=x.active!==false;
-  x.id=String(x.id||`rescue-${slug(x.number||x.name)}-${stableHash(`${x.number}|${x.name}|${x.series}|${sourceKey}|${index}`)}`);
-  x.updatedAt=x.updatedAt||new Date().toISOString();
-  x.createdAt=x.createdAt||x.updatedAt;
-  return x;
-}
-function identity(c){
-  if(c.id) return `id:${c.id}`;
-  return `card:${String(c.number||'').toUpperCase()}|${String(c.name||'').toLowerCase()}|${String(c.series||'').toLowerCase()}`;
-}
-function collect(){
-  const keys=new Set(KNOWN_KEYS);
-  for(let i=0;i<localStorage.length;i++){
-    const key=localStorage.key(i);
-    if(key&&/snazzle/i.test(key)&&/card/i.test(key)) keys.add(key);
-  }
-  const map=new Map();
-  const sources=[];
-  for(const key of keys){
-    const value=readJson(key);
-    let count=0;
-    for(const arr of arraysFrom(value)){
-      arr.forEach((raw,index)=>{
-        if(!looksLikeUploadedCard(raw)) return;
-        const c=normalize(raw,index,key);
-        map.set(identity(c),c);
-        count++;
-      });
-    }
-    if(count) sources.push({key,count});
-  }
-  return {cards:[...map.values()],sources};
-}
 
-const recovered=collect();
-if(recovered.cards.length){
-  try{
-    const current=readJson(TARGET_KEY);
-    const map=new Map();
-    (Array.isArray(current)?current:[]).forEach(c=>{if(c&&typeof c==='object')map.set(identity(c),c)});
-    recovered.cards.forEach(c=>map.set(identity(c),c));
-    const merged=[...map.values()];
-    localStorage.setItem(TARGET_KEY,JSON.stringify(merged));
-    localStorage.setItem('snazzleCardRescueV132',JSON.stringify({version:VERSION,at:new Date().toISOString(),count:merged.length,sources:recovered.sources}));
-    recovered.cards=merged;
-    console.info(`Snazzle Cards rescue: ${merged.length} lokale kaart(en) klaar voor V2.`);
-  }catch(err){console.warn('Snazzle Cards rescue lokaal mislukt',err);}
-}
+let seeds=[];
+try{
+  seeds=await buildSeeds();
+  const current=readLocal();
+  const map=new Map(current.filter(Boolean).map(c=>[c.id,c]));
+  for(const seed of seeds){
+    const old=map.get(seed.id);
+    map.set(seed.id,old?{...seed,...old,imageData:old.imageData||seed.imageData,world:old.world||seed.world}:seed);
+  }
+  const merged=[...map.values()];
+  localStorage.setItem(TARGET_KEY,JSON.stringify(merged));
+  localStorage.setItem('snazzleCardRestoreV133',JSON.stringify({version:VERSION,at:new Date().toISOString(),seeded:seeds.length,total:merged.length}));
+  window.dispatchEvent(new CustomEvent('snazzle-card-catalog-restored',{detail:{count:seeds.length}}));
+  console.info(`Snazzle Cards v133: ${seeds.length} teruggevonden kaarten lokaal hersteld.`);
+}catch(err){console.warn('Snazzle Cards v133 lokaal herstel mislukt',err);}
 
-window.SnazzleCardRescueV132={version:VERSION,count:recovered.cards.length,sources:recovered.sources};
+window.SnazzleCardRestoreV133={version:VERSION,count:seeds.length};
 
 const app=getApps().length?getApp():null;
-if(app&&recovered.cards.length){
-  const auth=getAuth(app),db=getFirestore(app);
-  let synced=false;
+if(app&&seeds.length){
+  const auth=getAuth(app),db=getFirestore(app);let syncing=false,done=false;
   onAuthStateChanged(auth,async user=>{
-    if(!user||user.isAnonymous||synced) return;
+    if(!user||user.isAnonymous||syncing||done)return;
+    syncing=true;
     try{
-      const adminSnap=await getDoc(doc(db,'adminUsers',user.uid));
-      const profile=adminSnap.exists()?adminSnap.data():null;
-      if(profile?.active!==true||profile?.role!=='superadmin') return;
-      for(const card of recovered.cards) await setDoc(doc(db,'snazzleCards',card.id),card,{merge:true});
-      synced=true;
-      localStorage.setItem('snazzleCardRescueV132Central',JSON.stringify({version:VERSION,at:new Date().toISOString(),count:recovered.cards.length}));
-      console.info(`Snazzle Cards rescue: ${recovered.cards.length} kaart(en) centraal veiliggesteld.`);
-    }catch(err){console.warn('Snazzle Cards rescue centrale sync wacht op beheerlogin/rechten',err);}
+      const a=await getDoc(doc(db,'adminUsers',user.uid));
+      const p=a.exists()?a.data():null;
+      if(p?.active!==true||p?.role!=='superadmin'){syncing=false;return;}
+      for(const card of seeds) await setDoc(doc(db,'snazzleCards',card.id),card,{merge:true});
+      done=true;
+      localStorage.setItem('snazzleCardRestoreV133Central',JSON.stringify({version:VERSION,at:new Date().toISOString(),count:seeds.length}));
+      console.info(`Snazzle Cards v133: ${seeds.length} kaarten centraal hersteld.`);
+    }catch(err){console.warn('Snazzle Cards v133 centrale synchronisatie wacht op beheerlogin/rechten',err);}finally{syncing=false;}
   });
 }
