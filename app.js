@@ -1,6 +1,6 @@
-// Snazzle Hunt v130 — snelle start: eerst de basis, daarna functies in achtergrondbundels.
+// Snazzle Hunt v131 — snelle start + compleet compact hoofdmenu.
 
-const runtimeVersion = '20260827-v130-fast-start';
+const runtimeVersion = '20260827-v131-complete-menu';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
