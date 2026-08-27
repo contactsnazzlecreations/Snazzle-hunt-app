@@ -1,6 +1,6 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-const runtimeVersion = '20260827-v1206-village-visibility-early';
+const runtimeVersion = '20260827-v1207-stable-single-start';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -45,7 +45,6 @@ window.__snazzleReleaseBoot=()=>{};
 await import(fresh('./app-core.js'));
 
 // Kritiek: dorpzichtbaarheid moet direct na de core actief zijn, vóór alle optionele modules.
-// Zo kan de Home-dorpenbalk niet eerst minutenlang de fallback-dorpen blijven tonen.
 await safeImport('./snazzle-village-visibility-v120.js');
 
 (function installHeroQuack(){
