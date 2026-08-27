@@ -73,7 +73,7 @@ try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle 
 window.__snazzleReleaseBoot?.();
 suppressLateStartupOverlays();
 
-setTimeout(()=>{safeImport('./snazzle-ar-admin-v83.js');safeImport('./snazzle-ar-admin-display-v84.js');},900);
+setTimeout(()=>{safeImport('./snazzle-ar-admin-v83.js');safeImport('./snazzle-ar-admin-display-v84.js');safeImport('./snazzle-ar-save-fix-v91.js');},900);
 
 import { getAuth,onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 const auth=getAuth();let shopLoaded=false;
