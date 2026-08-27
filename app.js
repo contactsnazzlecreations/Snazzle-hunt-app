@@ -2,7 +2,7 @@
 
 // Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
 // maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
-const runtimeVersion = '20260827-v115-android-startup-fix';
+const runtimeVersion = '20260827-v120-village-visibility';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -145,6 +145,7 @@ const optionalModules=[
   './snazzle-home-magic.js',
   './snazzle-home-magic-fix.js',
   './village-access.js',
+  './snazzle-village-visibility-v120.js',
   './snazzle-characters.js',
   './snazzle-adventure-ui-v28.js',
   './snazzle-clean-home-v31.js',
