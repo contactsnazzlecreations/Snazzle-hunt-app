@@ -1,5 +1,5 @@
-// Snazzle v60 — veilige herstelhulp voor oudere lokale beeldkeuzes.
-// Geen auth- of rechtenwijzigingen: alleen een superadmin kan herstel naar Firestore uitvoeren.
+// Snazzle v60.1 — veilige herstelhulp zonder automatische herstart.
+// Beeldherstel is alleen nog handmatig; de app mag tijdens normaal openen nooit zichzelf verversen.
 
 import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -11,6 +11,7 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 let isSuper=false;
 let running=false;
+let adminObserver=null;
 
 function toast(message){
   const el=document.getElementById('toast');
@@ -60,10 +61,11 @@ async function recoverNow(){
       await updateStatus('Er staat op deze browser geen oude lokale beeldkopie meer. Bestaande centrale beelden worden wel gewoon geladen.');
       toast('Geen oude lokale beeldkopieën gevonden op dit toestel');
     }else{
+      // Pas de nieuwe centrale beelden direct toe. Belangrijk: GEEN location.reload().
+      try{await window.SnazzleCentralAssets?.reapply?.();}catch{}
+      try{await window.SnazzleVisualSyncV54?.pull?.();}catch{}
       await updateStatus(`Herstel uitgevoerd. ${uploaded ? uploaded+' ontbrekende centrale beeldkeuze(s) opnieuw opgeslagen.' : 'De gevonden beelden waren al centraal aanwezig.'}`);
       toast('Snazzle-beeldherstel uitgevoerd ✨');
-      setTimeout(()=>window.SnazzleCentralAssets?.reapply?.(),500);
-      setTimeout(()=>location.reload(),1700);
     }
   }catch(err){
     console.warn('Snazzle v60 beeldherstel',err);
@@ -85,7 +87,7 @@ function installPanel(){
   box.innerHTML=`<strong style="display:block;font-size:15px;margin-bottom:5px">🛟 Beeldherstel</strong>
     <div id="snV60RecoveryStatus" style="font-size:12px;line-height:1.45;margin-bottom:9px">Lokale beeldkopieën controleren…</div>
     <button type="button" id="snV60RecoverBtn" style="width:100%;min-height:48px;border:0;border-radius:13px;background:#2f7945;color:white;font-weight:900;padding:11px">🔄 Oude Snazzle-afbeeldingen herstellen</button>
-    <small style="display:block;margin-top:8px;line-height:1.35;color:#6d5737">Deze knop wist niets. Hij probeert alleen nog aanwezige oude beeldkeuzes van dit toestel opnieuw centraal beschikbaar te maken.</small>`;
+    <small style="display:block;margin-top:8px;line-height:1.35;color:#6d5737">Deze knop wist niets. Beeldherstel gebeurt alleen wanneer je hier zelf op tikt en ververst de app niet.</small>`;
   admin.prepend(box);
   document.getElementById('snV60RecoverBtn').onclick=recoverNow;
   updateStatus();
@@ -93,8 +95,9 @@ function installPanel(){
 
 function observeAdmin(){
   installPanel();
-  const obs=new MutationObserver(()=>installPanel());
-  obs.observe(document.body,{childList:true,subtree:true});
+  if(adminObserver) return;
+  adminObserver=new MutationObserver(()=>installPanel());
+  adminObserver.observe(document.body,{childList:true,subtree:true});
 }
 
 onAuthStateChanged(auth,async user=>{
@@ -106,15 +109,10 @@ onAuthStateChanged(auth,async user=>{
     isSuper=snap.exists()&&data.active===true&&data.role==='superadmin';
   }catch{}
   if(isSuper){
+    // Geen automatisch herstel meer bij aanmelden/openen. Dat kon vroeger na circa
+    // 1,7 seconde een echte location.reload() veroorzaken.
     observeAdmin();
-    // Een beheerder met oude lokale beelden wordt automatisch één keer veilig geprobeerd.
-    if(sessionStorage.getItem('snazzleV60AutoRecovery')!=='1'){
-      sessionStorage.setItem('snazzleV60AutoRecovery','1');
-      setTimeout(async()=>{
-        const count=mainLocalCount()+await indexedLocalCount();
-        if(count>0) recoverNow();
-      },1600);
-    }
+    updateStatus();
   }
 });
 
