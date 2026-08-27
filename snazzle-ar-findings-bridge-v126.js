@@ -20,6 +20,7 @@ let listObserver=null;
 let sheetObserver=null;
 let rendering=false;
 let rerenderTimer=null;
+let lastBaseSignature='';
 
 function localItems(){
   try{
@@ -87,6 +88,9 @@ function installStyles(){
   `;
   document.head.appendChild(s);
 }
+function baseSignature(list){
+  return [...list.children].filter(el=>!el.classList.contains('sn-ar-find126')).map(el=>el.outerHTML).join('');
+}
 function hasOrdinaryFindings(list){
   return [...list.children].some(el=>!el.classList.contains('sn-ar-find126') && !/^Nog niets gevonden$/i.test((el.textContent||'').trim()));
 }
@@ -113,6 +117,7 @@ async function renderFinds(){
     }else if(!hasOrdinaryFindings(list) && ![...list.children].some(el=>/^Nog niets gevonden$/i.test((el.textContent||'').trim()))){
       list.innerHTML='<div class="listitem"><strong>Nog niets gevonden</strong></div>';
     }
+    lastBaseSignature=baseSignature(list);
   }finally{
     rendering=false;
   }
@@ -130,7 +135,12 @@ function watchFindsUi(){
   }
   if(!list.dataset.arFindings126){
     list.dataset.arFindings126='1';
-    listObserver=new MutationObserver(()=>{if(!rendering)scheduleRender(20);});
+    lastBaseSignature=baseSignature(list);
+    listObserver=new MutationObserver(()=>{
+      if(rendering)return;
+      const sig=baseSignature(list);
+      if(sig!==lastBaseSignature){lastBaseSignature=sig;scheduleRender(20);}
+    });
     listObserver.observe(list,{childList:true});
   }
   if(!sheet.dataset.arFindings126){
