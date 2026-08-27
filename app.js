@@ -1,6 +1,6 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-const runtimeVersion = '20260827-v1281-listen-under-play';
+const runtimeVersion = '20260827-v129-five-main-groups';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -75,8 +75,8 @@ await safeImport('./snazzle-ar-collection-bridge-v125.js');
 await safeImport('./snazzle-ar-findings-bridge-v126.js');
 // Transparante AR-Snazzle gevonden => bijbehorende aparte Wild Card / Snazzle Card wordt ontgrendeld.
 await safeImport('./snazzle-ar-card-unlock-v127.js');
-// Alleen de navigatie wordt gegroepeerd: zes hoofdknoppen, bestaande functies blijven intact.
-await safeImport('./snazzle-main-menu-v128.js');
+// Alleen de navigatie wordt gegroepeerd: vijf hoofdknoppen, bestaande functies blijven intact.
+await safeImport('./snazzle-main-menu-v129.js');
 
 try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
 window.__snazzleReleaseBoot?.();suppressLateStartupOverlays();
