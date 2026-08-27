@@ -1,4 +1,4 @@
-# AR-beheer: forceer herpublicatie van de actuele Firestore-regels (2026-08-26)
+# Snazzle beheer: forceer herpublicatie van de actuele Firestore-regels (2026-08-27 card rescue)
 name: Deploy Firestore Rules Only
 
 on:
