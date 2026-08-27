@@ -1,6 +1,6 @@
-// Snazzle v129.2 — vijf compacte hoofdgroepen, zonder bestaande menu-functies te verplaatsen.
-// Belangrijk: originele quick-menu knoppen blijven directe kinderen van .quick-menu-list.
-// Daardoor kunnen laat ladende modules (AR, Route, Bieb, Spel, kaarten, beloningen, enz.)
+// Snazzle v129.3 — vijf compacte hoofdgroepen, mét alle bestaande functies.
+// Originele quick-menu knoppen blijven directe kinderen van .quick-menu-list.
+// Zo kunnen laat ladende modules (AR, Route, Bieb, Spel, kaarten, beloningen, enz.)
 // hun bestaande knoppen veilig blijven invoegen. In de vijf hoofdgroepen tonen we klikbare spiegels.
 
 const GROUPS=[
@@ -88,19 +88,122 @@ function injectStyles(){
   document.head.appendChild(s);
 }
 
+function menuToast(message){
+  const toast=document.getElementById('toast');
+  if(!toast) return;
+  toast.textContent=message;
+  toast.classList.add('show');
+  clearTimeout(window.__snMainMenuToast129);
+  window.__snMainMenuToast129=setTimeout(()=>toast.classList.remove('show'),2600);
+}
+
+function closeQuickMenu(){
+  try{document.getElementById('quickMenuClose')?.click();}catch{}
+}
+
+function waitForTarget(findTarget,onFound,label){
+  const first=findTarget();
+  closeQuickMenu();
+  if(first){setTimeout(()=>onFound(first),70);return;}
+  menuToast(`${label} wordt geladen…`);
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    const target=findTarget();
+    if(target){clearInterval(timer);onFound(target);return;}
+    if(tries>=40){clearInterval(timer);menuToast(`${label} is nog niet klaar. Probeer het zo nog eens.`);}
+  },100);
+}
+
+function makeFixedButton({id,icon,title,sub,rank,onClick}){
+  const b=document.createElement('button');
+  b.type='button';
+  b.id=id;
+  b.className='sn-main-fixed';
+  b.dataset.rank=String(rank);
+  b.innerHTML=`<b>${icon}</b><span><strong>${title}</strong><small>${sub}</small></span><i>›</i>`;
+  b.addEventListener('click',onClick);
+  return b;
+}
+
+function insertRanked(box,button,rank){
+  if(!box||!button) return;
+  button.dataset.rank=String(rank);
+  const before=[...box.children].find(el=>el!==button && Number(el.dataset.rank||999)>rank);
+  if(before) box.insertBefore(button,before); else box.appendChild(button);
+}
+
+function openArFromMenu(){
+  waitForTarget(
+    ()=>document.getElementById('snArLaunch'),
+    target=>target.click(),
+    'Snazzle AR'
+  );
+}
+
+function collectionSource(){
+  return document.querySelector('#quickMenuPanel .quick-menu-list > [data-snazzle-collection]') ||
+    document.querySelector('.collection-home-card');
+}
+
+function openCollectionTab(tab){
+  waitForTarget(
+    collectionSource,
+    target=>{
+      target.click();
+      let tries=0;
+      const timer=setInterval(()=>{
+        tries++;
+        const tabButton=document.querySelector(`[data-collection-tab="${tab}"]`);
+        if(tabButton){clearInterval(timer);tabButton.click();return;}
+        if(tries>=20) clearInterval(timer);
+      },60);
+    },
+    tab==='nest'?'Mijn beloningen':'Mijn kaarten'
+  );
+}
+
+function ensureFixedEntries(root){
+  const search=root?.querySelector('[data-options="search"]');
+  if(search&&!document.getElementById('snArMenuV129')){
+    insertRanked(search,makeFixedButton({
+      id:'snArMenuV129',icon:'📷',title:'Snazzle AR',sub:'Zoek en vang Snazzles met camera en GPS',rank:20,onClick:openArFromMenu
+    }),20);
+  }
+
+  const collection=root?.querySelector('[data-options="collection"]');
+  if(collection&&!document.getElementById('snCardsMenuV129')){
+    insertRanked(collection,makeFixedButton({
+      id:'snCardsMenuV129',icon:'🃏',title:'Mijn kaarten',sub:'Bekijk je Snazzle Cards en ontgrendelingen',rank:10,onClick:()=>openCollectionTab('cards')
+    }),10);
+  }
+  if(collection&&!document.getElementById('snRewardsMenuV129')){
+    insertRanked(collection,makeFixedButton({
+      id:'snRewardsMenuV129',icon:'🎁',title:'Mijn beloningen',sub:'Nest, mijlpalen en verrassingen',rank:30,onClick:()=>openCollectionTab('nest')
+    }),30);
+  }
+
+  // De algemene collectie-ingang blijft technisch bestaan als bron, maar in het menu
+  // tonen we de duidelijkere aparte keuzes "Mijn kaarten" en "Mijn beloningen".
+  const generic=document.querySelector('#quickMenuPanel .quick-menu-list > [data-snazzle-collection]');
+  if(generic?.__snMainKey){
+    root.querySelector(`.sn-main-proxy[data-source-key="${generic.__snMainKey}"]`)?.remove();
+  }
+}
+
 function makeFallbackSafetyButton(){
   const b=document.createElement('button');
   b.type='button';
   b.id='snSafetyParentsFallbackV129';
   b.className='sn-main-fallback';
+  b.dataset.rank='40';
   b.innerHTML='<b>🛡️</b><span><strong>Veiligheid & ouders</strong><small>Ouder- en privacy-informatie</small></span><i>›</i>';
   b.addEventListener('click',()=>{
     const candidates=[...document.querySelectorAll('#quickMenuPanel .sn-main-source, button, a')]
       .filter(el=>el!==b && !el.closest('#snMainMenuV129'));
     const target=candidates.find(el=>/ouder|parent|veilig|privacy/i.test(buttonText(el)));
-    if(target){ document.getElementById('quickMenuClose')?.click(); setTimeout(()=>target.click(),70); return; }
-    const toast=document.getElementById('toast');
-    if(toast){toast.textContent='Veiligheids- en ouderinformatie wordt geladen.';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2400);}
+    if(target){ closeQuickMenu(); setTimeout(()=>target.click(),70); return; }
+    menuToast('Veiligheids- en ouderinformatie wordt geladen.');
   });
   return b;
 }
@@ -172,14 +275,11 @@ function placeProxy(source,root){
   if(!box) return;
 
   let proxy=root.querySelector(`.sn-main-proxy[data-source-key="${source.__snMainKey}"]`);
-  if(!proxy){
-    proxy=makeProxy(source);
-  }
-  proxy.dataset.rank=String(optionRank(source));
+  if(!proxy) proxy=makeProxy(source);
+  const rank=optionRank(source);
+  proxy.dataset.rank=String(rank);
 
-  const rank=Number(proxy.dataset.rank||90);
-  const before=[...box.querySelectorAll('.sn-main-proxy')]
-    .find(p=>p!==proxy && Number(p.dataset.rank||90)>rank);
+  const before=[...box.children].find(el=>el!==proxy && Number(el.dataset.rank||999)>rank);
   if(before) box.insertBefore(proxy,before); else box.appendChild(proxy);
 }
 
@@ -201,6 +301,7 @@ function syncSources(list,root){
   root.querySelectorAll('.sn-main-proxy').forEach(proxy=>{
     if(!liveKeys.has(proxy.dataset.sourceKey)) proxy.remove();
   });
+  ensureFixedEntries(root);
   ensureSafetyEntry(root);
 }
 
@@ -210,7 +311,7 @@ function ensureSafetyEntry(root){
   const hasSafety=[...box.querySelectorAll('.sn-main-proxy')].some(el=>/ouder|parent|veilig|safety|privacy/i.test(buttonText(el)));
   const fallback=box.querySelector('#snSafetyParentsFallbackV129');
   if(hasSafety){ fallback?.remove(); return; }
-  if(!fallback) box.appendChild(makeFallbackSafetyButton());
+  if(!fallback) insertRanked(box,makeFallbackSafetyButton(),40);
 }
 
 function install(){
