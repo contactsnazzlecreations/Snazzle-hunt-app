@@ -1,6 +1,6 @@
 // Snazzle Hunt entrypoint: keep the proven hunt app core separate from newer modules.
 
-const runtimeVersion = '20260827-v1207-stable-single-start';
+const runtimeVersion = '20260827-v1207-stable-safety82d';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
