@@ -20,6 +20,19 @@ function installMenuLink(){
   list.appendChild(makePrivacyButton());
 }
 
+function installSafetyBadge(){
+  const panel=document.querySelector('#quickMenuPanel .panel');
+  if(!panel || document.getElementById('snazzleChildSafetyBadge')) return;
+  const badge=document.createElement('button');
+  badge.type='button';
+  badge.id='snazzleChildSafetyBadge';
+  badge.className='snazzle-child-safety-badge';
+  badge.setAttribute('aria-label','Lees meer over privacy en veilig spelen');
+  badge.innerHTML=`<span class="snazzle-safety-shield">🛡️</span><span class="snazzle-safety-copy"><strong>ONTWORPEN VOOR VEILIG SPELEN</strong><small>Met aandacht voor kinderen &amp; privacy</small></span><span class="snazzle-safety-check">✓</span>`;
+  badge.onclick=openPrivacy;
+  panel.appendChild(badge);
+}
+
 function installProfileBox(){
   const panel=document.querySelector('#profileSheet .panel');
   if(!panel || document.getElementById('snazzlePrivacyProfileBox')) return;
@@ -85,6 +98,10 @@ function installStyles(){
     .snazzle-photo-safety button,.snazzle-family-notice button{border:0;background:none;padding:0;color:#24613a;text-decoration:underline;font-weight:950}
     .snazzle-family-notice{margin:12px 0 2px;padding:11px 12px;border-radius:14px;background:#eef7d1;border:1px solid #a8c56f;color:#354525;font-size:11px;font-weight:720;line-height:1.4}
     [data-snazzle-privacy-link]{color:#24613a;font-weight:950;text-decoration:underline}
+    .snazzle-child-safety-badge{width:100%;margin:18px 0 5px;padding:12px 13px;border:1px solid rgba(104,220,126,.38);border-radius:17px;background:linear-gradient(135deg,#17243a,#162c2d);color:#fff;display:grid;grid-template-columns:48px 1fr 35px;align-items:center;gap:10px;text-align:left;box-shadow:0 7px 18px rgba(0,0,0,.18)}
+    .snazzle-safety-shield{width:45px;height:45px;display:grid;place-items:center;border-radius:14px;background:rgba(80,211,104,.13);font-size:27px}
+    .snazzle-safety-copy{min-width:0}.snazzle-safety-copy strong{display:block;color:#58d875;font-size:13px;line-height:1.18;letter-spacing:.15px}.snazzle-safety-copy small{display:block;color:#e7eee8;font-size:10px;font-weight:720;margin-top:4px;line-height:1.25}
+    .snazzle-safety-check{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#55d675;color:#12351d;font-size:20px;font-weight:1000}
   `;
   document.head.appendChild(s);
 }
@@ -92,6 +109,7 @@ function installStyles(){
 function installPrivacyLayer(){
   installStyles();
   installMenuLink();
+  installSafetyBadge();
   installProfileBox();
   installPhotoNotice();
   installOnboardingNotice();
