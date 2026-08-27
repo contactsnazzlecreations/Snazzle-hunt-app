@@ -6,39 +6,13 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="theme-color" content="#0d563d">
-<title>Snazzle Hunt vernieuwen</title>
-<style>
-body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(180deg,#17684c,#083a31);color:#fff7df;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center}
-.load{padding:24px;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,.3)}
-.duck{font-size:58px;display:block;margin-bottom:12px}
-</style>
-</head>
-<body>
-<div class="load"><span class="duck">🦆✨</span>De nieuwste Snazzle Hunt wordt geladen…</div>
+<meta name="theme-color" content="#146b3a">
+<title>Snazzle Hunt</title>
 <script>
-(async()=>{
-  const stamp=Date.now();
-  try{
-    // Verwijder oude browsercaches en eventuele oude service workers.
-    if('caches' in window){
-      const keys=await caches.keys();
-      await Promise.all(keys.map(key=>caches.delete(key)));
-    }
-    if('serviceWorker' in navigator){
-      const regs=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(reg=>reg.unregister()));
-    }
-
-    // Niet langer index.html met document.write herschrijven.
-    // index.html laadt app.js zelf al met een unieke Date.now()-versie.
-    // Een unieke query op de hoofdpagina voorkomt daarnaast een oude HTML-cache.
-    location.replace('./?fresh='+encodeURIComponent(stamp));
-  }catch(err){
-    console.error(err);
-    location.replace('./?fresh='+encodeURIComponent(stamp));
-  }
-})();
+  // Legacy Android-snelkoppeling: meteen naar de echte app, zonder zichtbaar tussen-laadscherm
+  // en zonder caches/service workers te wissen. Hierdoor verdwijnt de dubbele zichtbare start.
+  location.replace('./');
 </script>
-</body>
+</head>
+<body style="margin:0;background:#083a24"></body>
 </html>
