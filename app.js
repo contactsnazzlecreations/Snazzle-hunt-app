@@ -2,7 +2,7 @@
 
 // Vaste release-versie: app.js zelf mag door index.html opnieuw worden opgehaald,
 // maar alle lokale modules en styles blijven daarna cachebaar op de telefoon.
-const runtimeVersion = '20260827-v111-ar-zones';
+const runtimeVersion = '20260827-v112-map-stability';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
