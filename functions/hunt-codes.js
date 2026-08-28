@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const MIN_CODE_LENGTH = 8;
 const MAX_ATTEMPTS = 8;
 const ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
+const MAX_PHOTO_BYTES = 600 * 1024;
+const ALLOWED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 function normalizeCode(value) {
   return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
@@ -37,11 +39,43 @@ async function requireSuperAdmin(db, uid) {
     throw new HttpsError('permission-denied', 'Alleen de hoofdbeheerder mag Hunt-codes beheren.');
   }
 }
+function hasValidImageSignature(buffer, mime) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 12) return false;
+  if (mime === 'image/jpeg') {
+    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  }
+  if (mime === 'image/png') {
+    return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  }
+  if (mime === 'image/webp') {
+    return buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+  }
+  return false;
+}
 function validatePhoto(photoData) {
-  const photo = String(photoData || '');
-  if (!photo.startsWith('data:image/')) throw new HttpsError('invalid-argument', 'Maak eerst een vondstfoto.');
-  if (photo.length > 800000) throw new HttpsError('invalid-argument', 'De vondstfoto is te groot.');
-  return photo;
+  const photo = String(photoData || '').trim();
+  const match = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(photo);
+  if (!match || !ALLOWED_PHOTO_TYPES.has(match[1])) {
+    throw new HttpsError('invalid-argument', 'Gebruik een geldige JPG-, PNG- of WebP-vondstfoto.');
+  }
+
+  let buffer;
+  try {
+    buffer = Buffer.from(match[2], 'base64');
+  } catch {
+    throw new HttpsError('invalid-argument', 'De vondstfoto is ongeldig.');
+  }
+  if (!buffer.length || buffer.length > MAX_PHOTO_BYTES) {
+    throw new HttpsError('invalid-argument', 'De vondstfoto is te groot of leeg.');
+  }
+  if (!hasValidImageSignature(buffer, match[1])) {
+    throw new HttpsError('invalid-argument', 'De vondstfoto heeft geen geldig afbeeldingsformaat.');
+  }
+
+  // Sla uitsluitend een genormaliseerde data-URL op; zo kunnen extra attributen of scripts
+  // nooit via dit veld in later gerenderde HTML terechtkomen.
+  return `data:${match[1]};base64,${buffer.toString('base64')}`;
 }
 function huntIsClaimable(hunt) {
   if (!hunt || hunt.found === true || hunt.mode === 'draft') return false;
