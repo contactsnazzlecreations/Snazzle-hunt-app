@@ -4,5 +4,7 @@ module.exports = {
   ...require('./hunt-codes'),
   ...require('./meetups'),
   ...require('./admin-mfa'),
-  ...require('./org-hunts')
+  ...require('./org-hunts'),
+  // Laatste export wint bewust: extra brute-forcebescherming voor organisatiecodes.
+  ...require('./org-access-guard')
 };
