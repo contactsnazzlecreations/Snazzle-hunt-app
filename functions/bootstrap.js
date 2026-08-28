@@ -1,5 +1,6 @@
-// Centrale Functions-loader: behoud bestaande functies en voeg veilige Hunt-codefuncties toe.
+// Centrale Functions-loader: behoud bestaande functies en voeg beveiligde functies toe.
 module.exports = {
   ...require('./index'),
-  ...require('./hunt-codes')
+  ...require('./hunt-codes'),
+  ...require('./meetups')
 };
