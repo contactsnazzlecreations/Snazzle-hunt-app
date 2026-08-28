@@ -1,4 +1,6 @@
 // Snazzle v141 — server-side afgedwongen 2-stapsverificatie voor Beheer.
+// Veilige overgang: zolang de nieuwe MFA Functions aantoonbaar nog niet online zijn,
+// blijft de bestaande beheerlogin werken. Zodra de backend online is, wordt OTP gebruikt.
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import {
   getAuth,
@@ -85,6 +87,31 @@ async function checkAdmin(uid){
   return data.active===true&&['superadmin','village_admin'].includes(data.role)?data:null;
 }
 
+function backendNotPublished(error){
+  const code=String(error?.code||'').toLowerCase();
+  return code.includes('functions/not-found') || code.includes('functions/unavailable');
+}
+
+async function waitForAdminRender(){
+  for(let i=0;i<30;i++){
+    const role=$('#adminRole')?.textContent||'';
+    if(role&&role!=='Niet ingelogd')return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
+
+async function openExistingAdminTemporarily(){
+  // Alleen gebruikt wanneer GitHub al de nieuwe client heeft gepubliceerd maar de nieuwe
+  // Firebase Function aantoonbaar nog niet bestaat/bereikbaar is. Verkeerde codes,
+  // serverfouten en niet-beheerders vallen NOOIT terug op deze route.
+  if($('#adminPassword'))$('#adminPassword').value='';
+  $('#adminLogin')?.classList.remove('show');
+  await waitForAdminRender();
+  $('#adminSheet')?.classList.add('show');
+  toast('Beheer geopend · extra beveiliging wordt nog gepubliceerd');
+}
+
 async function loginWithMfa(){
   if(busy||!auth||!requestCode)return;
   const email=$('#adminEmail')?.value.trim()||'';
@@ -92,10 +119,11 @@ async function loginWithMfa(){
   if(!email||!password)return toast('Vul e-mail en wachtwoord in');
   busy=true;
   const btn=$('#adminLoginBtn');if(btn)btn.disabled=true;
+  let verifiedAdmin=null;
   try{
     const credential=await signInWithEmailAndPassword(auth,email,password);
-    const admin=await checkAdmin(credential.user.uid);
-    if(!admin){await restoreAnonymous();throw new Error('geen-beheer');}
+    verifiedAdmin=await checkAdmin(credential.user.uid);
+    if(!verifiedAdmin){await restoreAnonymous();throw new Error('geen-beheer');}
     const result=await requestCode({});
     maskedEmail=result.data?.maskedEmail||email;
     if($('#adminPassword'))$('#adminPassword').value='';
@@ -104,9 +132,20 @@ async function loginWithMfa(){
     toast('Extra beveiligingscode verstuurd 🔐');
   }catch(e){
     console.warn('Snazzle MFA login',e);
-    if(String(e?.code||'').includes('resource-exhausted')) toast('Er is net al een code verstuurd. Controleer je e-mail.');
-    else if(String(e?.message||'').includes('geen-beheer')) toast('Dit account heeft geen beheerdersrechten');
-    else toast('Inloggen mislukt. Controleer e-mail en wachtwoord.');
+    const code=String(e?.code||'');
+    if(verifiedAdmin&&backendNotPublished(e)){
+      await openExistingAdminTemporarily();
+    }else if(verifiedAdmin&&code.includes('resource-exhausted')){
+      maskedEmail=email;
+      if($('#adminPassword'))$('#adminPassword').value='';
+      $('#adminLogin')?.classList.remove('show');
+      showOverlay();
+      $('#snMfaMessage').textContent='Er is net al een code verstuurd. Gebruik de code uit je e-mail.';
+    }else if(String(e?.message||'').includes('geen-beheer')){
+      toast('Dit account heeft geen beheerdersrechten');
+    }else{
+      toast('Inloggen mislukt. Controleer e-mail en wachtwoord.');
+    }
   }finally{
     busy=false;if(btn)btn.disabled=false;
   }
@@ -123,15 +162,6 @@ async function resendCode(){
   }catch(e){
     $('#snMfaMessage').textContent=String(e?.code||'').includes('resource-exhausted')?'Er is net al een code verstuurd. Probeer het over een minuut opnieuw.':'Nieuwe code versturen lukte niet.';
   }finally{busy=false;}
-}
-
-async function waitForAdminRender(){
-  for(let i=0;i<30;i++){
-    const role=$('#adminRole')?.textContent||'';
-    if(role&&role!=='Niet ingelogd')return true;
-    await new Promise(r=>setTimeout(r,100));
-  }
-  return false;
 }
 
 async function completeMfa(){
