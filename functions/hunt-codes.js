@@ -31,8 +31,11 @@ function verifyStoredCode(code, secret) {
   if (secret.codeHash) return safeEqualHex(legacyHash(code), secret.codeHash);
   return false;
 }
-async function requireSuperAdmin(db, uid) {
+async function requireSuperAdmin(db, uid, token) {
   if (!uid) throw new HttpsError('unauthenticated', 'Log eerst in als beheerder.');
+  if (token?.snazzle_admin_mfa !== true) {
+    throw new HttpsError('permission-denied', 'Bevestig eerst de extra beveiligingscode voor Beheer.');
+  }
   const snap = await db.collection('adminUsers').doc(uid).get();
   const data = snap.exists ? (snap.data() || {}) : {};
   if (data.active !== true || data.role !== 'superadmin') {
@@ -114,7 +117,7 @@ async function registerAttempt(db, huntId, uid) {
 
 const saveHuntCode = onCall({ region: 'europe-west1' }, async request => {
   const db = getFirestore();
-  await requireSuperAdmin(db, request.auth?.uid);
+  await requireSuperAdmin(db, request.auth?.uid, request.auth?.token);
   const huntId = String(request.data?.huntId || '').trim();
   const code = normalizeCode(request.data?.code);
   if (!huntId) throw new HttpsError('invalid-argument', 'Hunt ontbreekt.');
@@ -138,7 +141,7 @@ const saveHuntCode = onCall({ region: 'europe-west1' }, async request => {
 
 const getHuntCodeState = onCall({ region: 'europe-west1' }, async request => {
   const db = getFirestore();
-  await requireSuperAdmin(db, request.auth?.uid);
+  await requireSuperAdmin(db, request.auth?.uid, request.auth?.token);
   const huntId = String(request.data?.huntId || '').trim();
   if (!huntId) throw new HttpsError('invalid-argument', 'Hunt ontbreekt.');
   const snap = await db.collection('huntSecrets').doc(huntId).get();
