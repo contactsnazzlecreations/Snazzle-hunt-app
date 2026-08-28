@@ -1,6 +1,6 @@
-// Snazzle Hunt v138 — noodfix: kaart-herstel tijdelijk uitgeschakeld zodat menu en knoppen direct responsief blijven.
+// Snazzle Hunt v139 — herstel naar de laatste stabiele compacte app; tijdelijke kaart-herstelcode uitgeschakeld.
 
-const runtimeVersion = '20260828-v138-menu-responsive';
+const runtimeVersion = '20260828-v139-stable-compact-menu';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -131,10 +131,8 @@ await idle();
 const backgroundBundles=[
   [
     './snazzle-ar-v80.js',
-    './snazzle-card-rescue-v132.js',
     './snazzle-ar-safety-pass-v124.js',
     './snazzle-card-system-v2.js',
-    './snazzle-card-draft-link-v107.js',
     './snazzle-card-worlds-v78.js',
     './snazzle-card-world-prompt-v79.js',
     './snazzle-hunt-code-v2.js',
