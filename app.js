@@ -1,6 +1,6 @@
-// Snazzle Hunt v141 — stabiele compacte app + extra beveiligingslaag.
+// Snazzle Hunt v143 — stabiele compacte app + veilig organisatieplatform.
 
-const runtimeVersion = '20260828-v141-security-hardening';
+const runtimeVersion = '20260828-v143-organization-platform';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -128,6 +128,10 @@ const fastBundles=[
 
 Promise.allSettled(fastBundles.map(loadSequence)).then(()=>refreshLocalStyles());
 await idle();
+
+// Het organisatieplatform start pas nadat de hoofdapp al geschilderd is.
+// safeImport houdt deze uitbreiding volledig fail-safe: bij een fout blijft de bestaande app gewoon werken.
+safeImport('./snazzle-org-platform-v143.js');
 
 const backgroundBundles=[
   [

@@ -384,14 +384,10 @@ const organizerListPoints = onCall({ region: REGION }, async request => {
   const points = snap.docs.map(d => {
     const p = d.data() || {};
     return {
-      id: d.id,
-      assetId: text(p.assetId, 180),
-      assetName: text(p.assetName, 60),
-      imageUrl: text(p.imageUrl, 1000),
-      name: text(p.name, 50),
-      hint: text(p.hint, 140),
-      radius: number(p.radius, 5, 15, 8),
-      active: p.active !== false
+      id: d.id, name: text(p.name, 50), hint: text(p.hint, 140),
+      radius: Number(p.radius || 8), active: p.active !== false,
+      assetId: text(p.assetId, 180), imageUrl: text(p.imageUrl, 1000),
+      assetName: text(p.assetName, 60)
     };
   });
   return { hunt: adminHunt(huntId, hunt), points };
@@ -401,38 +397,28 @@ const organizerPlacePoint = onCall({ region: REGION }, async request => {
   const db = getFirestore();
   const uid = requireAuth(request);
   const { huntId, huntRef } = await requireOrganizerSession(db, uid, request.data?.huntId);
-  const existing = await huntRef.collection('points').get();
-  if (existing.size >= MAX_POINTS_PER_HUNT) throw new HttpsError('resource-exhausted', `Maximaal ${MAX_POINTS_PER_HUNT} AR-punten per tijdelijke Hunt.`);
+  const current = await huntRef.collection('points').get();
+  if (current.size >= MAX_POINTS_PER_HUNT) throw new HttpsError('resource-exhausted', 'Deze Hunt heeft het maximale aantal AR-punten bereikt.');
   const assetId = safeId(request.data?.assetId, 'asset');
   const assetSnap = await db.collection(C.assets).doc(assetId).get();
   const asset = assetSnap.exists ? (assetSnap.data() || {}) : {};
-  if (!assetSnap.exists || asset.active !== true || asset.allowedForOrg !== true) {
-    throw new HttpsError('failed-precondition', 'Deze Snazzle staat niet in de goedgekeurde organisatie-bibliotheek.');
+  if (!assetSnap.exists || asset.active !== true || asset.allowedForOrg !== true || !asset.imageUrl) {
+    throw new HttpsError('failed-precondition', 'Deze Snazzle staat niet in de toegestane organisatie-bibliotheek.');
   }
   const geo = geoFrom(request.data);
-  const accuracy = number(request.data?.accuracy, 0, 500, 0);
-  if (accuracy > 80) throw new HttpsError('failed-precondition', 'GPS is nog te onnauwkeurig. Wacht even en probeer opnieuw.');
-  const pointId = randomId('point');
-  const point = {
-    assetId,
-    assetName: text(asset.name, 60),
-    imageUrl: text(asset.imageUrl, 1000),
-    name: text(request.data?.name, 50) || text(asset.name, 50),
-    hint: text(request.data?.hint, 140),
-    radius: number(request.data?.radius, 5, 15, 8),
-    lat: geo.lat,
-    lon: geo.lon,
-    accuracy,
-    active: true,
-    createdByOrganizerUid: uid,
-    createdAt: new Date().toISOString()
-  };
-  const pRef = huntRef.collection('points').doc(pointId);
-  await db.runTransaction(async tx => {
-    tx.set(pRef, point);
-    tx.set(huntRef, { pointCount: FieldValue.increment(1), updatedAt: new Date().toISOString() }, { merge: true });
+  const accuracy = number(request.data?.accuracy, 0, 100, 0);
+  const radius = number(request.data?.radius, 4, 20, 8);
+  const name = text(request.data?.name, 50) || text(asset.name, 50) || 'Snazzle';
+  const hint = text(request.data?.hint, 140);
+  const pointId = randomId('orgar');
+  const now = new Date().toISOString();
+  await huntRef.collection('points').doc(pointId).set({
+    name, hint, radius, lat: geo.lat, lon: geo.lon, accuracy,
+    assetId, assetName: text(asset.name, 60), imageUrl: text(asset.imageUrl, 1000),
+    active: true, createdAt: now, createdBy: uid, updatedAt: now
   });
-  return { ok: true, point: { id: pointId, ...point, lat: undefined, lon: undefined } };
+  await huntRef.set({ pointCount: current.size + 1, updatedAt: now }, { merge: true });
+  return { ok: true, pointId };
 });
 
 const organizerTogglePoint = onCall({ region: REGION }, async request => {
@@ -452,13 +438,9 @@ const organizerDeletePoint = onCall({ region: REGION }, async request => {
   const uid = requireAuth(request);
   const { huntRef } = await requireOrganizerSession(db, uid, request.data?.huntId);
   const pointId = safeId(request.data?.pointId, 'point');
-  const ref = huntRef.collection('points').doc(pointId);
-  const snap = await ref.get();
-  if (!snap.exists) return { ok: true };
-  await db.runTransaction(async tx => {
-    tx.delete(ref);
-    tx.set(huntRef, { pointCount: FieldValue.increment(-1), updatedAt: new Date().toISOString() }, { merge: true });
-  });
+  await huntRef.collection('points').doc(pointId).delete();
+  const countSnap = await huntRef.collection('points').get();
+  await huntRef.set({ pointCount: countSnap.size, updatedAt: new Date().toISOString() }, { merge: true });
   return { ok: true };
 });
 
@@ -466,55 +448,45 @@ const listLiveOrgHunts = onCall({ region: REGION }, async request => {
   requireAuth(request);
   const db = getFirestore();
   const snap = await db.collection(C.hunts).where('active', '==', true).limit(MAX_HUNTS_RETURNED).get();
-  const items = [];
-  for (const d of snap.docs) {
-    const h = d.data() || {};
-    if (!publicWindowOpen(h)) continue;
-    items.push(publicHunt(d.id, h, h.pointCount));
-  }
-  items.sort((a, b) => String(a.publicEndsAt).localeCompare(String(b.publicEndsAt)));
+  const items = snap.docs
+    .filter(d => publicWindowOpen(d.data() || {}))
+    .map(d => publicHunt(d.id, d.data() || {}))
+    .sort((a, b) => String(a.publicStartsAt).localeCompare(String(b.publicStartsAt)));
   return { items };
 });
 
 const getOrgHuntState = onCall({ region: REGION }, async request => {
   const db = getFirestore();
   const uid = requireAuth(request);
-  const { id, ref, data: hunt } = await getHuntOrThrow(db, request.data?.huntId);
-  if (!publicWindowOpen(hunt)) throw new HttpsError('failed-precondition', 'Deze Special Hunt is niet actief.');
-  const pointsSnap = await ref.collection('points').where('active', '==', true).get();
-  const findSnap = await db.collection(C.finds).where('userId', '==', uid).where('huntId', '==', id).get();
-  const foundIds = new Set(findSnap.docs.map(d => String((d.data() || {}).pointId || '')));
-  return { found: foundIds.size, total: pointsSnap.size };
+  const { id, data: hunt } = await getHuntOrThrow(db, request.data?.huntId);
+  if (!publicWindowOpen(hunt)) throw new HttpsError('failed-precondition', 'Deze Special Hunt is nu niet actief.');
+  const pointSnap = await db.collection(C.hunts).doc(id).collection('points').where('active', '==', true).get();
+  const findSnap = await db.collection(C.finds).where('userId', '==', uid).get();
+  const mine = findSnap.docs.map(d => d.data() || {}).filter(f => f.huntId === id);
+  return { hunt: publicHunt(id, hunt, pointSnap.size), found: mine.length, total: pointSnap.size };
 });
 
 const getNextOrgTarget = onCall({ region: REGION }, async request => {
   const db = getFirestore();
   const uid = requireAuth(request);
-  const geo = geoFrom(request.data);
-  const { id, ref, data: hunt } = await getHuntOrThrow(db, request.data?.huntId);
-  if (!publicWindowOpen(hunt)) throw new HttpsError('failed-precondition', 'Deze Special Hunt is niet actief.');
-  const [pointsSnap, findSnap] = await Promise.all([
-    ref.collection('points').where('active', '==', true).get(),
-    db.collection(C.finds).where('userId', '==', uid).where('huntId', '==', id).get()
-  ]);
-  const foundIds = new Set(findSnap.docs.map(d => String((d.data() || {}).pointId || '')));
-  const targets = pointsSnap.docs
-    .map(d => ({ id: d.id, ...(d.data() || {}) }))
-    .filter(p => !foundIds.has(p.id))
-    .map(p => ({ p, dist: distanceMeters(geo, { lat: Number(p.lat), lon: Number(p.lon) }) }))
-    .sort((a, b) => a.dist - b.dist);
-  if (!targets.length) return { done: true };
-  const p = targets[0].p;
+  const here = geoFrom(request.data);
+  const { id, ref: huntRef, data: hunt } = await getHuntOrThrow(db, request.data?.huntId);
+  if (!publicWindowOpen(hunt)) throw new HttpsError('failed-precondition', 'Deze Special Hunt is nu niet actief.');
+  const pointSnap = await huntRef.collection('points').where('active', '==', true).get();
+  if (pointSnap.empty) return { done: true, total: 0, found: 0 };
+  const allPoints = pointSnap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+  const findSnap = await db.collection(C.finds).where('userId', '==', uid).get();
+  const foundIds = new Set(findSnap.docs.map(d => d.data() || {}).filter(f => f.huntId === id).map(f => f.pointId));
+  const remaining = allPoints.filter(p => !foundIds.has(p.id));
+  if (!remaining.length) return { done: true, total: allPoints.length, found: allPoints.length };
+  remaining.sort((a, b) => distanceMeters(here, { lat: Number(a.lat), lon: Number(a.lon) }) - distanceMeters(here, { lat: Number(b.lat), lon: Number(b.lon) }));
+  const p = remaining[0];
   return {
-    done: false,
+    done: false, total: allPoints.length, found: allPoints.length - remaining.length,
     target: {
-      id: p.id,
-      name: text(p.name, 50),
-      hint: text(p.hint, 140),
-      radius: number(p.radius, 5, 15, 8),
-      lat: Number(p.lat),
-      lon: Number(p.lon),
-      assetName: text(p.assetName, 60),
+      id: p.id, name: text(p.name, 50), hint: text(p.hint, 140),
+      radius: number(p.radius, 4, 20, 8), lat: Number(p.lat), lon: Number(p.lon),
+      assetId: text(p.assetId, 180), assetName: text(p.assetName, 60),
       imageUrl: text(p.imageUrl, 1000)
     }
   };
@@ -523,31 +495,28 @@ const getNextOrgTarget = onCall({ region: REGION }, async request => {
 const claimOrgTarget = onCall({ region: REGION }, async request => {
   const db = getFirestore();
   const uid = requireAuth(request);
-  const geo = geoFrom(request.data);
-  const accuracy = number(request.data?.accuracy, 0, 500, 0);
-  if (accuracy > 80) throw new HttpsError('failed-precondition', 'GPS is nog te onnauwkeurig om de Snazzle te bevestigen.');
-  const { id, ref, data: hunt } = await getHuntOrThrow(db, request.data?.huntId);
-  if (!publicWindowOpen(hunt)) throw new HttpsError('failed-precondition', 'Deze Special Hunt is niet actief.');
+  const here = geoFrom(request.data);
+  const accuracy = number(request.data?.accuracy, 0, 100, 0);
+  const { id, ref: huntRef, data: hunt } = await getHuntOrThrow(db, request.data?.huntId);
+  if (!publicWindowOpen(hunt)) throw new HttpsError('failed-precondition', 'Deze Special Hunt is nu niet actief.');
   const pointId = safeId(request.data?.pointId, 'point');
-  const pointSnap = await ref.collection('points').doc(pointId).get();
-  if (!pointSnap.exists) throw new HttpsError('not-found', 'Deze AR Snazzle bestaat niet meer.');
+  const pointRef = huntRef.collection('points').doc(pointId);
+  const pointSnap = await pointRef.get();
+  if (!pointSnap.exists) throw new HttpsError('not-found', 'Deze AR-Snazzle bestaat niet meer.');
   const p = pointSnap.data() || {};
-  if (p.active === false) throw new HttpsError('failed-precondition', 'Deze AR Snazzle staat uit.');
-  const dist = distanceMeters(geo, { lat: Number(p.lat), lon: Number(p.lon) });
-  const radius = number(p.radius, 5, 15, 8);
-  const allowed = Math.max(radius + Math.min(accuracy, 20), radius + 3);
-  if (!Number.isFinite(dist) || dist > allowed) {
-    throw new HttpsError('failed-precondition', 'Je bent nog niet dicht genoeg bij deze Snazzle.');
-  }
-  const findId = safeId(`${uid}_${id}_${pointId}`, 'find');
-  const findRef = db.collection(C.finds).doc(findId);
+  if (p.active === false) throw new HttpsError('failed-precondition', 'Deze AR-Snazzle is uitgeschakeld.');
+  const remaining = distanceMeters(here, { lat: Number(p.lat), lon: Number(p.lon) });
+  const allowed = number(p.radius, 4, 20, 8) + Math.min(30, accuracy) + 5;
+  if (remaining > allowed) throw new HttpsError('failed-precondition', 'Je bent nog niet dicht genoeg bij deze Snazzle.');
+  const findingId = safeId(`${id}_${uid}_${pointId}`, 'find');
+  const findingRef = db.collection(C.finds).doc(findingId);
   const now = new Date().toISOString();
   await db.runTransaction(async tx => {
-    const foundSnap = await tx.get(findRef);
-    if (!foundSnap.exists) {
-      tx.set(findRef, {
+    const existing = await tx.get(findingRef);
+    if (!existing.exists) {
+      tx.create(findingRef, {
         userId: uid, huntId: id, pointId,
-        eventTitle: text(hunt.title, 70), organization: text(hunt.organization, 70), village: text(hunt.village, 60),
+        organization: text(hunt.organization, 70), eventTitle: text(hunt.title, 70), village: text(hunt.village, 60),
         assetId: text(p.assetId, 180), assetName: text(p.assetName, 60) || text(p.name, 50),
         imageUrl: text(p.imageUrl, 1000), foundAt: now,
         edition: 'EVENT EDITION'

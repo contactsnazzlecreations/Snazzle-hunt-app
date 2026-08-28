@@ -71,6 +71,7 @@ const redeemOrgAccessCode=onCall({region:REGION},async request=>{
   if(code.length!==CODE_LENGTH||!ALPHABET_RE.test(code))throw new HttpsError('invalid-argument','Vul de volledige organisatiecode in.');
 
   const db=getFirestore();
+  // Beperk pogingen voordat we prijsgeven of een locator/code bestaat.
   const attemptRef=await registerAttempt(db,uid);
   const locator=code.slice(0,3);
   const query=await db.collection('snazzleOrgSecrets').where('locator','==',locator).get();

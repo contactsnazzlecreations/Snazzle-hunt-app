@@ -12,6 +12,10 @@ service firebase.storage {
         firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.uid)).data.role == "superadmin";
     }
 
+    function hasAdminMfa() {
+      return signedIn() && request.auth.token.snazzle_admin_mfa == true;
+    }
+
     match /listen-stories/audio/{uid}/{fileName} {
       allow read: if signedIn();
       allow create, update: if isSuperAdmin() &&
@@ -28,6 +32,17 @@ service firebase.storage {
         request.resource.size <= 8 * 1024 * 1024 &&
         request.resource.contentType.matches("image/.*");
       allow delete: if isSuperAdmin() && request.auth.uid == uid;
+    }
+
+    // Centrale Snazzle Bibliotheek voor Special Hunts en later persoonlijke Hunts.
+    // Alleen de hoofdbeheerder met bevestigde MFA mag hier afbeeldingen wijzigen.
+    match /snazzle-org-assets/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isSuperAdmin() && hasAdminMfa() &&
+        request.auth.uid == uid &&
+        request.resource.size <= 8 * 1024 * 1024 &&
+        request.resource.contentType.matches("image/.*");
+      allow delete: if isSuperAdmin() && hasAdminMfa() && request.auth.uid == uid;
     }
 
     // De Bieb: iedere gebruiker bewaart alleen eigen boekkaften.
