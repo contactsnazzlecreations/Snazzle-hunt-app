@@ -4,7 +4,7 @@ import { auth,db,state,call } from './snazzle-org-shared-v143.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { doc,getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-let publicModule=null,organizerModule=null,adminModule=null,collectionModule=null,refreshTimer=null;
+let publicModule=null,organizerModule=null,organizerUxModule=null,adminModule=null,collectionModule=null,refreshTimer=null;
 const ORG_FLAG='snazzleOrgAccessUsed143';
 
 async function safeImport(path){
@@ -19,6 +19,10 @@ async function ensurePublic(){
 async function ensureOrganizer(){
   if(organizerModule)return organizerModule;
   organizerModule=await safeImport('./snazzle-org-organizer-v143.js');
+  if(organizerModule&&!organizerUxModule){
+    organizerUxModule=await safeImport('./snazzle-org-ux-v143.js');
+    organizerUxModule?.install?.();
+  }
   return organizerModule;
 }
 async function ensureCollection(){
