@@ -1,6 +1,6 @@
-// Snazzle Hunt v140 — stabiele compacte app + veilige vaste Snazzle Cards-basis.
+// Snazzle Hunt v141 — stabiele compacte app + extra beveiligingslaag.
 
-const runtimeVersion = '20260828-v140-safe-card-seed';
+const runtimeVersion = '20260828-v141-security-hardening';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -75,6 +75,7 @@ await Promise.all([
 ]);
 
 await import(fresh('./app-core.js'));
+await safeImport('./snazzle-admin-mfa-v141.js');
 
 await Promise.all([
   safeImport('./snazzle-village-visibility-v120.js'),
