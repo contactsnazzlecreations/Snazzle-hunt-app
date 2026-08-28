@@ -1,6 +1,6 @@
-// Snazzle Hunt v139 — herstel naar de laatste stabiele compacte app; tijdelijke kaart-herstelcode uitgeschakeld.
+// Snazzle Hunt v140 — stabiele compacte app + veilige vaste Snazzle Cards-basis.
 
-const runtimeVersion = '20260828-v139-stable-compact-menu';
+const runtimeVersion = '20260828-v140-safe-card-seed';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
