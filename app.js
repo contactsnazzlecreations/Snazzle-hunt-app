@@ -1,6 +1,6 @@
-// Snazzle Hunt v144 — stabiele compacte app + rustige Bieb-hub en veilig Bieb-beheer.
+// Snazzle Hunt v144 — stabiele compacte app + rustige Bieb-hub, beheer en Leesmaatje.
 
-const runtimeVersion = '20260828-v144-bieb-admin';
+const runtimeVersion = '20260828-v144-bieb-buddy';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -123,7 +123,8 @@ const fastBundles=[
     './snazzle-bieb-cloud-v74.js',
     './snazzle-bieb-locations-v77.js',
     './snazzle-bieb-hub-v144.js',
-    './snazzle-bieb-settings-v144.js'
+    './snazzle-bieb-settings-v144.js',
+    './snazzle-bieb-leesmaatje-v144.js'
   ],
   ['./snazzle-news-v46.js']
 ];
