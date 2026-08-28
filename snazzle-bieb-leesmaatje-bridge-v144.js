@@ -1,16 +1,21 @@
-// Snazzle v144.2 — fail-safe brug tussen bestaand Bieb-formulier en Professor Kwak.
+// Snazzle v144.4 — fail-safe brug tussen bestaand Bieb-formulier en Professor Kwak.
 // Leest alleen het formulier en wacht op een echte verhoging van het boekaantal.
-// Raakt de bestaande opslaglogica niet aan.
+// Raakt de bestaande opslaglogica niet aan en respecteert de centrale Bieb-instelling.
 
-const VERSION='144.2.0';
+const VERSION='144.4.0';
 let watchToken=0;
 
 function numberFrom(id){
   const n=Number(document.getElementById(id)?.textContent||0);
   return Number.isFinite(n)&&n>=0?n:0;
 }
+function buddyEnabled(){
+  try{return window.SnazzleBiebSettingsV144?.get?.().showBuddy!==false;}
+  catch{return true;}
+}
 
 function captureCandidate(){
+  if(!buddyEnabled()) return null;
   const title=String(document.getElementById('snBiebTitle73')?.value||'').trim().replace(/\s+/g,' ').slice(0,80);
   const reaction=String(document.getElementById('snBiebReaction73')?.value||'').trim().replace(/\s+/g,' ').slice(0,180);
   const rating=Number(document.getElementById('snBiebRating73')?.value||0);
@@ -24,6 +29,7 @@ function waitForSaved(candidate){
   const started=Date.now();
   const poll=()=>{
     if(token!==watchToken) return;
+    if(!buddyEnabled()) return;
     const current=numberFrom('snBiebBookCount73');
     if(current>candidate.before){
       document.dispatchEvent(new CustomEvent('snazzle:bieb-book-added',{detail:{book:candidate.book,total:current}}));
@@ -40,5 +46,9 @@ document.addEventListener('submit',event=>{
   const candidate=captureCandidate();
   if(candidate) waitForSaved(candidate);
 },true);
+
+document.addEventListener('snazzle:bieb-settings',event=>{
+  if(event.detail?.showBuddy===false) watchToken++;
+});
 
 console.info(`Snazzle Leesmaatje bridge ${VERSION} geladen`);
