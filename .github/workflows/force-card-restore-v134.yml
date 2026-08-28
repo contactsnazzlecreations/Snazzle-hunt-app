@@ -1,0 +1,29 @@
+name: Force card restore v134
+on:
+  push:
+    paths:
+      - '.github/workflows/force-card-restore-v134.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump card restore cache version
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('app.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('// Snazzle Hunt v133 — herstelde WILD- en SPARK-kaarten + compact hoofdmenu.','// Snazzle Hunt v134 — geforceerd herstel van WILD- en SPARK-kaarten + compact hoofdmenu.')
+          s=s.replace("const runtimeVersion = '20260828-v133-card-restore';","const runtimeVersion = '20260828-v134-force-card-restore';")
+          p.write_text(s,encoding='utf-8')
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Force Snazzle card restore v134 cache refresh"
+          git push
