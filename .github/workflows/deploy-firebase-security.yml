@@ -45,6 +45,7 @@ jobs:
           node --check functions/hunt-codes.js
           node --check functions/meetups.js
           node --check functions/admin-mfa.js
+          node --check functions/org-hunts.js
           test -f firestore.rules
           test -f firebase.json
           test -f .firebaserc
@@ -86,3 +87,4 @@ jobs:
 # Luisterverhalen permission redeploy: 2026-08-25 19:45
 # Security hardening v141: MFA, meetup privacy and strict photo validation
 # Safety order v141: Functions must succeed before stricter Firestore rules are published
+# Organization platform v143: validate org-hunts.js before any production deployment
