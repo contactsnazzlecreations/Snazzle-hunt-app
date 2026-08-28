@@ -50,10 +50,12 @@ try{
     map.set(seed.id,old?{...seed,...old,imageData:old.imageData||seed.imageData,world:old.world||seed.world}:seed);
   }
   const merged=[...map.values()];
-  localStorage.setItem(TARGET_KEY,JSON.stringify(merged));
-  localStorage.setItem('snazzleCardRestoreV133',JSON.stringify({version:VERSION,at:new Date().toISOString(),seeded:seeds.length,total:merged.length}));
+  try{
+    localStorage.setItem(TARGET_KEY,JSON.stringify(merged));
+    localStorage.setItem('snazzleCardRestoreV133',JSON.stringify({version:VERSION,at:new Date().toISOString(),seeded:seeds.length,total:merged.length}));
+  }catch(err){console.warn('Snazzle Cards v133: localStorage vol, v134 fallback neemt over',err);}
   window.dispatchEvent(new CustomEvent('snazzle-card-catalog-restored',{detail:{count:seeds.length}}));
-  console.info(`Snazzle Cards v133: ${seeds.length} teruggevonden kaarten lokaal hersteld.`);
+  console.info(`Snazzle Cards v133: ${seeds.length} teruggevonden kaarten voorbereid.`);
 }catch(err){console.warn('Snazzle Cards v133 lokaal herstel mislukt',err);}
 
 window.SnazzleCardRestoreV133={version:VERSION,count:seeds.length};
@@ -70,8 +72,11 @@ if(app&&seeds.length){
       if(p?.active!==true||p?.role!=='superadmin'){syncing=false;return;}
       for(const card of seeds) await setDoc(doc(db,'snazzleCards',card.id),card,{merge:true});
       done=true;
-      localStorage.setItem('snazzleCardRestoreV133Central',JSON.stringify({version:VERSION,at:new Date().toISOString(),count:seeds.length}));
+      try{localStorage.setItem('snazzleCardRestoreV133Central',JSON.stringify({version:VERSION,at:new Date().toISOString(),count:seeds.length}));}catch{}
       console.info(`Snazzle Cards v133: ${seeds.length} kaarten centraal hersteld.`);
     }catch(err){console.warn('Snazzle Cards v133 centrale synchronisatie wacht op beheerlogin/rechten',err);}finally{syncing=false;}
   });
 }
+
+// Altijd de harde zichtbare fallback laden; die gebruikt geen localStorage voor de kaartafbeeldingen.
+import(`./snazzle-card-force-restore-v134.js?fresh=${Date.now()}`).catch(err=>console.error('Snazzle Cards v134 fallback kon niet laden',err));
