@@ -5,6 +5,7 @@ import {
 } from './snazzle-org-shared-v143.js';
 
 let selectedHuntId='',selectedAssetId='',accessDeepLinkHandled=false;
+const ORG_FLAG='snazzleOrgAccessUsed143';
 
 function isSessionLive(h){
   const now=Date.now(),s=new Date(h?.accessStartsAt||0).getTime(),e=new Date(h?.accessEndsAt||0).getTime();
@@ -81,6 +82,7 @@ async function redeemCode(){
   btn.disabled=true;status.style.display='block';status.textContent='🔐 Code veilig controleren…';
   try{
     const data=await call('redeemOrgAccessCode',{code});
+    try{localStorage.setItem(ORG_FLAG,'1');}catch{}
     status.textContent='✅ Toegang geopend.';
     await loadSessions();
     closeModal('#snOrgAccess143');
