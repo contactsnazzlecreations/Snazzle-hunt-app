@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<meta name="theme-color" content="#0d5a3a">
+<title>Snazzle v143 test C</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:linear-gradient(#0b6a45,#083f2d);color:#2f2419}body{padding:64px 16px 40px}.badge{position:fixed;z-index:50;top:10px;left:50%;transform:translateX(-50%);background:#673ca7;color:#fff;border:2px solid #eadcff;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:1000;white-space:nowrap;box-shadow:0 4px 14px #0006}.wrap{max-width:620px;margin:auto}.hero,.panel{background:linear-gradient(#fff4c9,#efd69d);border:3px solid #755331;border-radius:24px;box-shadow:0 8px 0 #3d2d1b66,0 18px 36px #0003;overflow:hidden}.hero{padding:18px;margin-bottom:16px}.hero h1{margin:0 0 6px;font-size:31px}.hero p{margin:0;font-weight:800;color:#6d5436}.special{width:100%;margin-top:16px;border:3px solid #ffe27a;border-radius:20px;padding:14px;background:linear-gradient(135deg,#8b4fc8,#4e78c9);color:#fff;text-align:left;display:grid;grid-template-columns:48px 1fr 28px;align-items:center;gap:10px;box-shadow:0 6px 0 #493467;font:inherit}.special b{font-size:31px}.special strong{display:block;font-size:18px}.special small{display:block;margin-top:3px;font-weight:800;color:#f6ebff}.special i{font-style:normal;font-size:28px}.panel{display:none;margin-top:14px}.panel.show{display:block}.head{display:flex;align-items:center;gap:8px;padding:13px;background:linear-gradient(135deg,#62408c,#365d91);color:#fff}.head h2{flex:1;margin:0;font-size:21px}.close{width:44px;height:44px;border:0;border-radius:13px;background:#fff;color:#4a315e;font-size:24px;font-weight:1000}.body{padding:14px}.card{width:100%;border:2px solid #bb965e;border-radius:17px;padding:13px;margin-bottom:10px;background:#fff9e8;color:#2f2419;text-align:left;font:inherit;box-shadow:0 3px 0 #9d7949}.card strong{display:block;font-size:17px}.card span,.card small{display:block;margin-top:4px;font-weight:800}.card small{font-size:11px;color:#6d5639}.go{display:inline-block!important;margin-top:9px!important;padding:7px 10px;border-radius:999px;background:#4d9938;color:#fff;font-size:11px}.note{padding:12px;border:2px solid #c6a16a;border-radius:14px;background:#fff9e8;font-size:12px;font-weight:800;line-height:1.45}.field{margin:11px 0}.field label{display:block;font-size:11px;font-weight:1000;margin:0 0 5px}.field input,.field select{width:100%;border:2px solid #b8945d;border-radius:13px;padding:12px;background:#fffaf0;font-size:16px}.primary,.secondary{width:100%;border:0;border-radius:15px;padding:14px;font-weight:1000;font-size:16px}.primary{margin-top:10px;background:linear-gradient(#75c64a,#4d972f);color:#fff;box-shadow:0 4px 0 #326e23}.primary:disabled{opacity:.7}.secondary{margin-top:9px;background:#d8b672;color:#352519}.assets{display:grid;grid-template-columns:1fr 1fr;gap:9px}.asset{border:2px solid #ae8a55;border-radius:15px;padding:8px;background:#fff9e8;text-align:center}.asset.on{border-color:#4e9938;box-shadow:0 0 0 3px #75c95755}.duck{height:92px;border-radius:12px;background:linear-gradient(145deg,#d9edc8,#b7d9ba);display:grid;place-items:center;font-size:48px}.asset strong{display:block;margin-top:5px;font-size:12px}.status{display:none;margin-top:11px;padding:12px;border:2px solid #c6a16a;border-radius:14px;background:#fff9e8;font-weight:850;line-height:1.45}.status.show{display:block}.placed{margin-top:12px;padding:12px;border:2px solid #79a84b;border-radius:14px;background:#eaf7d5}.placed strong{display:block}.camera{position:fixed;inset:0;z-index:100;display:none;background:#000}.camera.show{display:block}.camera video{width:100%;height:100%;object-fit:cover}.camShade{position:absolute;inset:0;background:linear-gradient(#0007,transparent 28%,transparent 72%,#0008);pointer-events:none}.camDuck{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:96px;filter:drop-shadow(0 10px 12px #0008)}.camClose{position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top));width:48px;height:48px;border:0;border-radius:14px;background:#fff;font-size:24px;font-weight:1000}.camText{position:absolute;left:14px;right:70px;top:calc(14px + env(safe-area-inset-top));padding:11px;border-radius:14px;background:#173626dd;color:#fff;font-weight:900}.small{font-size:11px;color:#71583b;font-weight:800;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="badge">TEST v143 · LOSSE GPS TEST · NIET LIVE</div>
+<div class="wrap">
+  <section class="hero">
+    <div style="font-size:12px;font-weight:1000;letter-spacing:1.5px;color:#7a5b2d">SNAZZLE AVONTUUR</div>
+    <h1>Klaar voor avontuur?</h1><p>Test hier alleen de nieuwe organisatie-Hunt. Je gewone app verandert niet.</p>
+    <button class="special" id="openHunts"><b>🎪</b><span><strong>2 Speciale Hunts vandaag</strong><small>Kies organisatie en locatie</small></span><i>›</i></button>
+  </section>
+
+  <section class="panel" id="hunts"><div class="head"><h2>Speciale Hunts 🎪</h2><button class="close" data-close="hunts">×</button></div><div class="body">
+    <button class="card" data-hunt="montfort"><strong>🎯 Jeugd Hunt Montfort</strong><span>Stichting Jeugd Montfort · 📍 Montfort</span><small>13:00–17:00 · 8 AR Snazzles</small><span class="go">START / BEKIJK HUNT ›</span></button>
+    <button class="card" data-hunt="posterholt"><strong>🎯 Scouting Speurtocht</strong><span>Scouting Posterholt · 📍 Posterholt</span><small>10:00–16:00 · 6 AR Snazzles</small><span class="go">START / BEKIJK HUNT ›</span></button>
+    <button class="secondary" id="orgAccess">🔑 Organisatiecode gekregen?</button>
+  </div></section>
+
+  <section class="panel" id="org"><div class="head"><h2>Organisatie toegang 🔑</h2><button class="close" data-close="org">×</button></div><div class="body">
+    <div class="note">De stichting krijgt alleen toegang tot haar eigen Hunt. Geen toegang tot jouw hoofdbeheer.</div>
+    <div class="field"><label>Tijdelijke organisatiecode</label><input id="code" value="SNA-TEST143" autocomplete="one-time-code"></div>
+    <button class="primary" id="codeGo">Toegang openen</button>
+  </div></section>
+
+  <section class="panel" id="workspace"><div class="head"><h2>Jeugd Hunt Montfort</h2><button class="close" data-close="workspace">×</button></div><div class="body">
+    <div class="note"><b>Stichting Jeugd Montfort</b> · 📍 Montfort<br>Je kunt alleen deze Hunt aanpassen. Toegang stopt automatisch op de ingestelde tijd.</div>
+    <h3>Kies een Snazzle</h3><div class="assets" id="assets"></div>
+    <div class="field"><label>Hint</label><input id="hint" value="Kijk goed bij het groen"></div>
+    <div class="field"><label>Vangzone</label><select id="radius"><option>5</option><option selected>8</option><option>12</option><option>15</option></select></div>
+    <button class="primary" id="place">📍 Plaats gekozen Snazzle op mijn locatie</button>
+    <div class="status" id="status"></div>
+    <div id="placedList"></div>
+  </div></section>
+</div>
+
+<div class="camera" id="camera"><video id="video" playsinline muted></video><div class="camShade"></div><div class="camText">AR-camera test · gekozen Snazzle</div><div class="camDuck" id="camDuck">🦆🌿</div><button class="camClose" id="camClose">×</button></div>
+
+<script>
+const panels=[...document.querySelectorAll('.panel')];
+const open=id=>{panels.forEach(p=>p.classList.remove('show'));document.getElementById(id)?.classList.add('show');document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})};
+const close=id=>document.getElementById(id)?.classList.remove('show');
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close(b.dataset.close));
+document.getElementById('openHunts').onclick=()=>open('hunts');
+document.getElementById('orgAccess').onclick=()=>open('org');
+document.querySelectorAll('[data-hunt]').forEach(b=>b.onclick=()=>alert('Dit is de gebruikerskant. Voor GPS-plaatsing test je via “Organisatiecode gekregen?”.'));
+document.getElementById('codeGo').onclick=()=>{const c=document.getElementById('code').value.replace(/[^A-Z0-9]/gi,'').toUpperCase();if(c!=='SNATEST143'){alert('Gebruik testcode SNA-TEST143');return;}open('workspace')};
+const choices=[['🌿','Jungle Snazzle'],['✨','Magic Snazzle'],['🛡️','Ridder Snazzle'],['🎃','Spooky Snazzle']];let selected=0,placed=[];
+function renderAssets(){const box=document.getElementById('assets');box.innerHTML=choices.map((x,i)=>`<button class="asset${i===selected?' on':''}" data-a="${i}" type="button"><div class="duck">🦆${x[0]}</div><strong>${x[1]}</strong></button>`).join('');box.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{selected=Number(b.dataset.a);renderAssets()})}renderAssets();
+function renderPlaced(){const box=document.getElementById('placedList');box.innerHTML=placed.map((p,i)=>`<div class="placed"><strong>✅ ${p.name} geplaatst</strong><div class="small">GPS-nauwkeurigheid ±${p.accuracy} m · vangzone ${p.radius} m · testpunt ${i+1}</div><button class="secondary" data-cam="${i}" type="button">📷 Test AR-camera bij deze Snazzle</button></div>`).join('');box.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>openCamera(Number(b.dataset.cam)))}
+const place=document.getElementById('place'),status=document.getElementById('status');
+place.onclick=()=>{
+  status.className='status show';status.textContent='📍 GPS bepalen…';place.disabled=true;
+  if(!window.isSecureContext){status.textContent='⚠️ Deze testpagina is niet als veilige HTTPS-pagina geopend.';place.disabled=false;return;}
+  if(!navigator.geolocation){status.textContent='⚠️ GPS wordt niet ondersteund door deze browser.';place.disabled=false;return;}
+  let finished=false;const fallback=setTimeout(()=>{if(finished)return;finished=true;status.textContent='⚠️ GPS reageert niet binnen 20 seconden. Controleer bij Chrome → Site-instellingen → Locatie of locatie voor deze site is toegestaan.';place.disabled=false;},20000);
+  navigator.geolocation.getCurrentPosition(pos=>{if(finished)return;finished=true;clearTimeout(fallback);const accuracy=Math.max(1,Math.round(pos.coords.accuracy||0));const item={name:choices[selected][1],icon:choices[selected][0],accuracy,radius:Number(document.getElementById('radius').value||8),lat:pos.coords.latitude,lon:pos.coords.longitude};placed.push(item);status.innerHTML=`✅ <b>${item.name}</b> staat nu op deze testlocatie.<br><span class="small">GPS-nauwkeurigheid ±${accuracy} m. De precieze locatie blijft alleen in deze geopende testpagina.</span>`;renderPlaced();place.disabled=false;},err=>{if(finished)return;finished=true;clearTimeout(fallback);const msg=err.code===1?'Locatietoestemming is geweigerd.':err.code===2?'GPS kon geen positie bepalen.':'GPS duurde te lang.';status.textContent='⚠️ '+msg;place.disabled=false;},{enableHighAccuracy:true,timeout:18000,maximumAge:0});
+};
+let stream=null;async function openCamera(i){const p=placed[i];document.getElementById('camDuck').textContent='🦆'+(p?.icon||'✨');try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const v=document.getElementById('video');v.srcObject=stream;await v.play().catch(()=>{});document.getElementById('camera').classList.add('show')}catch(e){alert('Camera kon niet worden geopend. Controleer de cameratoestemming voor deze site.')}}
+function closeCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}document.getElementById('video').srcObject=null;document.getElementById('camera').classList.remove('show')}
+document.getElementById('camClose').onclick=closeCamera;window.addEventListener('pagehide',closeCamera);
+</script>
+</body></html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="theme-color" content="#3f2770">
+<title>Snazzle v143 test</title>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#07140f;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}#appFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#083a24}.badge{position:fixed;z-index:99999;top:7px;left:50%;transform:translateX(-50%);background:#6337a1;color:white;border:2px solid #ead8ff;border-radius:999px;padding:6px 10px;font-size:10px;font-weight:1000;box-shadow:0 3px 12px #0008;pointer-events:none;white-space:nowrap}.helper{position:fixed;z-index:99998;left:8px;right:8px;bottom:82px;margin:auto;max-width:520px;display:flex;gap:6px;justify-content:center;pointer-events:none}.helper button{pointer-events:auto;border:2px solid #fff6;border-radius:999px;padding:8px 10px;background:#271c36e8;color:#fff;font-size:10px;font-weight:900;box-shadow:0 3px 10px #0007}.helper button:active{transform:scale(.97)}
+</style>
+</head>
+<body>
+<div class="badge" id="badge">TEST v143 · OEFENGEGEVENS · NIET LIVE</div>
+<iframe id="appFrame" src="./index.html?testv143=1" title="Snazzle v143 test"></iframe>
+<div class="helper" id="helper" style="display:none"><button id="showHunts">🎪 Special Hunts</button><button id="showOrg">🔑 Organisatie</button><button id="showAdmin">⚙️ Beheer</button></div>
+<script>
+const frame=document.getElementById('appFrame');
+const CDN='https://cdn.jsdelivr.net/gh/contactsnazzlecreations/Snazzle-hunt-app@621e0dc61468c9f426d7d5be0b17d36865956cf0/';
+const KEY='snazzleV143DemoState';
+function svg(body,accent='#6ecb63'){const s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><rect width="500" height="500" rx="60" fill="#173d2c"/><circle cx="225" cy="300" r="130" fill="${accent}" stroke="#5c3b22" stroke-width="14"/><circle cx="330" cy="180" r="84" fill="${accent}" stroke="#5c3b22" stroke-width="14"/><path d="M395 180 490 220 395 260Z" fill="#ff9b42" stroke="#5c3b22" stroke-width="12"/><circle cx="350" cy="160" r="11"/><path d="M140 300 Q225 230 300 305 Q240 385 155 365Z" fill="#f7cf4a" stroke="#5c3b22" stroke-width="10"/>${body}</svg>`;return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)}
+const defaultAssets=()=>[
+ {id:'asset-jungle',name:'Jungle Snazzle',category:'Avontuur',imageUrl:svg('<path d="M300 95 Q345 45 405 75 Q370 125 315 130Z" fill="#81e25b"/>','#69c65c'),active:true,allowedForOrg:true,allowedForPersonal:true},
+ {id:'asset-magic',name:'Magic Snazzle',category:'Magisch',imageUrl:svg('<path d="M330 65 l14 32 35 4-27 23 8 34-30-18-30 18 8-34-27-23 35-4z" fill="#ffe56c"/>','#79c8ff'),active:true,allowedForOrg:true,allowedForPersonal:true},
+ {id:'asset-ridder',name:'Ridder Snazzle',category:'Avontuur',imageUrl:svg('<path d="M275 130 Q290 45 360 45 Q430 45 445 130Z" fill="#dce5eb" stroke="#4f4437" stroke-width="10"/>','#ffd95a'),active:true,allowedForOrg:true,allowedForPersonal:true},
+ {id:'asset-spooky',name:'Spooky Snazzle',category:'Halloween',imageUrl:svg('<path d="M250 110 Q330 20 430 105 L395 155 Q330 105 275 160Z" fill="#7d49a8"/>','#b98ae8'),active:true,allowedForOrg:true,allowedForPersonal:false}
+];
+function nowIso(deltaMs){return new Date(Date.now()+deltaMs).toISOString()}
+function defaults(){return{redeemed:false,assets:defaultAssets(),hunts:[
+ {id:'demo-montfort',organization:'Stichting Jeugd Montfort',title:'Jeugd Hunt Montfort',village:'Montfort',description:'Voorbeeld van een tijdelijke AR-Hunt voor een stichting.',accessStartsAt:nowIso(-86400000),accessEndsAt:nowIso(86400000),publicStartsAt:nowIso(-3600000),publicEndsAt:nowIso(86400000),active:true,pointCount:3},
+ {id:'demo-posterholt',organization:'Scouting Posterholt',title:'Scouting Speurtocht',village:'Posterholt',description:'Tweede voorbeeld om te laten zien dat meerdere Hunts tegelijk kunnen lopen.',accessStartsAt:nowIso(-86400000),accessEndsAt:nowIso(86400000),publicStartsAt:nowIso(-3600000),publicEndsAt:nowIso(86400000),active:true,pointCount:2}
+],points:{'demo-montfort':[
+ {id:'p1',assetId:'asset-jungle',assetName:'Jungle Snazzle',name:'Jungle Snazzle',hint:'Kijk goed tussen het groen.',radius:12,active:true,imageUrl:''},
+ {id:'p2',assetId:'asset-magic',assetName:'Magic Snazzle',name:'Magic Snazzle',hint:'Hier schittert iets magisch.',radius:12,active:true,imageUrl:''},
+ {id:'p3',assetId:'asset-ridder',assetName:'Ridder Snazzle',name:'Ridder Snazzle',hint:'Zoek de dappere bewaker.',radius:12,active:true,imageUrl:''}
+ ],'demo-posterholt':[
+ {id:'p4',assetId:'asset-spooky',assetName:'Spooky Snazzle',name:'Spooky Snazzle',hint:'Een beetje griezelig…',radius:12,active:true,imageUrl:''},
+ {id:'p5',assetId:'asset-jungle',assetName:'Jungle Snazzle',name:'Jungle Snazzle',hint:'Groen is hier de beste hint.',radius:12,active:true,imageUrl:''}
+ ]},finds:[],codes:{'SNATEST143':'demo-montfort'}}}
+function load(){try{return Object.assign(defaults(),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch{return defaults()}}
+function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
+function hydrate(s){s.assets=s.assets?.length?s.assets:defaultAssets();s.hunts=s.hunts?.length?s.hunts:defaults().hunts;s.points=s.points||defaults().points;s.finds=s.finds||[];s.codes=s.codes||{'SNATEST143':'demo-montfort'};for(const h of s.hunts){h.pointCount=(s.points[h.id]||[]).filter(p=>p.active!==false).length}for(const arr of Object.values(s.points)){for(const p of arr){const a=s.assets.find(x=>x.id===p.assetId);if(a){p.assetName=a.name;p.imageUrl=a.imageUrl}}}return s}
+function visible(h){const n=Date.now(),a=new Date(h.publicStartsAt).getTime(),b=new Date(h.publicEndsAt).getTime();return h.active!==false&&n>=a&&n<=b}
+function sessionHunt(s){const id=s.sessionHuntId||'demo-montfort';return s.hunts.find(h=>h.id===id)||s.hunts[0]}
+function mockCall(name,data={}){let s=hydrate(load());const hunt=id=>s.hunts.find(h=>h.id===id);const pts=id=>s.points[id]||(s.points[id]=[]);const asset=id=>s.assets.find(a=>a.id===id);const persist=()=>save(s);
+ switch(name){
+  case'listLiveOrgHunts':return{items:s.hunts.filter(visible)};
+  case'getOrgHuntState':{const p=pts(data.huntId).filter(x=>x.active!==false),f=s.finds.filter(x=>x.huntId===data.huntId);return{found:f.length,total:p.length}}
+  case'getNextOrgTarget':{const p=pts(data.huntId).filter(x=>x.active!==false&&!s.finds.some(f=>f.huntId===data.huntId&&f.pointId===x.id));if(!p.length)return{done:true};const x=p[0],a=asset(x.assetId)||{};return{done:false,target:{...x,lat:Number(data.lat),lon:Number(data.lon),imageUrl:a.imageUrl||x.imageUrl,assetName:a.name||x.assetName}}}
+  case'claimOrgTarget':{const p=pts(data.huntId).find(x=>x.id===data.pointId),a=asset(p?.assetId)||{};const f={id:'find-'+Date.now(),huntId:data.huntId,pointId:data.pointId,eventTitle:hunt(data.huntId)?.title||'Speciale Hunt',organization:hunt(data.huntId)?.organization||'',village:hunt(data.huntId)?.village||'',assetId:p?.assetId||'',assetName:a.name||p?.name||'Snazzle',imageUrl:a.imageUrl||p?.imageUrl||'',foundAt:new Date().toISOString()};if(!s.finds.some(x=>x.huntId===f.huntId&&x.pointId===f.pointId))s.finds.push(f);persist();return{ok:true,found:f}}
+  case'listMyOrgFinds':return{items:s.finds};
+  case'adminListOrgHunts':return{items:s.hunts};
+  case'adminSaveOrgHunt':{let h=data.huntId?hunt(data.huntId):null;if(!h){h={id:'demo-'+Date.now().toString(36),pointCount:0};s.hunts.unshift(h);s.points[h.id]=[]}Object.assign(h,data,{id:h.id});h.pointCount=pts(h.id).length;persist();return{ok:true,hunt:h}}
+  case'adminDeleteOrgHunt':s.hunts=s.hunts.filter(h=>h.id!==data.huntId);delete s.points[data.huntId];persist();return{ok:true};
+  case'adminGenerateOrgAccessCode':{const code='SNA'+Math.random().toString(36).slice(2,9).toUpperCase().replace(/[IO01]/g,'7').padEnd(7,'7').slice(0,7);s.codes[code]=data.huntId;s.lastCode=code;persist();return{ok:true,code,accessEndsAt:hunt(data.huntId)?.accessEndsAt}}
+  case'adminListOrgAssets':return{items:s.assets};
+  case'adminSaveOrgAsset':{let a=data.assetId?asset(data.assetId):null;if(!a){a={id:'asset-'+Date.now().toString(36)};s.assets.unshift(a)}Object.assign(a,data,{id:a.id});persist();return{ok:true,asset:a}}
+  case'adminDeleteOrgAsset':s.assets=s.assets.filter(a=>a.id!==data.assetId);persist();return{ok:true};
+  case'redeemOrgAccessCode':{const c=String(data.code||'').replace(/[^A-Z0-9]/gi,'').toUpperCase(),id=s.codes[c];if(!id)throw new Error('De testcode klopt niet. Gebruik SNA-TEST143.');s.redeemed=true;s.sessionHuntId=id;persist();return{ok:true,hunt:hunt(id),expiresAt:hunt(id)?.accessEndsAt}}
+  case'getOrganizerSessions':return{items:s.redeemed?[sessionHunt(s)]:[]};
+  case'listOrgAssets':return{items:s.assets.filter(a=>a.active!==false&&(a.allowedForOrg||a.allowedForPersonal))};
+  case'organizerListPoints':return{hunt:hunt(data.huntId),points:pts(data.huntId)};
+  case'organizerPlacePoint':{const a=asset(data.assetId)||{},p={id:'point-'+Date.now().toString(36),assetId:data.assetId,assetName:a.name,name:data.name||a.name||'Snazzle',hint:data.hint||'',radius:Number(data.radius||8),lat:Number(data.lat),lon:Number(data.lon),active:true,imageUrl:a.imageUrl||''};pts(data.huntId).push(p);const h=hunt(data.huntId);if(h)h.pointCount=pts(data.huntId).length;persist();return{ok:true,point:p}}
+  case'organizerTogglePoint':{const p=pts(data.huntId).find(x=>x.id===data.pointId);if(p)p.active=data.active!==false;persist();return{ok:true}}
+  case'organizerDeletePoint':s.points[data.huntId]=pts(data.huntId).filter(x=>x.id!==data.pointId);persist();return{ok:true};
+  default:console.info('[v143 demo API]',name,data);return{};
+ }}
+frame.addEventListener('load',()=>{
+ const w=frame.contentWindow,d=frame.contentDocument;if(!w||!d)return;
+ let tries=0;const wait=setInterval(()=>{tries++;if(!d.getElementById('bigStart')){if(tries>120){clearInterval(wait);document.getElementById('badge').textContent='TEST v143 · app kon niet laden';}return}clearInterval(wait);
+   w.__snazzleOrgTestCall143=async(name,data)=>mockCall(name,data);
+   w.__snazzleFresh=p=>new URL(p,CDN).href;
+   const tag=d.createElement('script');tag.type='module';tag.src=CDN+'snazzle-org-platform-v143.js';tag.onload=()=>{document.getElementById('helper').style.display='flex';setTimeout(()=>w.SnazzleOrgPlatformV143?.refresh?.(),300)};tag.onerror=()=>document.getElementById('badge').textContent='TEST v143 · module kon niet laden';d.head.appendChild(tag);
+ },150);
+});
+document.getElementById('showHunts').onclick=()=>frame.contentWindow.SnazzleOrgPlatformV143?.open?.();
+document.getElementById('showOrg').onclick=()=>frame.contentWindow.SnazzleOrgPlatformV143?.organizationAccess?.();
+document.getElementById('showAdmin').onclick=()=>{const d=frame.contentDocument;const btn=d?.querySelector('.admin,#adminBtn,[data-open-admin]');if(btn)btn.click();else alert('Tik rechtsboven in de app op het beheer-icoon.');};
+</script>
+</body>
+</html>
