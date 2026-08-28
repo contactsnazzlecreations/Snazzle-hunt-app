@@ -11,7 +11,7 @@ export const db=getFirestore(app);
 export const functions=getFunctions(app,'europe-west1');
 export const storage=getStorage(app);
 export const $=(s,r=document)=>r.querySelector(s);
-export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 export const CACHE_MS=45000;
 export const fresh=window.__snazzleFresh||((p)=>p);
 export const state=window.__snazzleOrgState143||(window.__snazzleOrgState143={user:null,superAdmin:false,liveHunts:[],organizerSessions:[],myFinds:[],assets:[],adminAssets:[],adminHunts:[]});
@@ -28,6 +28,11 @@ export function errorMessage(err,fallback='Er ging iets mis.'){
   return msg||fallback;
 }
 export async function call(name,data={}){
+  // Alleen de aparte v143-testpagina mag een lokale demo-API aanbieden.
+  // De normale/live app heeft deze hook niet en gebruikt altijd Firebase Functions.
+  if(typeof window.__snazzleOrgTestCall143==='function'){
+    return await window.__snazzleOrgTestCall143(name,data)||{};
+  }
   const result=await httpsCallable(functions,name)(data);
   return result.data||{};
 }
