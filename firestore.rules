@@ -217,13 +217,14 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, update: if isSuperAdmin() &&
         configId == "main" &&
-        request.resource.data.keys().hasOnly(["enabled", "introTitle", "introText", "showListen", "showLocations", "showExtras", "updatedAt", "updatedBy"]) &&
+        request.resource.data.keys().hasOnly(["enabled", "introTitle", "introText", "showListen", "showLocations", "showExtras", "showBuddy", "updatedAt", "updatedBy"]) &&
         request.resource.data.enabled is bool &&
         request.resource.data.introTitle is string && request.resource.data.introTitle.size() >= 2 && request.resource.data.introTitle.size() <= 70 &&
         request.resource.data.introText is string && request.resource.data.introText.size() >= 2 && request.resource.data.introText.size() <= 240 &&
         request.resource.data.showListen is bool &&
         request.resource.data.showLocations is bool &&
         request.resource.data.showExtras is bool &&
+        request.resource.data.showBuddy is bool &&
         request.resource.data.updatedAt is string &&
         request.resource.data.updatedBy == request.auth.uid;
       allow delete: if isSuperAdmin() && configId == "main";
