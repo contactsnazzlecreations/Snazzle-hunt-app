@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Professor Kwak test</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#173f30,#0d2d22);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#fff;padding:calc(20px + env(safe-area-inset-top)) 16px 30px}.wrap{width:min(100%,520px);margin:auto}.hero{padding:18px;border:2px solid #ab8247;border-radius:22px;background:linear-gradient(135deg,#6b482a,#315b3d);box-shadow:0 6px 0 #092318}.hero h1{margin:0;font-size:25px;color:#ffe184}.hero p{margin:7px 0 0;font-size:12px;line-height:1.45;color:#e5eedf;font-weight:700}.grid{display:grid;gap:10px;margin-top:16px}.test{border:0;border-radius:17px;padding:15px;background:#fff0c2;color:#372619;text-align:left;box-shadow:0 4px 0 #956b34;font-weight:900}.test b{display:block;font-size:15px}.test span{display:block;margin-top:4px;color:#745633;font-size:11px;font-weight:750}.note{margin-top:16px;padding:12px;border-radius:15px;background:rgba(255,255,255,.08);font-size:10px;line-height:1.45;color:#dce9d5}.ok{color:#f5d668;font-weight:900}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero"><h1>🦆 Professor Kwak</h1><p>Test de reactie, de leesmissie en de knop <b>🔊 Luister naar Kwak</b>. Dit zijn oefenboeken; er wordt niets opgeslagen.</p></section>
+  <div class="grid">
+    <button class="test" data-case="spannend"><b>🌟 5 sterren · spannend</b><span>Boek 3 · “Ik vond het super spannend en avontuurlijk.”</span></button>
+    <button class="test" data-case="grappig"><b>😂 4 sterren · grappig</b><span>Boek 5 · “Ik moest heel vaak lachen.”</span></button>
+    <button class="test" data-case="minder"><b>🤔 2 sterren · minder leuk</b><span>Boek 4 · ziet hoe Kwak positief reageert zonder te overdrijven.</span></button>
+    <button class="test" data-case="eerste"><b>📚 Eerste boek</b><span>De missie stuurt direct richting een echte Bieb-keuze.</span></button>
+  </div>
+  <div class="note"><span class="ok">TEST v144.2</span> · De stem komt voor deze proef uit de Nederlandse voorleesstem van je telefoon. Een eigen Snazzle-stem kan later.</div>
+</div>
+<script src="./snazzle-bieb-leesmaatje-v144.js?v=86a72d9"></script>
+<script>
+const cases={
+  spannend:{book:{title:'Het geheim van het donkere bos',reaction:'Ik vond het super spannend en avontuurlijk.',rating:5},total:3},
+  grappig:{book:{title:'De gekste klas ooit',reaction:'Ik moest heel vaak lachen om dit grappige boek.',rating:4},total:5},
+  minder:{book:{title:'Een lang verhaal',reaction:'Ik vond het een beetje saai en niet zo leuk.',rating:2},total:4},
+  eerste:{book:{title:'Mijn eerste Biebboek',reaction:'Ik vond het leuk.',rating:4},total:1}
+};
+document.querySelectorAll('[data-case]').forEach(btn=>btn.addEventListener('click',()=>window.SnazzleBiebLeesmaatjeV144?.show(cases[btn.dataset.case])));
+</script>
+</body>
+</html>
