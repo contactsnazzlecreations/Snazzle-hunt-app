@@ -182,15 +182,29 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || isVillageAdmin(resource.data.village);
     }
 
+    // Deelnemersgegevens van Treffpunten zijn niet langer breed uitleesbaar.
+    // Een gezin leest uitsluitend de eigen deelname; aantallen worden via een serverfunctie geleverd.
     match /snazzleMeetupJoins/{joinId} {
-      allow read: if signedIn();
+      allow read: if isSuperAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid) ||
+        (
+          exists(/databases/$(database)/documents/snazzleMeetups/$(resource.data.meetupId)) &&
+          isVillageAdmin(get(/databases/$(database)/documents/snazzleMeetups/$(resource.data.meetupId)).data.village)
+        );
       allow create: if signedIn() &&
+        joinId == request.resource.data.meetupId + "_" + request.auth.uid &&
         request.resource.data.keys().hasOnly(["meetupId", "userId", "adultConfirmed", "createdAt"]) &&
         request.resource.data.userId == request.auth.uid && request.resource.data.meetupId is string && request.resource.data.meetupId.size() >= 1 && request.resource.data.meetupId.size() <= 160 &&
         request.resource.data.adultConfirmed == true && request.resource.data.createdAt is string &&
-        exists(/databases/$(database)/documents/snazzleMeetups/$(request.resource.data.meetupId));
+        exists(/databases/$(database)/documents/snazzleMeetups/$(request.resource.data.meetupId)) &&
+        get(/databases/$(database)/documents/snazzleMeetups/$(request.resource.data.meetupId)).data.active != false;
       allow update: if false;
-      allow delete: if isSuperAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isSuperAdmin() ||
+        (signedIn() && resource.data.userId == request.auth.uid) ||
+        (
+          exists(/databases/$(database)/documents/snazzleMeetups/$(resource.data.meetupId)) &&
+          isVillageAdmin(get(/databases/$(database)/documents/snazzleMeetups/$(resource.data.meetupId)).data.village)
+        );
     }
 
     match /snazzleNewsPages/{pageId} {
