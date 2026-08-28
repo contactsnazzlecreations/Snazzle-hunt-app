@@ -6,7 +6,7 @@ import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.
 import { getAuth, onAuthStateChanged, getIdTokenResult } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-const VERSION='144.1.0';
+const VERSION='144.4.0';
 const app=getApp();
 const auth=getAuth(app);
 const db=getFirestore(app);
@@ -20,7 +20,8 @@ const DEFAULTS={
   introText:'Maak een foto van de kaft als je een boek uit hebt. Om de twee boeken verdien je een Leesveer en groeit jouw eigen leeshoek.',
   showListen:true,
   showLocations:true,
-  showExtras:true
+  showExtras:true,
+  showBuddy:true
 };
 
 let settings={...DEFAULTS};
@@ -41,7 +42,8 @@ function normalize(raw={}){
     introText:cleanText(raw.introText,240,DEFAULTS.introText),
     showListen:raw.showListen!==false,
     showLocations:raw.showLocations!==false,
-    showExtras:raw.showExtras!==false
+    showExtras:raw.showExtras!==false,
+    showBuddy:raw.showBuddy!==false
   };
 }
 function toast(message){
@@ -118,7 +120,11 @@ function fillAdminForm(){
   const setCheck=(id,val)=>{const el=$(`#${id}`);if(el)el.checked=!!val;};
   const title=$('#snBiebAdminTitle144');if(title&&document.activeElement!==title)title.value=settings.introTitle;
   const intro=$('#snBiebAdminIntro144');if(intro&&document.activeElement!==intro)intro.value=settings.introText;
-  setCheck('snBiebEnabled144',settings.enabled);setCheck('snBiebListen144',settings.showListen);setCheck('snBiebLocations144',settings.showLocations);setCheck('snBiebExtras144',settings.showExtras);
+  setCheck('snBiebEnabled144',settings.enabled);
+  setCheck('snBiebListen144',settings.showListen);
+  setCheck('snBiebLocations144',settings.showLocations);
+  setCheck('snBiebExtras144',settings.showExtras);
+  setCheck('snBiebBuddy144Toggle',settings.showBuddy);
   const state=$('#snBiebAdminState144');if(state){state.classList.toggle('warn',!hasAdminMfa);state.textContent=hasAdminMfa?'✓ Beheer beveiligd met admin-MFA. Wijzigingen mogen worden opgeslagen.':'🔒 Open eerst het beveiligde hoofdbeheer/MFA om wijzigingen op te slaan.';}
 }
 
@@ -141,7 +147,8 @@ async function saveSettings(){
     introText:$('#snBiebAdminIntro144')?.value,
     showListen:$('#snBiebListen144')?.checked!==false,
     showLocations:$('#snBiebLocations144')?.checked!==false,
-    showExtras:$('#snBiebExtras144')?.checked!==false
+    showExtras:$('#snBiebExtras144')?.checked!==false,
+    showBuddy:$('#snBiebBuddy144Toggle')?.checked!==false
   });
   const btn=$('#snBiebAdminSave144');saving=true;if(btn){btn.disabled=true;btn.textContent='Opslaan…';}
   try{
@@ -168,6 +175,7 @@ function ensureAdminUI(){
       <div class="sn-bieb-admin-field144"><label class="sn-bieb-switch144"><input id="snBiebEnabled144" type="checkbox"><span>De Bieb zichtbaar<small>Zet alleen uit als De Bieb tijdelijk helemaal niet gebruikt moet worden.</small></span></label></div>
       <div class="sn-bieb-admin-field144"><label>Titel bovenaan</label><input id="snBiebAdminTitle144" type="text" maxlength="70"></div>
       <div class="sn-bieb-admin-field144"><label>Korte uitleg</label><textarea id="snBiebAdminIntro144" maxlength="240"></textarea></div>
+      <div class="sn-bieb-admin-field144"><label class="sn-bieb-switch144"><input id="snBiebBuddy144Toggle" type="checkbox"><span>🦆 Professor Kwak Leesmaatje<small>Geeft na een gelezen boek een korte reactie en een nieuwe lees- of Bieb-missie.</small></span></label></div>
       <div class="sn-bieb-admin-field144"><label class="sn-bieb-switch144"><input id="snBiebListen144" type="checkbox"><span>🎧 Luisterverhalen tonen<small>De verhalen zelf beheer je met de knop hieronder.</small></span></label></div>
       <div class="sn-bieb-admin-field144"><label class="sn-bieb-switch144"><input id="snBiebLocations144" type="checkbox"><span>📍 Bieb dichtbij tonen<small>Laat adressen en routes naar bibliotheken zien.</small></span></label></div>
       <div class="sn-bieb-admin-field144"><label class="sn-bieb-switch144"><input id="snBiebExtras144" type="checkbox"><span>🧭 Leesplezier & missies tonen<small>Waarom lezen en de kleine leesmissies blijven onder één knop.</small></span></label></div>
