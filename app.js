@@ -1,6 +1,6 @@
-// Snazzle Hunt v136 — herstelkaarten exact in het bestaande Mijn Snazzle Cards-vak.
+// Snazzle Hunt v137 — 24 kaarten direct op de vaste collectieplek zonder canvas.
 
-const runtimeVersion = '20260828-v136-native-card-place';
+const runtimeVersion = '20260828-v137-direct-card-place';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
