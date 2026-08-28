@@ -4,7 +4,7 @@ import { auth,db,state,call } from './snazzle-org-shared-v143.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { doc,getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-let publicModule=null,organizerModule=null,organizerUxModule=null,adminModule=null,collectionModule=null,refreshTimer=null;
+let publicModule=null,organizerModule=null,organizerUxModule=null,adminModule=null,adminLibraryModule=null,collectionModule=null,refreshTimer=null;
 const ORG_FLAG='snazzleOrgAccessUsed143';
 
 async function safeImport(path){
@@ -33,6 +33,10 @@ async function ensureCollection(){
 async function ensureAdmin(){
   if(adminModule)return adminModule;
   adminModule=await safeImport('./snazzle-org-admin-v143.js');
+  if(adminModule&&!adminLibraryModule){
+    adminLibraryModule=await safeImport('./snazzle-org-admin-library-v143.js');
+    adminLibraryModule?.install?.();
+  }
   return adminModule;
 }
 async function isSuperAdmin(){
