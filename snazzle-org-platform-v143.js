@@ -5,6 +5,7 @@ import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/f
 import { doc,getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 let publicModule=null,organizerModule=null,adminModule=null,collectionModule=null,refreshTimer=null;
+const ORG_FLAG='snazzleOrgAccessUsed143';
 
 async function safeImport(path){
   try{return await import(path);}
@@ -38,11 +39,19 @@ async function isSuperAdmin(){
     return !!(p?.active===true&&p?.role==='superadmin');
   }catch{return false;}
 }
+function organizerMayExist(){
+  if(new URLSearchParams(location.search).get('orgaccess')==='1')return true;
+  try{return localStorage.getItem(ORG_FLAG)==='1';}catch{return false;}
+}
 async function refreshSessions(){
   if(!state.user){state.organizerSessions=[];notify();return;}
+  if(!organizerMayExist()&&!organizerModule){state.organizerSessions=[];notify();return;}
   try{
     const d=await call('getOrganizerSessions');
     state.organizerSessions=Array.isArray(d.items)?d.items:[];
+    if(!state.organizerSessions.length&&new URLSearchParams(location.search).get('orgaccess')!=='1'){
+      try{localStorage.removeItem(ORG_FLAG);}catch{}
+    }
   }catch{state.organizerSessions=[];}
   notify();
 }
@@ -61,19 +70,21 @@ async function onUser(user){
     return;
   }
 
-  // Publieke Special Hunts laden parallel en los van de rest.
+  // Publieke Special Hunts laden los van de hoofdapp en blokkeren de eerste paint nooit.
   pub?.refreshLiveHunts?.();
 
-  // Alleen een organisatievertegenwoordiger krijgt de plaatsmodule.
-  await refreshSessions();
+  // Alleen eerdere/deeplink organisatiegebruikers krijgen een sessiecontrole.
   const hasDeepLink=new URLSearchParams(location.search).get('orgaccess')==='1';
-  if(state.organizerSessions.length||hasDeepLink){
+  if(organizerMayExist()){
+    await refreshSessions();
     const org=await ensureOrganizer();
     if(state.organizerSessions.length)org?.loadSessions?.();
     if(hasDeepLink)org?.maybeOpenDeepLink?.();
+  }else{
+    notify();
   }
 
-  // Event Collecties zijn klein en worden pas in idle-tijd geladen.
+  // Event Collecties worden pas in idle-tijd geladen.
   idle(async()=>{
     const col=await ensureCollection();
     col?.loadMyFinds?.();
@@ -90,12 +101,14 @@ async function onUser(user){
   refreshTimer=setInterval(()=>{
     if(document.visibilityState!=='visible'||!state.user)return;
     pub?.refreshLiveHunts?.(true);
-    refreshSessions().then(async()=>{
-      if(state.organizerSessions.length&&!organizerModule){
-        const org=await ensureOrganizer();
-        org?.loadSessions?.();
-      }
-    });
+    if(organizerMayExist()){
+      refreshSessions().then(async()=>{
+        if(state.organizerSessions.length&&!organizerModule){
+          const org=await ensureOrganizer();
+          org?.loadSessions?.();
+        }
+      });
+    }
   },60000);
 }
 
@@ -112,7 +125,10 @@ window.SnazzleOrgPlatformV143={
   open:async()=>{const m=await ensurePublic();m?.openSpecialHunts?.();},
   organizationAccess:async()=>{const m=await ensureOrganizer();await m?.loadSessions?.();m?.openAccess?.();},
   refresh:async()=>{
-    const m=await ensurePublic();await Promise.allSettled([m?.refreshLiveHunts?.(true),refreshSessions()]);
+    const m=await ensurePublic();
+    const jobs=[m?.refreshLiveHunts?.(true)];
+    if(organizerMayExist())jobs.push(refreshSessions());
+    await Promise.allSettled(jobs);
     if(collectionModule)collectionModule.loadMyFinds?.(true);
   }
 };
