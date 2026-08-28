@@ -30,6 +30,17 @@ service firebase.storage {
       allow delete: if isSuperAdmin() && request.auth.uid == uid;
     }
 
+    // Centrale Snazzle Bibliotheek voor Special Hunts en later persoonlijke Hunts.
+    // Alleen de hoofdbeheerder mag hier afbeeldingen toevoegen of wijzigen.
+    match /snazzle-org-assets/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if isSuperAdmin() &&
+        request.auth.uid == uid &&
+        request.resource.size <= 8 * 1024 * 1024 &&
+        request.resource.contentType.matches("image/.*");
+      allow delete: if isSuperAdmin() && request.auth.uid == uid;
+    }
+
     // De Bieb: iedere gebruiker bewaart alleen eigen boekkaften.
     // De foto's zijn niet openbaar doorzoekbaar en maximaal 1 MB per kaft.
     match /bieb/covers/{uid}/{fileName} {
