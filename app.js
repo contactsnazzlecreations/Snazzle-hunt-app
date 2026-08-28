@@ -1,6 +1,6 @@
-// Snazzle Hunt v137 — 24 kaarten direct op de vaste collectieplek zonder canvas.
+// Snazzle Hunt v138 — noodfix: kaart-herstel tijdelijk uitgeschakeld zodat menu en knoppen direct responsief blijven.
 
-const runtimeVersion = '20260828-v137-direct-card-place';
+const runtimeVersion = '20260828-v138-menu-responsive';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -134,7 +134,6 @@ const backgroundBundles=[
     './snazzle-card-rescue-v132.js',
     './snazzle-ar-safety-pass-v124.js',
     './snazzle-card-system-v2.js',
-    './snazzle-card-force-restore-v134.js',
     './snazzle-card-draft-link-v107.js',
     './snazzle-card-worlds-v78.js',
     './snazzle-card-world-prompt-v79.js',
