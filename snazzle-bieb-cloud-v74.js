@@ -35,7 +35,7 @@ const REWARDS=[
 ];
 
 function esc(value){
-  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));
 }
 function today(){
   const d=new Date();
@@ -270,6 +270,7 @@ async function saveBook(event){
     document.getElementById('snBiebCancel73')?.click();
     lastPreviewKey='';lastPreviewData='';
     toast('Boek staat in je Bieb 📚');
+    document.dispatchEvent(new CustomEvent('snazzle:bieb-book-added',{detail:{book:{id:metadata.id,title:metadata.title,reaction:metadata.reaction,rating:metadata.rating},total:newCount}}));
     if(newCount%2===0) setTimeout(()=>showReward(newCount),220);
   }catch(err){
     console.error('Snazzle Bieb v74 opslaan',err);
