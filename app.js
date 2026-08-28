@@ -1,6 +1,6 @@
-// Snazzle Hunt v141 — stabiele compacte app + extra beveiligingslaag.
+// Snazzle Hunt v142 — stabiele compacte app + tijdelijke organisatie-Hunts.
 
-const runtimeVersion = '20260828-v141-security-hardening';
+const runtimeVersion = '20260828-v142-organization-hunts';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -123,7 +123,10 @@ const fastBundles=[
     './snazzle-bieb-cloud-v74.js',
     './snazzle-bieb-locations-v77.js'
   ],
-  ['./snazzle-news-v46.js']
+  [
+    './snazzle-news-v46.js',
+    './snazzle-org-hunts-v142.js'
+  ]
 ];
 
 Promise.allSettled(fastBundles.map(loadSequence)).then(()=>refreshLocalStyles());
