@@ -1,8 +1,8 @@
-// Snazzle v144.3 — Professor Kwak Leesmaatje.
+// Snazzle v144.4 — Professor Kwak Leesmaatje.
 // Veilige lokale reacties na een gelezen boek. Geen vrije chat en geen externe AI-call.
 // De standaard browserstem is bewust uitgeschakeld; later kan hier een vaste neural Snazzle-stem komen.
 
-const VERSION='144.3.0';
+const VERSION='144.4.0';
 const $=(s,r=document)=>r.querySelector(s);
 let pending=null;
 
@@ -46,9 +46,7 @@ function ensureUI(){
       </div>
       <div class="sn-bieb-buddy-say144" id="snBiebBuddySay144" aria-live="polite"></div>
       <div class="sn-bieb-buddy-mission144"><small>Jouw volgende missie</small><strong id="snBiebBuddyMission144"></strong></div>
-      <div class="sn-bieb-buddy-actions144">
-        <button class="sn-bieb-buddy-next144" id="snBiebBuddyDone144" type="button">👍 Missie onthouden</button>
-      </div>
+      <div class="sn-bieb-buddy-actions144"><button class="sn-bieb-buddy-next144" id="snBiebBuddyDone144" type="button">👍 Missie onthouden</button></div>
       <button class="sn-bieb-buddy-library144" id="snBiebBuddyLibrary144" type="button">📍 Zoek een Bieb dichtbij</button>
       <div class="sn-bieb-buddy-note144">Geen toets en geen chat — gewoon een vrolijk zetje om verder te lezen en eens naar de echte Bieb te gaan.</div>
     </section>`;
@@ -75,64 +73,43 @@ function bookFlavor(book){
 function buildReaction(book,total){
   const rating=Math.max(1,Math.min(5,Number(book?.rating)||3));
   const flavor=bookFlavor(book);
-  const first=rating>=5
-    ?'Vijf sterren! Dat boek was duidelijk een schot in de roos. 🌟'
-    :rating===4
-      ?'Vier sterren! Daar heb je zo te zien behoorlijk van genoten. 📚'
-      :rating===3
-        ?'Drie sterren. Mooi dat je het hebt uitgelezen en zelf hebt bedacht wat je ervan vond. 👍'
-        :'Niet ieder boek hoeft je favoriet te zijn. Juist daardoor ontdek je steeds beter wat jij wél graag leest. 🦆';
+  const first=rating>=5?'Vijf sterren! Dat boek was duidelijk een schot in de roos. 🌟':rating===4?'Vier sterren! Daar heb je zo te zien behoorlijk van genoten. 📚':rating===3?'Drie sterren. Mooi dat je het hebt uitgelezen en zelf hebt bedacht wat je ervan vond. 👍':'Niet ieder boek hoeft je favoriet te zijn. Juist daardoor ontdek je steeds beter wat jij wél graag leest. 🦆';
   const second=`Ik krijg het idee dat ${flavor} best goed bij jou kunnen passen.`;
-
   let mission='Ga bij je volgende bezoek aan de Bieb op zoek naar een boek dat je normaal niet meteen zou pakken.';
   if(total===1) mission='Maak van boek nummer 2 een echte Bieb-keuze: loop eens langs de kasten en kies alleen op de kaft.';
   else if(total%5===0) mission='Vraag iemand in de Bieb om één boek aan te raden dat je zelf nooit gekozen zou hebben.';
   else if(total%3===0) mission=`Zoek in de Bieb een ander boek met ${flavor}. Kun je er eentje vinden dat nóg beter scoort?`;
   else if(rating<=2) mission='Ga naar de Bieb en kies iets totaal anders dan dit boek. Misschien ontdek je zo jouw favoriete soort verhaal.';
   else if(rating>=4) mission=`Zoek in de Bieb nog een boek met ${flavor}, maar van een andere schrijver.`;
-
   return {say:`${first} ${second}`,mission};
 }
 
 function closeBuddy(){
   const overlay=$('#snBiebBuddy144');if(!overlay)return;
-  overlay.classList.remove('show');overlay.setAttribute('aria-hidden','true');
-  pending=null;
+  overlay.classList.remove('show');overlay.setAttribute('aria-hidden','true');pending=null;
 }
-
 function showBuddy(detail){
   if(!detail?.book) return;
+  if(window.SnazzleBiebSettingsV144?.get?.().showBuddy===false) return;
   ensureUI();pending={book:{title:String(detail.book.title||'').slice(0,80),reaction:String(detail.book.reaction||'').slice(0,180),rating:Number(detail.book.rating)||3},total:Math.max(1,Number(detail.total)||1)};
   const content=buildReaction(pending.book,pending.total);
-  $('#snBiebBuddySay144').textContent=content.say;
-  $('#snBiebBuddyMission144').textContent=content.mission;
-  const overlay=$('#snBiebBuddy144');overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');
-  $('#snBiebBuddyDone144')?.focus();
+  $('#snBiebBuddySay144').textContent=content.say;$('#snBiebBuddyMission144').textContent=content.mission;
+  const overlay=$('#snBiebBuddy144');overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');$('#snBiebBuddyDone144')?.focus();
 }
-
 function showAfterReward(detail){
   const reward=$('#snBiebReward73');
   if(!reward?.classList.contains('show')){setTimeout(()=>showBuddy(detail),380);return;}
-  const observer=new MutationObserver(()=>{
-    if(!reward.classList.contains('show')){observer.disconnect();setTimeout(()=>showBuddy(detail),240);}
-  });
-  observer.observe(reward,{attributes:true,attributeFilter:['class']});
-  setTimeout(()=>observer.disconnect(),120000);
+  const observer=new MutationObserver(()=>{if(!reward.classList.contains('show')){observer.disconnect();setTimeout(()=>showBuddy(detail),240);}});
+  observer.observe(reward,{attributes:true,attributeFilter:['class']});setTimeout(()=>observer.disconnect(),120000);
 }
-
 function openNearbyLibrary(){
-  closeBuddy();
-  try{window.SnazzleBiebV73?.open?.();}catch{}
-  setTimeout(()=>{
-    const near=$('[data-bieb-action="near"]');
-    if(near){near.click();return;}
-    const locations=$('#snBiebLocations77');if(locations){locations.hidden=false;locations.scrollIntoView({behavior:'smooth',block:'start'});}
-  },120);
+  closeBuddy();try{window.SnazzleBiebV73?.open?.();}catch{}
+  setTimeout(()=>{const near=$('[data-bieb-action="near"]');if(near){near.click();return;}const locations=$('#snBiebLocations77');if(locations){locations.hidden=false;locations.scrollIntoView({behavior:'smooth',block:'start'});}},120);
 }
 
 document.addEventListener('snazzle:bieb-book-added',event=>showAfterReward(event.detail));
+document.addEventListener('snazzle:bieb-settings',event=>{if(event.detail?.showBuddy===false)closeBuddy();});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('#snBiebBuddy144')?.classList.contains('show'))closeBuddy();});
 ensureUI();
-
 window.SnazzleBiebLeesmaatjeV144={show:showBuddy};
 console.info(`Snazzle Leesmaatje ${VERSION} geladen`);
