@@ -1,6 +1,6 @@
-// Snazzle Hunt v135 — geforceerd herstel van WILD- en SPARK-kaarten zichtbaar in Collectie.
+// Snazzle Hunt v136 — herstelkaarten exact in het bestaande Mijn Snazzle Cards-vak.
 
-const runtimeVersion = '20260828-v135-card-visible';
+const runtimeVersion = '20260828-v136-native-card-place';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
