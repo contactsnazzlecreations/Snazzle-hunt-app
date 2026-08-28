@@ -26,7 +26,7 @@ function waitForSaved(candidate){
     if(token!==watchToken) return;
     const current=numberFrom('snBiebBookCount73');
     if(current>candidate.before){
-      window.SnazzleBiebLeesmaatjeV144?.show?.({book:candidate.book,total:current});
+      document.dispatchEvent(new CustomEvent('snazzle:bieb-book-added',{detail:{book:candidate.book,total:current}}));
       return;
     }
     if(Date.now()-started<12000) setTimeout(poll,180);
