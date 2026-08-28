@@ -3,5 +3,6 @@ module.exports = {
   ...require('./index'),
   ...require('./hunt-codes'),
   ...require('./meetups'),
-  ...require('./admin-mfa')
+  ...require('./admin-mfa'),
+  ...require('./org-hunts')
 };
