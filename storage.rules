@@ -8,6 +8,7 @@ service firebase.storage {
 
     function isSuperAdmin() {
       return signedIn() &&
+        request.auth.token.snazzle_admin_mfa == true &&
         firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
         firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.uid)).data.role == "superadmin";
     }
