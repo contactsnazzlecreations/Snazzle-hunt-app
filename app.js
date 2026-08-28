@@ -1,6 +1,6 @@
-// Snazzle Hunt v134 — geforceerd herstel van WILD- en SPARK-kaarten + compact hoofdmenu.
+// Snazzle Hunt v135 — geforceerd herstel van WILD- en SPARK-kaarten zichtbaar in Collectie.
 
-const runtimeVersion = '20260828-v134-force-card-restore';
+const runtimeVersion = '20260828-v135-card-visible';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -69,16 +69,13 @@ function suppressLateStartupOverlays(){
 suppressLateStartupOverlays();
 window.__snazzleReleaseBoot=()=>{};
 
-// Kleine stabiliteitslagen mogen tegelijk laden.
 await Promise.all([
   safeImport('./snazzle-runtime-stability-v71.js'),
   safeImport('./snazzle-image-stability-v72.js')
 ]);
 
-// De echte app-basis is het enige grote onderdeel waarop de start wacht.
 await import(fresh('./app-core.js'));
 
-// Kritieke navigatie meteen beschikbaar maken; overige functies komen daarna.
 await Promise.all([
   safeImport('./snazzle-village-visibility-v120.js'),
   safeImport('./snazzle-main-menu-v129.js'),
@@ -104,12 +101,9 @@ await Promise.all([
 
 window.__snazzleReleaseBoot?.();
 suppressLateStartupOverlays();
-
-// Laat de browser nu eerst één vloeiend frame tekenen voordat extra functies beginnen.
 await nextPaint();
 
 const fastBundles=[
-  // Privacy / ouders / shop-compatibiliteit
   [
     './snazzle-auto-update-v51.js',
     './snazzle-privacy-v52.js',
@@ -117,35 +111,30 @@ const fastBundles=[
     './snazzle-parent-close-fix-v76.js',
     './shop-compat.js'
   ],
-  // Zoeken en persoonlijke collectie
   [
     './kids-fun.js',
     './snazzle-route.js',
     './snazzle-collection.js'
   ],
-  // Luisteren en bibliotheek
   [
     './snazzle-listen-stories-v63.js',
     './snazzle-bieb-v73.js',
     './snazzle-bieb-cloud-v74.js',
     './snazzle-bieb-locations-v77.js'
   ],
-  // Nieuws kan onafhankelijk laden
-  [
-    './snazzle-news-v46.js'
-  ]
+  ['./snazzle-news-v46.js']
 ];
 
-const fastLoading=Promise.allSettled(fastBundles.map(loadSequence)).then(()=>refreshLocalStyles());
+Promise.allSettled(fastBundles.map(loadSequence)).then(()=>refreshLocalStyles());
 await idle();
 
 const backgroundBundles=[
-  // Kaarten + AR: volgorde binnen deze keten behouden.
   [
     './snazzle-ar-v80.js',
     './snazzle-card-rescue-v132.js',
     './snazzle-ar-safety-pass-v124.js',
     './snazzle-card-system-v2.js',
+    './snazzle-card-force-restore-v134.js',
     './snazzle-card-draft-link-v107.js',
     './snazzle-card-worlds-v78.js',
     './snazzle-card-world-prompt-v79.js',
@@ -155,7 +144,6 @@ const backgroundBundles=[
     './snazzle-ar-findings-bridge-v126.js',
     './snazzle-ar-card-unlock-v127.js'
   ],
-  // Snazzle Wereld + spel. Volgorde behouden zodat de spelknop pas verschijnt als de wereld klaar is.
   [
     './snazzle-world.js',
     './village-access.js',
@@ -175,7 +163,6 @@ const backgroundBundles=[
     './snazzle-world-hub-v47.js',
     './snazzle-game-menu-v62.js'
   ],
-  // Beeld- en afwerkingslagen.
   [
     './image-fit.js',
     './snazzle-home-magic.js',
@@ -190,7 +177,6 @@ const backgroundBundles=[
     './snazzle-input-visibility-v69.js',
     './snazzle-top-stability-v70.js'
   ],
-  // Beheer hoeft de publieke appstart niet te blokkeren.
   [
     './snazzle-admin-reset-v49.js',
     './snazzle-admin-backup-v50.js',
@@ -201,7 +187,6 @@ const backgroundBundles=[
   ]
 ];
 
-// Deze bundels lopen parallel; alleen echte onderlinge afhankelijkheden blijven sequentieel.
 Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   refreshLocalStyles();
   try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
@@ -212,7 +197,6 @@ Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   },250);
 });
 
-// Shop pas koppelen als authenticatie beschikbaar is, zonder de eerste paint te blokkeren.
 (async function startShopLoader(){
   try{
     const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
