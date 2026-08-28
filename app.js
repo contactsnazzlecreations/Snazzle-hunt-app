@@ -124,7 +124,8 @@ const fastBundles=[
     './snazzle-bieb-locations-v77.js',
     './snazzle-bieb-hub-v144.js',
     './snazzle-bieb-settings-v144.js',
-    './snazzle-bieb-leesmaatje-v144.js'
+    './snazzle-bieb-leesmaatje-v144.js',
+    './snazzle-bieb-leesmaatje-bridge-v144.js'
   ],
   ['./snazzle-news-v46.js']
 ];
