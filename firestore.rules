@@ -7,19 +7,23 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function hasAdminMfa() {
+      return signedIn() && request.auth.token.snazzle_admin_mfa == true;
+    }
+
     function adminExists() {
       return signedIn() &&
         exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid));
     }
 
     function isSuperAdmin() {
-      return adminExists() &&
+      return hasAdminMfa() && adminExists() &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == "superadmin";
     }
 
     function isVillageAdmin(village) {
-      return adminExists() &&
+      return hasAdminMfa() && adminExists() &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == "village_admin" &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.village == village;
