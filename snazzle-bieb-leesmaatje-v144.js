@@ -1,11 +1,10 @@
-// Snazzle v144.2 — Professor Kwak Leesmaatje.
+// Snazzle v144.3 — Professor Kwak Leesmaatje.
 // Veilige lokale reacties na een gelezen boek. Geen vrije chat en geen externe AI-call.
-// De UI is bewust zo opgezet dat later een beveiligde AI-generator dezelfde plek kan voeden.
+// De standaard browserstem is bewust uitgeschakeld; later kan hier een vaste neural Snazzle-stem komen.
 
-const VERSION='144.2.0';
+const VERSION='144.3.0';
 const $=(s,r=document)=>r.querySelector(s);
 let pending=null;
-let speaking=false;
 
 function installStyles(){
   if($('#snBiebBuddyStyles144')) return;
@@ -23,10 +22,10 @@ function installStyles(){
     .sn-bieb-buddy-say144{margin-top:14px;padding:14px;border-radius:17px;background:#fff9e5;border:2px solid #cba35c;font-size:14px;line-height:1.48;font-weight:820}
     .sn-bieb-buddy-mission144{margin-top:10px;padding:13px;border-radius:17px;background:linear-gradient(135deg,#315f43,#244a35);color:#fff;border:2px solid #6f955e;box-shadow:0 4px 0 #173a29}
     .sn-bieb-buddy-mission144 small{display:block;color:#f5d979;font-size:9px;font-weight:1000;text-transform:uppercase;letter-spacing:.8px}.sn-bieb-buddy-mission144 strong{display:block;margin-top:4px;font-size:14px;line-height:1.38}
-    .sn-bieb-buddy-actions144{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.sn-bieb-buddy-actions144 button{min-height:47px;border:0;border-radius:13px;font-weight:1000;font-size:11px}.sn-bieb-buddy-speak144{background:#6553a5;color:#fff;box-shadow:0 3px 0 #413476}.sn-bieb-buddy-next144{background:#4f8d4c;color:#fff;box-shadow:0 3px 0 #32632f}
+    .sn-bieb-buddy-actions144{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}.sn-bieb-buddy-actions144 button{min-height:47px;border:0;border-radius:13px;font-weight:1000;font-size:11px}.sn-bieb-buddy-next144{background:#4f8d4c;color:#fff;box-shadow:0 3px 0 #32632f}
     .sn-bieb-buddy-library144{width:100%;min-height:46px;margin-top:8px;border:2px solid #a87838;border-radius:13px;background:#f3c951;color:#382819;font-weight:1000;font-size:11px;box-shadow:0 3px 0 #a16a2f}
     .sn-bieb-buddy-note144{margin:9px 2px 0;font-size:9px;line-height:1.35;color:#765d3e;font-weight:740;text-align:center}
-    @media(max-width:380px){.sn-bieb-buddy-card144{padding:14px}.sn-bieb-buddy-top144{grid-template-columns:58px 1fr 40px}.sn-bieb-buddy-avatar144{width:58px;height:58px;font-size:36px}.sn-bieb-buddy-avatar144:after{font-size:25px;left:16px;top:12px}.sn-bieb-buddy-actions144{grid-template-columns:1fr}}
+    @media(max-width:380px){.sn-bieb-buddy-card144{padding:14px}.sn-bieb-buddy-top144{grid-template-columns:58px 1fr 40px}.sn-bieb-buddy-avatar144{width:58px;height:58px;font-size:36px}.sn-bieb-buddy-avatar144:after{font-size:25px;left:16px;top:12px}}
   `;
   document.head.appendChild(style);
 }
@@ -48,7 +47,6 @@ function ensureUI(){
       <div class="sn-bieb-buddy-say144" id="snBiebBuddySay144" aria-live="polite"></div>
       <div class="sn-bieb-buddy-mission144"><small>Jouw volgende missie</small><strong id="snBiebBuddyMission144"></strong></div>
       <div class="sn-bieb-buddy-actions144">
-        <button class="sn-bieb-buddy-speak144" id="snBiebBuddySpeak144" type="button">🔊 Luister naar Kwak</button>
         <button class="sn-bieb-buddy-next144" id="snBiebBuddyDone144" type="button">👍 Missie onthouden</button>
       </div>
       <button class="sn-bieb-buddy-library144" id="snBiebBuddyLibrary144" type="button">📍 Zoek een Bieb dichtbij</button>
@@ -57,7 +55,6 @@ function ensureUI(){
   document.body.appendChild(overlay);
   $('#snBiebBuddyClose144').addEventListener('click',closeBuddy);
   $('#snBiebBuddyDone144').addEventListener('click',closeBuddy);
-  $('#snBiebBuddySpeak144').addEventListener('click',speakCurrent);
   $('#snBiebBuddyLibrary144').addEventListener('click',openNearbyLibrary);
   overlay.addEventListener('click',e=>{if(e.target===overlay)closeBuddy();});
 }
@@ -97,30 +94,7 @@ function buildReaction(book,total){
   return {say:`${first} ${second}`,mission};
 }
 
-function stopSpeaking(){
-  if(!('speechSynthesis' in window)) return;
-  try{window.speechSynthesis.cancel();}catch{}
-  speaking=false;
-  const btn=$('#snBiebBuddySpeak144');if(btn)btn.textContent='🔊 Luister naar Kwak';
-}
-
-function speakCurrent(){
-  if(!pending||!('speechSynthesis' in window)) return;
-  if(speaking){stopSpeaking();return;}
-  const content=buildReaction(pending.book,pending.total);
-  try{
-    window.speechSynthesis.cancel();
-    const utterance=new SpeechSynthesisUtterance(`${content.say} Jouw volgende missie: ${content.mission}`);
-    utterance.lang='nl-NL';utterance.rate=.94;utterance.pitch=1.08;
-    utterance.onend=()=>stopSpeaking();utterance.onerror=()=>stopSpeaking();
-    speaking=true;
-    const btn=$('#snBiebBuddySpeak144');if(btn)btn.textContent='■ Stop met praten';
-    window.speechSynthesis.speak(utterance);
-  }catch{stopSpeaking();}
-}
-
 function closeBuddy(){
-  stopSpeaking();
   const overlay=$('#snBiebBuddy144');if(!overlay)return;
   overlay.classList.remove('show');overlay.setAttribute('aria-hidden','true');
   pending=null;
@@ -133,7 +107,7 @@ function showBuddy(detail){
   $('#snBiebBuddySay144').textContent=content.say;
   $('#snBiebBuddyMission144').textContent=content.mission;
   const overlay=$('#snBiebBuddy144');overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');
-  $('#snBiebBuddySpeak144')?.focus();
+  $('#snBiebBuddyDone144')?.focus();
 }
 
 function showAfterReward(detail){
