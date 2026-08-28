@@ -59,21 +59,30 @@ jobs:
           set -euo pipefail
           SA_JSON="${FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT:-${FIREBASE_SERVICE_ACCOUNT:-}}"
 
-          if [ -n "$SA_JSON" ]; then
-            CREDS="$RUNNER_TEMP/firebase-service-account.json"
-            printf '%s' "$SA_JSON" > "$CREDS"
-            chmod 600 "$CREDS"
-            export GOOGLE_APPLICATION_CREDENTIALS="$CREDS"
-            firebase deploy --project snazzle-hunt --only firestore:rules,functions --non-interactive
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            firebase deploy --project snazzle-hunt --only firestore:rules,functions --non-interactive --token "$FIREBASE_TOKEN"
-          else
-            echo 'Geen Firebase deployment credential gevonden.' >&2
-            echo 'Voeg een repository secret FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT, FIREBASE_SERVICE_ACCOUNT of FIREBASE_TOKEN toe.' >&2
-            exit 1
-          fi
+          deploy_with_auth() {
+            if [ -n "$SA_JSON" ]; then
+              CREDS="$RUNNER_TEMP/firebase-service-account.json"
+              printf '%s' "$SA_JSON" > "$CREDS"
+              chmod 600 "$CREDS"
+              export GOOGLE_APPLICATION_CREDENTIALS="$CREDS"
+              firebase deploy --project snazzle-hunt --only "$1" --non-interactive
+            elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+              firebase deploy --project snazzle-hunt --only "$1" --non-interactive --token "$FIREBASE_TOKEN"
+            else
+              echo 'Geen Firebase deployment credential gevonden.' >&2
+              echo 'Voeg een repository secret FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT, FIREBASE_SERVICE_ACCOUNT of FIREBASE_TOKEN toe.' >&2
+              exit 1
+            fi
+          }
+
+          # Kritische volgorde: publiceer eerst de Functions die MFA en privacy ondersteunen.
+          # Pas wanneer dat volledig slaagt mogen de strengere Firestore-regels live gaan.
+          # Zo kan een mislukte Functions-deploy nooit Beheer blokkeren.
+          deploy_with_auth functions
+          deploy_with_auth firestore:rules
 
 # Security deploy trigger: 2026-08-25 Snazzle Nieuws v46
 # Security redeploy trigger: 2026-08-25 public Snazzle-look v64
 # Luisterverhalen permission redeploy: 2026-08-25 19:45
 # Security hardening v141: MFA, meetup privacy and strict photo validation
+# Safety order v141: Functions must succeed before stricter Firestore rules are published
