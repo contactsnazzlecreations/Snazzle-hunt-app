@@ -1,6 +1,6 @@
-// Snazzle Hunt v144 — stabiele compacte app + directe luisterverhalen-knop.
+// Snazzle Hunt v145 — stabiele compacte app + veilige luisterverhalen-knop.
 
-const runtimeVersion = '20260829-v144-listen-direct-menu';
+const runtimeVersion = '20260829-v145-menu-freeze-fix';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
