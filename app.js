@@ -1,6 +1,6 @@
-// Snazzle Hunt v157 — stabiele basis + directe Spel, Bieb en Luisterverhalen-knoppen.
+// Snazzle Hunt v161 — betrouwbare Luisterverhalen-auth + directe Spel, Bieb en Luisterverhalen-knoppen.
 
-const runtimeVersion = '20260829-v157-play-menu-direct';
+const runtimeVersion = '20260830-v161-listen-auth-fix';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
