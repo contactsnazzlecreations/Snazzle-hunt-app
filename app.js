@@ -1,6 +1,6 @@
-// Snazzle Hunt v151 — stabiele compacte app + mobiele Luisterverhalen-openfix.
+// Snazzle Hunt v152 — stabiele compacte app + directe Mijn beloningen-openfix.
 
-const runtimeVersion = '20260829-v151-listen-mobile-open';
+const runtimeVersion = '20260829-v152-rewards-mobile-open';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -212,6 +212,61 @@ Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
       refreshLocalStyles();
     });
   }catch(err){console.warn('Snazzle shop loader',err);}
+})();
+
+// v152: open Mijn beloningen rechtstreeks op het Nest-scherm.
+// Dit omzeilt de mobiele race tussen de verborgen collectieknop en het tabblad.
+(function installRewardsMenuFix(){
+  if(window.__snazzleRewardsMenuFixV152) return;
+  window.__snazzleRewardsMenuFixV152=true;
+
+  const showToast=message=>{
+    const toast=document.getElementById('toast');
+    if(!toast) return;
+    toast.textContent=message;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2600);
+  };
+
+  const forceOpenRewards=()=>{
+    document.getElementById('quickMenuClose')?.click();
+    let tries=0;
+    const open=()=>{
+      tries++;
+      const sheet=document.getElementById('collectionSheet');
+      const nest=document.getElementById('collectionNest');
+      if(sheet&&nest){
+        const nestTab=sheet.querySelector('[data-collection-tab="nest"]');
+        try{nestTab?.click();}catch{}
+        sheet.querySelectorAll('[data-collection-tab]').forEach(btn=>{
+          btn.classList.toggle('on',btn.dataset.collectionTab==='nest');
+        });
+        sheet.querySelectorAll('.collection-section').forEach(section=>section.classList.remove('on'));
+        nest.classList.add('on');
+        sheet.classList.add('show');
+        const panel=sheet.querySelector('.panel');
+        if(panel) panel.scrollTop=0;
+        return;
+      }
+      if(tries===1){
+        try{
+          (document.querySelector('#quickMenuPanel .quick-menu-list > [data-snazzle-collection]') ||
+           document.querySelector('.collection-home-card'))?.click();
+        }catch{}
+      }
+      if(tries<50) setTimeout(open,100);
+      else showToast('Mijn beloningen kon nog niet openen. Probeer het nog eens.');
+    };
+    setTimeout(open,70);
+  };
+
+  document.addEventListener('click',event=>{
+    const button=event.target?.closest?.('#snRewardsMenuV129');
+    if(!button) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    forceOpenRewards();
+  },true);
 })();
 
 setTimeout(()=>{refreshLocalStyles();headObserver.disconnect();},12000);
