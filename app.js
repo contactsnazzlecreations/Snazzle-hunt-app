@@ -1,6 +1,6 @@
-// Snazzle Hunt v145 — stabiele compacte app + veilige luisterverhalen-knop.
+// Snazzle Hunt v146 — stabiele compacte app + robuuste luisteraudio.
 
-const runtimeVersion = '20260829-v145-menu-freeze-fix';
+const runtimeVersion = '20260829-v146-listen-audio-retry-fix';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
