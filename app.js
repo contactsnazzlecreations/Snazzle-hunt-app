@@ -1,6 +1,6 @@
-// Snazzle Hunt v156 — stabiele basis + duidelijk gescheiden Mijn kaarten en Mijn beloningen.
+// Snazzle Hunt v157 — stabiele basis + directe Spel, Bieb en Luisterverhalen-knoppen.
 
-const runtimeVersion = '20260829-v156-separated-cards-rewards';
+const runtimeVersion = '20260829-v157-play-menu-direct';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -126,7 +126,8 @@ const fastBundles=[
     './snazzle-listen-audio-fix-v143.js',
     './snazzle-bieb-v73.js',
     './snazzle-bieb-cloud-v74.js',
-    './snazzle-bieb-locations-v77.js'
+    './snazzle-bieb-locations-v77.js',
+    './snazzle-play-menu-direct-v157.js'
   ],
   ['./snazzle-news-v46.js']
 ];
