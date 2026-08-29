@@ -1,6 +1,6 @@
-// Snazzle Hunt v149 — stabiele compacte app + één Luisterverhalen-menuoptie.
+// Snazzle Hunt v150 — stabiele compacte app + herstellende luisterverhalenlijst.
 
-const runtimeVersion = '20260829-v149-single-listen-menu';
+const runtimeVersion = '20260829-v150-listen-list-refresh';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -119,6 +119,7 @@ const fastBundles=[
   ],
   [
     './snazzle-listen-stories-v63.js',
+    './snazzle-listen-list-fix-v150.js',
     './snazzle-listen-menu-fix-v142.js',
     './snazzle-listen-direct-menu-v144.js',
     './snazzle-listen-audio-fix-v143.js',
