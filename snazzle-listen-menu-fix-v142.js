@@ -3,7 +3,10 @@
 // browsers kan de verborgen bronknop daardoor niet betrouwbaar openen. Deze fix vangt
 // de zichtbare menu-keuze direct af en opent de luistermodule via zijn publieke API.
 
-const VERSION='142.1.0';
+const VERSION='142.2.0';
+
+// Laad de aparte mobiele audiofix met een eigen cache-buster.
+import(`./snazzle-listen-audio-fix-v143.js?v=${Date.now()}`).catch(err=>console.error('Luisteraudio fix kon niet laden',err));
 
 function isListenMenuButton(button){
   if(!(button instanceof Element)) return false;
