@@ -1,6 +1,6 @@
-// Snazzle Hunt v148 — stabiele compacte app + direct streamende luisteraudio.
+// Snazzle Hunt v149 — stabiele compacte app + één Luisterverhalen-menuoptie.
 
-const runtimeVersion = '20260829-v148-listen-stream-start';
+const runtimeVersion = '20260829-v149-single-listen-menu';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
