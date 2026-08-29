@@ -1,6 +1,6 @@
-// Snazzle Hunt v146 — stabiele compacte app + robuuste luisteraudio.
+// Snazzle Hunt v147 — stabiele compacte app + vernieuwde luisteraudio-loader.
 
-const runtimeVersion = '20260829-v146-listen-audio-retry-fix';
+const runtimeVersion = '20260829-v147-listen-query-fix';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
