@@ -1,7 +1,8 @@
-// Snazzle v144 — Luisterverhalen als vaste directe knop in het compacte menu.
-// Geen spiegelknop meer: de zichtbare knop opent rechtstreeks de luistermodule.
+// Snazzle v145 — veilige directe Luisterverhalen-knop zonder observer-lus.
+// De vorige v144 observeerde de hele pagina en kon dezelfde knop steeds opnieuw verplaatsen,
+// waardoor mobiele browsers konden vastlopen. Deze versie installeert alleen wanneer nodig.
 
-const VERSION='144.0.0';
+const VERSION='145.0.0';
 
 function textOf(el){
   return String(`${el?.id||''} ${el?.getAttribute?.('aria-label')||''} ${el?.textContent||''}`).toLowerCase();
@@ -12,8 +13,8 @@ function toast(message){
   if(!el)return;
   el.textContent=message;
   el.classList.add('show');
-  clearTimeout(window.__snListenDirectToast144);
-  window.__snListenDirectToast144=setTimeout(()=>el.classList.remove('show'),2600);
+  clearTimeout(window.__snListenDirectToast145);
+  window.__snListenDirectToast145=setTimeout(()=>el.classList.remove('show'),2600);
 }
 
 function closeMenu(){
@@ -41,7 +42,7 @@ function installDirectListenButton(){
   const play=root?.querySelector('[data-options="play"]');
   if(!play)return false;
 
-  // Verwijder uitsluitend de gespiegeld weergegeven luisterverhalen-knop.
+  // Verwijder alleen de oude zichtbare spiegel van Luisterverhalen.
   play.querySelectorAll('.sn-main-proxy').forEach(proxy=>{
     if(/luisterverhalen|luister verhalen|snlistenmenuv63/.test(textOf(proxy))) proxy.remove();
   });
@@ -62,20 +63,24 @@ function installDirectListenButton(){
     });
   }
 
-  const before=[...play.children].find(el=>el!==button && Number(el.dataset.rank||999)>30);
-  if(before)play.insertBefore(button,before);else play.appendChild(button);
+  // Alleen invoegen/verplaatsen als de knop nog niet op de juiste plek staat.
+  const ordered=[...play.children].filter(el=>el!==button);
+  const before=ordered.find(el=>Number(el.dataset.rank||999)>30);
+  if(before){
+    if(button.parentElement!==play || button.nextElementSibling!==before) play.insertBefore(button,before);
+  }else if(button.parentElement!==play || button!==play.lastElementChild){
+    play.appendChild(button);
+  }
   return true;
 }
 
 function boot(){
-  installDirectListenButton();
-  let queued=false;
-  const observer=new MutationObserver(()=>{
-    if(queued)return;
-    queued=true;
-    queueMicrotask(()=>{queued=false;installDirectListenButton();});
-  });
-  observer.observe(document.body,{childList:true,subtree:true});
+  if(installDirectListenButton())return;
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    if(installDirectListenButton()||tries>=50)clearInterval(timer);
+  },120);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
