@@ -1,6 +1,6 @@
-// Snazzle Hunt v154 — terug op stabiele basis + veilige directe Mijn beloningen-fix.
+// Snazzle Hunt v155 — stabiele basis + veilige directe Mijn kaarten en beloningen-fix.
 
-const runtimeVersion = '20260829-v154-stable-rewards-direct';
+const runtimeVersion = '20260829-v155-stable-collection-direct';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
