@@ -1,6 +1,6 @@
-// Snazzle Hunt v143 — stabiele compacte app + mobiele luisteraudio-fix.
+// Snazzle Hunt v144 — stabiele compacte app + directe luisterverhalen-knop.
 
-const runtimeVersion = '20260829-v143-listen-audio-fix';
+const runtimeVersion = '20260829-v144-listen-direct-menu';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -120,6 +120,7 @@ const fastBundles=[
   [
     './snazzle-listen-stories-v63.js',
     './snazzle-listen-menu-fix-v142.js',
+    './snazzle-listen-direct-menu-v144.js',
     './snazzle-listen-audio-fix-v143.js',
     './snazzle-bieb-v73.js',
     './snazzle-bieb-cloud-v74.js',
