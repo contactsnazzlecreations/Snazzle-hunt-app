@@ -1,6 +1,6 @@
-// Snazzle Hunt v150 — stabiele compacte app + herstellende luisterverhalenlijst.
+// Snazzle Hunt v151 — stabiele compacte app + mobiele Luisterverhalen-openfix.
 
-const runtimeVersion = '20260829-v150-listen-list-refresh';
+const runtimeVersion = '20260829-v151-listen-mobile-open';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
