@@ -1,6 +1,6 @@
-// Snazzle Hunt v161 — betrouwbare Luisterverhalen-auth + directe Spel, Bieb en Luisterverhalen-knoppen.
+// Snazzle Hunt v162 — Luisterverhalen via betrouwbare Firestore HTTPS-route.
 
-const runtimeVersion = '20260830-v161-listen-auth-fix';
+const runtimeVersion = '20260830-v162-listen-https';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
