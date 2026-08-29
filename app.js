@@ -1,6 +1,6 @@
-// Snazzle Hunt v152 — stabiele compacte app + directe Mijn beloningen-openfix.
+// Snazzle Hunt v153 — stabiele compacte app + harde mobiele Mijn beloningen-openfix.
 
-const runtimeVersion = '20260829-v152-rewards-mobile-open';
+const runtimeVersion = '20260829-v153-rewards-hardfix';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -51,6 +51,15 @@ function installMobilePerformanceMode(){
   document.head.appendChild(style);
 }
 installMobilePerformanceMode();
+
+// De collectie moet boven het grote Snazzle-menu kunnen openen.
+(function installCollectionLayerFix(){
+  if(document.getElementById('snCollectionLayerFixV153')) return;
+  const style=document.createElement('style');
+  style.id='snCollectionLayerFixV153';
+  style.textContent='#collectionSheet{z-index:6501!important}';
+  document.head.appendChild(style);
+})();
 
 for(const href of ['./snazzle-magic-theme.css','./snazzle-enchanted-layer.css','./snazzle-professional-v53.css','./snazzle-final-polish-v59.css']){
   const l=document.createElement('link');
@@ -214,59 +223,99 @@ Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   }catch(err){console.warn('Snazzle shop loader',err);}
 })();
 
-// v152: open Mijn beloningen rechtstreeks op het Nest-scherm.
-// Dit omzeilt de mobiele race tussen de verborgen collectieknop en het tabblad.
-(function installRewardsMenuFix(){
-  if(window.__snazzleRewardsMenuFixV152) return;
-  window.__snazzleRewardsMenuFixV152=true;
+// v153: harde, directe mobiele route voor Mijn beloningen.
+// Werkt ook als de collectie-module nog net aan het laden is en opent boven het menu.
+(function installRewardsMenuHardFix(){
+  if(window.__snazzleRewardsMenuHardFixV153) return;
+  window.__snazzleRewardsMenuHardFixV153=true;
+  let lastOpen=0;
 
   const showToast=message=>{
     const toast=document.getElementById('toast');
     if(!toast) return;
     toast.textContent=message;
     toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'),2600);
+    clearTimeout(window.__snRewardsToastV153);
+    window.__snRewardsToastV153=setTimeout(()=>toast.classList.remove('show'),2600);
   };
 
-  const forceOpenRewards=()=>{
-    document.getElementById('quickMenuClose')?.click();
+  const closeQuickMenuHard=()=>{
+    const overlay=document.getElementById('quickMenuOverlay');
+    if(overlay){
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden','true');
+      overlay.style.pointerEvents='none';
+      setTimeout(()=>overlay.style.removeProperty('pointer-events'),350);
+    }
+    document.getElementById('quickMenuBtn')?.setAttribute('aria-expanded','false');
+    document.documentElement.style.overflow='';
+    document.body.style.overflow='';
+  };
+
+  const activateNest=sheet=>{
+    const nest=sheet.querySelector('#collectionNest') || document.getElementById('collectionNest');
+    if(!nest) return false;
+    const nestTab=sheet.querySelector('[data-collection-tab="nest"]');
+    try{nestTab?.click();}catch{}
+    sheet.querySelectorAll('[data-collection-tab]').forEach(btn=>{
+      btn.classList.toggle('on',btn.dataset.collectionTab==='nest');
+      btn.setAttribute('aria-selected',btn.dataset.collectionTab==='nest'?'true':'false');
+    });
+    sheet.querySelectorAll('.collection-section').forEach(section=>section.classList.remove('on'));
+    nest.classList.add('on');
+    sheet.style.setProperty('z-index','6501','important');
+    sheet.classList.add('show');
+    sheet.setAttribute('aria-hidden','false');
+    const panel=sheet.querySelector('.panel');
+    if(panel) panel.scrollTop=0;
+    return true;
+  };
+
+  const forceOpenRewards=async()=>{
+    const now=Date.now();
+    if(now-lastOpen<450) return;
+    lastOpen=now;
+    closeQuickMenuHard();
+
+    // Zorg dat de collectie zelf geladen is, ook als de gebruiker heel snel op de knop drukt.
+    if(!document.getElementById('collectionSheet')){
+      await safeImport('./snazzle-collection.js');
+    }
+
+    const source=document.querySelector('#quickMenuPanel .quick-menu-list > [data-snazzle-collection]') ||
+      document.querySelector('.collection-home-card');
+    try{source?.click();}catch{}
+
     let tries=0;
-    const open=()=>{
+    const openWhenReady=()=>{
       tries++;
       const sheet=document.getElementById('collectionSheet');
-      const nest=document.getElementById('collectionNest');
-      if(sheet&&nest){
-        const nestTab=sheet.querySelector('[data-collection-tab="nest"]');
-        try{nestTab?.click();}catch{}
-        sheet.querySelectorAll('[data-collection-tab]').forEach(btn=>{
-          btn.classList.toggle('on',btn.dataset.collectionTab==='nest');
-        });
-        sheet.querySelectorAll('.collection-section').forEach(section=>section.classList.remove('on'));
-        nest.classList.add('on');
-        sheet.classList.add('show');
-        const panel=sheet.querySelector('.panel');
-        if(panel) panel.scrollTop=0;
-        return;
-      }
-      if(tries===1){
-        try{
-          (document.querySelector('#quickMenuPanel .quick-menu-list > [data-snazzle-collection]') ||
-           document.querySelector('.collection-home-card'))?.click();
-        }catch{}
-      }
-      if(tries<50) setTimeout(open,100);
-      else showToast('Mijn beloningen kon nog niet openen. Probeer het nog eens.');
+      if(sheet && activateNest(sheet)) return;
+      if(tries<60) setTimeout(openWhenReady,75);
+      else showToast('Mijn beloningen kon niet laden. Open de app opnieuw en probeer nog één keer.');
     };
-    setTimeout(open,70);
+    setTimeout(openWhenReady,20);
   };
 
-  document.addEventListener('click',event=>{
-    const button=event.target?.closest?.('#snRewardsMenuV129');
-    if(!button) return;
+  const isRewardsButton=target=>{
+    const button=target?.closest?.('button');
+    if(!button || !button.closest('#snMainMenuV129')) return false;
+    if(button.id==='snRewardsMenuV129') return true;
+    return /mijn\s+beloningen/i.test(button.textContent||'');
+  };
+
+  const intercept=event=>{
+    if(!isRewardsButton(event.target)) return;
     event.preventDefault();
+    event.stopPropagation();
     event.stopImmediatePropagation();
     forceOpenRewards();
-  },true);
+  };
+
+  // pointerup vangt Android/PWA-taps eerder af; click blijft als universele fallback.
+  document.addEventListener('pointerup',intercept,true);
+  document.addEventListener('click',intercept,true);
+  window.__snazzleOpenRewards=forceOpenRewards;
 })();
 
 setTimeout(()=>{refreshLocalStyles();headObserver.disconnect();},12000);
