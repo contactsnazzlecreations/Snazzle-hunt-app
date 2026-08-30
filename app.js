@@ -1,6 +1,6 @@
-// Snazzle Hunt v166 — zonekaarttegels zichtbaar en stabiel op mobiel.
+// Snazzle Hunt v167 — stabiele zonekaart zonder afbeeldingsconflict.
 
-const runtimeVersion = '20260830-v166-zone-map-tiles';
+const runtimeVersion = '20260830-v167-zone-map-stable';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
