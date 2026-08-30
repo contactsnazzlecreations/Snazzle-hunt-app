@@ -1,6 +1,6 @@
-// Snazzle Hunt v170 — AR-beheer direct laden zodat het beheermenu compleet is.
+// Snazzle Hunt v171 — mobiele Snazzle-zones knop robuust openen.
 
-const runtimeVersion = '20260830-v170-ar-admin-direct';
+const runtimeVersion = '20260830-v171-zone-button-fix';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -51,6 +51,19 @@ function installMobilePerformanceMode(){
   document.head.appendChild(style);
 }
 installMobilePerformanceMode();
+
+// Mobiele hotfix: sommige Android-webviews sturen bij deze knop geen betrouwbare click door.
+// Pointer-up opent daarom direct de nieuwe zonekaart, met de AR-wereldkaart als veilige fallback.
+document.addEventListener('pointerup',e=>{
+  const btn=e.target?.closest?.('#snArZoneOpen');
+  if(!btn)return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  const zoneApi=window.SnazzleZoneMapV169;
+  if(zoneApi?.open){zoneApi.open(e);return;}
+  const worldApi=window.SnazzleArWorldV85;
+  if(worldApi?.openZones)worldApi.openZones(e);
+},true);
 
 for(const href of ['./snazzle-magic-theme.css','./snazzle-enchanted-layer.css','./snazzle-professional-v53.css','./snazzle-final-polish-v59.css']){
   const l=document.createElement('link');
