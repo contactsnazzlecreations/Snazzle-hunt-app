@@ -1,6 +1,6 @@
-// Snazzle Hunt v167 — stabiele zonekaart zonder afbeeldingsconflict.
+// Snazzle Hunt v168 — zonesknop robuust en zonekaart stabiel op mobiel.
 
-const runtimeVersion = '20260830-v167-zone-map-stable';
+const runtimeVersion = '20260830-v168-zone-button-stable';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
