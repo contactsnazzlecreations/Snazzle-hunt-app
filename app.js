@@ -1,15 +1,26 @@
-// Snazzle Hunt v176 — snelle AR-start, minder dubbele handlers en directe mobiele respons.
+// Snazzle Hunt v177 — AR krijgt echte voorrang; achtergrondmodules pauzeren tijdens AR.
 
-const runtimeVersion='20260830-v176-ar-fast-start';
+const runtimeVersion='20260830-v177-ar-priority';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
+window.__snazzleArPriority=false;
 
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function safeImport(path){
   try{return await import(fresh(path));}
   catch(err){console.error(`Snazzle module kon niet laden: ${path}`,err);return null;}
 }
-async function loadSequence(paths){for(const path of paths)await safeImport(path);}
+async function waitIfArPriority(){
+  let guard=0;
+  while(window.__snazzleArPriority&&guard<240){await sleep(250);guard++;}
+}
+async function loadSequence(paths){
+  for(const path of paths){
+    await waitIfArPriority();
+    await safeImport(path);
+  }
+}
 const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
 const idle=()=>new Promise(resolve=>{
   if('requestIdleCallback' in window)requestIdleCallback(()=>resolve(),{timeout:650});
@@ -17,9 +28,9 @@ const idle=()=>new Promise(resolve=>{
 });
 
 function installMobilePerformanceMode(){
-  if(document.getElementById('snFastMobileV176'))return;
+  if(document.getElementById('snFastMobileV177'))return;
   const style=document.createElement('style');
-  style.id='snFastMobileV176';
+  style.id='snFastMobileV177';
   style.textContent=`
     @media (max-width:700px),(pointer:coarse){
       body{animation:none!important;background-size:100% 100%!important}
@@ -65,7 +76,7 @@ function suppressLateStartupOverlays(){
 suppressLateStartupOverlays();
 window.__snazzleReleaseBoot=()=>{};
 
-// Eerst alleen de lichte stabiliteitslaag en de kern van de app.
+// Alleen de lichte stabiliteitslaag en app-kern eerst.
 await Promise.all([
   safeImport('./snazzle-runtime-stability-v71.js'),
   safeImport('./snazzle-image-stability-v72.js')
@@ -74,8 +85,7 @@ await import(fresh('./app-core.js'));
 suppressLateStartupOverlays();
 await nextPaint();
 
-// AR krijgt vanaf v176 voorrang. Daardoor hoeft de gebruiker niet meer te wachten
-// tot alle spellen, kaarten, shop- en beheermodules geladen zijn.
+// AR wordt volledig opgebouwd vóór de overige zware functies.
 await safeImport('./snazzle-ar-v80.js');
 await Promise.all([
   safeImport('./snazzle-ar-intro-close-v175.js'),
@@ -85,7 +95,15 @@ await safeImport('./snazzle-ar-world-v85.js');
 await safeImport('./snazzle-zone-map-v169.js');
 await safeImport('./snazzle-ar-safety-pass-v124.js');
 
-// Beheer en de primaire navigatie daarna direct beschikbaar maken.
+// Houd automatisch bij of de gebruiker in een AR-scherm zit.
+function syncArPriority(){
+  window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show');
+}
+const arPriorityObserver=new MutationObserver(syncArPriority);
+if(document.body)arPriorityObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+syncArPriority();
+
+// Primaire navigatie/beheer beschikbaar maken; daarna krijgt AR een korte exclusieve startperiode.
 await Promise.all([
   safeImport('./snazzle-admin-mfa-v141.js'),
   safeImport('./snazzle-ar-admin-display-v84.js'),
@@ -95,8 +113,8 @@ await Promise.all([
 ]);
 
 (function installHeroQuack(){
-  const hero=document.getElementById('hero');if(!hero||hero.dataset.snQuack176)return;
-  hero.dataset.snQuack176='1';
+  const hero=document.getElementById('hero');if(!hero||hero.dataset.snQuack177)return;
+  hero.dataset.snQuack177='1';
   let audioContext=null;
   const hasSnazzleHero=()=>getComputedStyle(hero).backgroundImage.includes('url(');
   const playQuack=()=>{
@@ -111,7 +129,10 @@ await Promise.all([
   hero.addEventListener('click',()=>{if(hasSnazzleHero())playQuack();});
 })();
 
-// Belangrijke gewone functies parallel laden zonder de AR-interface te blokkeren.
+// Geef de gebruiker enkele seconden waarin AR geen concurrentie krijgt van tientallen imports.
+await sleep(3200);
+await waitIfArPriority();
+
 const fastBundles=[
   [
     './snazzle-auto-update-v51.js',
@@ -142,8 +163,8 @@ const fastBundles=[
 Promise.allSettled(fastBundles.map(loadSequence)).then(refreshLocalStyles);
 
 await idle();
+await waitIfArPriority();
 
-// Zwaardere en minder tijdkritische functies pas daarna op de achtergrond.
 const backgroundBundles=[
   [
     './snazzle-card-system-v2.js',
@@ -201,6 +222,7 @@ const backgroundBundles=[
 Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   refreshLocalStyles();
   try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
+  await waitIfArPriority();
   setTimeout(()=>{
     safeImport('./snazzle-ar-admin-v83.js');
     safeImport('./snazzle-ar-admin-display-v84.js');
@@ -215,6 +237,7 @@ Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
       const auth=getAuth();let shopLoaded=false;
       onAuthStateChanged(auth,async user=>{
         if(!user||shopLoaded)return;shopLoaded=true;
+        await waitIfArPriority();
         await safeImport('./shop.js');
         await safeImport('./shop-email-settings.js');
         refreshLocalStyles();
