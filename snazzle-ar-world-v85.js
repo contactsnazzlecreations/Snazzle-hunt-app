@@ -1,5 +1,5 @@
-// Snazzle AR World v176 — snelle, begrensde GPS + camera start op mobiel.
-// Exacte AR-punten blijven alleen tijdens de actieve zoekactie beschikbaar.
+// Snazzle AR World v177 — camera direct zichtbaar; snelle eerste GPS-fix, daarna nauwkeuriger volgen.
+// Exacte AR-punten worden alleen in het geheugen gebruikt tijdens de actieve app-sessie.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
@@ -27,7 +27,7 @@ function waitForUser(){
   return new Promise(resolve=>{
     let done=false;
     const off=onAuthStateChanged(auth,u=>{if(u&&!done){done=true;off();resolve(u);}});
-    setTimeout(()=>{if(!done){done=true;off();resolve(auth.currentUser);}},2200);
+    setTimeout(()=>{if(!done){done=true;off();resolve(auth.currentUser);}},1800);
   });
 }
 function dist(a,b){
@@ -41,11 +41,11 @@ function villagePoints(){const village=localStorage.getItem('snazzleVillage')||'
 
 async function loadWorld(force=false){
   const now=Date.now();
-  if(!force&&worldLoadedAt&&now-worldLoadedAt<45000)return world;
+  if(!force&&worldLoadedAt&&now-worldLoadedAt<60000)return world;
   if(!force&&worldPromise)return worldPromise;
   worldPromise=(async()=>{
     await waitForUser();
-    const snap=await Promise.race([getDoc(WORLD_DOC),timeoutPromise(5500,'De AR-punten laden duurt te lang.')]);
+    const snap=await Promise.race([getDoc(WORLD_DOC),timeoutPromise(4500,'De AR-punten laden duurt te lang.')]);
     const data=snap.exists()?snap.data():{};
     world=Array.isArray(data.points)?data.points.filter(p=>p&&p.active!==false&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))):[];
     worldLoadedAt=Date.now();
@@ -54,13 +54,15 @@ async function loadWorld(force=false){
   try{return await worldPromise;}finally{worldPromise=null;}
 }
 
-function geoOnceFast(){
+// Eerste locatie hoeft nog niet centimeter-nauwkeurig te zijn. Android geeft deze veel sneller.
+// Zodra AR open is, neemt de high-accuracy watch het automatisch over.
+function geoQuick(){
   return new Promise((resolve,reject)=>{
     if(!navigator.geolocation)return reject(new Error('GPS wordt niet ondersteund op dit toestel.'));
     navigator.geolocation.getCurrentPosition(resolve,e=>{
-      const msg=e.code===1?'Locatietoestemming is geweigerd. Zet locatie aan voor Snazzle AR.':e.code===3?'GPS reageert te langzaam. Ga even buiten staan en probeer opnieuw.':'Je locatie kon niet worden bepaald.';
+      const msg=e.code===1?'Locatietoestemming is geweigerd. Zet locatie aan voor Snazzle AR.':e.code===3?'GPS reageert te langzaam. Controleer of locatie aan staat en probeer opnieuw.':'Je locatie kon niet worden bepaald.';
       reject(new Error(msg));
-    },{enableHighAccuracy:true,timeout:7500,maximumAge:30000});
+    },{enableHighAccuracy:false,timeout:4000,maximumAge:120000});
   });
 }
 
@@ -71,8 +73,10 @@ function cameraFast(){
     const timer=setTimeout(()=>{
       if(settled)return;settled=true;
       reject(new Error('Camera reageert te langzaam. Controleer de cameratoestemming en probeer opnieuw.'));
-    },7500);
-    navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:960},height:{ideal:540}},audio:false}).then(s=>{
+    },5000);
+    navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480}},audio:false
+    }).then(s=>{
       if(settled){s.getTracks().forEach(t=>t.stop());return;}
       settled=true;clearTimeout(timer);resolve(s);
     }).catch(err=>{
@@ -125,6 +129,7 @@ function stop(){
   if(watchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(watchId);watchId=null;}
   $('#snArOverlay')?.classList.remove('show');
   setVisible(false);resetPlacementVisual();target=null;armed=false;starting=false;
+  window.__snazzleArPriority=false;
 }
 function update(pos){
   if(!target)return;
@@ -142,42 +147,51 @@ function update(pos){
 }
 function startWatch(){
   if(watchId!==null)navigator.geolocation.clearWatch(watchId);
-  watchId=navigator.geolocation.watchPosition(update,()=>{const b=$('#snArDistance');if(b)b.textContent='GPS-signaal even kwijt… blijf buiten en wacht kort.';},{enableHighAccuracy:true,timeout:12000,maximumAge:1500});
+  watchId=navigator.geolocation.watchPosition(update,()=>{const b=$('#snArDistance');if(b)b.textContent='GPS-signaal even kwijt… blijf buiten en wacht kort.';},{enableHighAccuracy:true,timeout:10000,maximumAge:2000});
 }
 
 async function startReal(e){
   e?.preventDefault?.();e?.stopImmediatePropagation?.();
   if(starting)return;
   starting=true;
-  const btn=$('#snArStart'),status=$('#snArStatus');
+  window.__snazzleArPriority=true;
+  const btn=$('#snArStart'),status=$('#snArStatus'),intro=$('#snArIntro'),overlay=$('#snArOverlay');
+  const hud=$('#snArHudText'),box=$('#snArDistance'),video=$('#snArCamera');
   if(btn)btn.disabled=true;
-  try{
-    if(status)status.textContent='⚡ AR direct klaarzetten…';
-    const points=await loadWorld();
-    const choices=villagePoints();
-    if(!choices.length){if(status)status.textContent=`ℹ️ Er staat nu geen actieve AR Snazzle in ${localStorage.getItem('snazzleVillage')||'dit dorp'}.`;return;}
 
-    if(status)status.textContent='📍 GPS en camera verbinden…';
-    const [pos,camStream]=await Promise.all([geoOnceFast(),cameraFast()]);
-    stream=camStream;
+  // Belangrijk: niet meer op GPS/Firebase wachten voordat de AR-weergave zichtbaar wordt.
+  intro?.classList.remove('show');
+  overlay?.classList.add('show');
+  if(hud)hud.textContent='⚡ Camera direct starten…';
+  if(box)box.textContent='Locatie op de achtergrond bepalen…';
+
+  try{
+    const cameraTask=cameraFast().then(s=>{
+      stream=s;
+      if(video){video.srcObject=s;video.play().catch(()=>{});}
+      if(hud)hud.textContent='📍 Camera klaar · locatie bepalen…';
+      return s;
+    });
+    const gpsTask=geoQuick();
+    const pointsTask=loadWorld();
+
+    const [,pos]=await Promise.all([cameraTask,gpsTask]);
+    await pointsTask;
+    const choices=villagePoints();
+    if(!choices.length)throw new Error(`Er staat nu geen actieve AR Snazzle in ${localStorage.getItem('snazzleVillage')||'dit dorp'}.`);
 
     const here=point(pos);
     target=choices.slice().sort((a,b)=>dist(here,a)-dist(here,b))[0];
     setTargetVisual();setVisible(false);
 
-    const video=$('#snArCamera');
-    if(video){video.srcObject=stream;video.play().catch(()=>{});}
-    $('#snArIntro')?.classList.remove('show');
-    $('#snArOverlay')?.classList.add('show');
-
     const remaining=Math.round(dist(here,{lat:Number(target.lat),lon:Number(target.lon)}));
     const accuracy=Math.round(Number(pos.coords.accuracy||0));
-    const hud=$('#snArHudText'),box=$('#snArDistance');
     if(hud)hud.textContent=`${normalizeRarity(target.rarity)} Snazzle-signaal actief · GPS ±${accuracy} m`;
     if(box)box.textContent=`Nog ongeveer ${remaining} meter… 👣`;
     startWatch();update(pos);
   }catch(err){
     stop();
+    intro?.classList.add('show');
     if(status)status.textContent='⚠️ '+(err?.message||'AR kon niet starten.');
   }finally{
     starting=false;
@@ -209,22 +223,25 @@ function catchReal(e){
 function wire(){
   customizeUi();
   const start=$('#snArStart'),duck=$('#snArCatchDuck'),hint=$('#snArCatchHint'),close=$('#snArClose'),launch=$('#snArLaunch');
-  if(start&&!start.dataset.world176){start.dataset.world176='1';start.addEventListener('click',startReal,true);}
-  for(const b of [duck,hint])if(b&&!b.dataset.world176){b.dataset.world176='1';b.addEventListener('click',catchReal,true);}
-  if(close&&!close.dataset.world176){close.dataset.world176='1';close.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();stop();},true);}
-  if(launch&&!launch.dataset.world176){
-    launch.dataset.world176='1';
-    launch.addEventListener('click',async()=>{
+  if(start&&!start.dataset.world177){start.dataset.world177='1';start.addEventListener('click',startReal,true);}
+  for(const b of [duck,hint])if(b&&!b.dataset.world177){b.dataset.world177='1';b.addEventListener('click',catchReal,true);}
+  if(close&&!close.dataset.world177){close.dataset.world177='1';close.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();stop();},true);}
+  if(launch&&!launch.dataset.world177){
+    launch.dataset.world177='1';
+    launch.addEventListener('click',()=>{
+      window.__snazzleArPriority=true;
       customizeUi();
-      const status=$('#snArStatus');if(status)status.textContent='Actieve AR Snazzles controleren…';
-      try{
-        const points=await loadWorld();const n=villagePoints().length;
-        if(status)status.textContent=n?`✅ ${n} actieve AR Snazzle${n===1?'':'s'} in ${localStorage.getItem('snazzleVillage')||'jouw dorp'} · bekijk de zoekzones op de kaart.`:`ℹ️ Er staat nu geen actieve AR Snazzle in ${localStorage.getItem('snazzleVillage')||'jouw dorp'}.`;
-      }catch(err){if(status)status.textContent='⚠️ '+(err?.message||'AR-punten konden niet worden geladen.');}
+      const status=$('#snArStatus');
+      const known=villagePoints().length;
+      if(status)status.textContent=known?`✅ ${known} actieve AR Snazzle${known===1?'':'s'} klaar.`:'⚡ AR klaar — tik op Zoek AR Snazzle';
+      loadWorld().then(()=>{
+        const n=villagePoints().length;
+        if(status&&$('#snArIntro')?.classList.contains('show'))status.textContent=n?`✅ ${n} actieve AR Snazzle${n===1?'':'s'} in ${localStorage.getItem('snazzleVillage')||'jouw dorp'} · bekijk eventueel eerst de zones.`:`ℹ️ Er staat nu geen actieve AR Snazzle in ${localStorage.getItem('snazzleVillage')||'jouw dorp'}.`;
+      }).catch(()=>{});
     },false);
   }
   window.addEventListener('pagehide',stop,{once:true});
-  setTimeout(()=>loadWorld().catch(()=>{}),250);
+  setTimeout(()=>loadWorld().catch(()=>{}),180);
 }
 
 function boot(){
@@ -236,4 +253,4 @@ function boot(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 
-window.SnazzleArWorldV85={reload:loadWorld,stop,openZones:()=>{location.href='./snazzle-zones.html?v=176';}};
+window.SnazzleArWorldV85={reload:loadWorld,stop,openZones:()=>{location.href='./snazzle-zones.html?v=177';}};
