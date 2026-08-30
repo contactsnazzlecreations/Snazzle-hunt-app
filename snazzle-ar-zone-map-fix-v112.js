@@ -1,19 +1,30 @@
-// Snazzle AR zone map fix v166 — kaarttegels altijd zichtbaar op mobiel.
-// Dwingt de Leaflet-tegels zichtbaar, gebruikt een stabiele CARTO-kaartlaag en schakelt automatisch naar OSM/Esri bij fouten.
+// Snazzle AR zone map fix v167 — vaste, rustige kaarttegels op mobiel.
+// Beschermt Leaflet tegen de algemene afbeeldings-polish en voorkomt onnodig herladen van kaarttegels.
 
 let readyPromise=null,patched=false;
 const $=s=>document.querySelector(s);
 
 function installCss(){
-  if(!document.getElementById('snArZoneMapFix166Style')){
+  if(!document.getElementById('snArZoneMapFix167Style')){
     const s=document.createElement('style');
-    s.id='snArZoneMapFix166Style';
+    s.id='snArZoneMapFix167Style';
     s.textContent=`
       #snArZoneMap.leaflet-container{background:#dce9d7!important;position:relative!important}
       #snArZoneMap .leaflet-map-pane,
+      #snArZoneMap .leaflet-pane,
       #snArZoneMap .leaflet-tile-pane{display:block!important;visibility:visible!important;opacity:1!important}
-      #snArZoneMap .leaflet-tile-pane img.leaflet-tile,
+      #snArZoneMap .leaflet-tile-container{
+        position:absolute!important;
+        left:0!important;
+        top:0!important;
+        overflow:visible!important;
+        width:auto!important;
+        height:auto!important;
+        visibility:visible!important;
+        opacity:1!important;
+      }
       #snArZoneMap img.leaflet-tile{
+        position:absolute!important;
         display:block!important;
         visibility:visible!important;
         opacity:1!important;
@@ -24,9 +35,11 @@ function installCss(){
         object-fit:fill!important;
         image-rendering:auto!important;
         filter:none!important;
+        transition:none!important;
+        animation:none!important;
       }
-      #snArZoneMap .leaflet-overlay-pane{z-index:400!important}
       #snArZoneMap .leaflet-tile-pane{z-index:200!important}
+      #snArZoneMap .leaflet-overlay-pane{z-index:400!important}
       #snArZoneMap .leaflet-control-container{display:block!important;visibility:visible!important;opacity:1!important}
     `;
     document.head.appendChild(s);
@@ -35,9 +48,38 @@ function installCss(){
     const l=document.createElement('link');
     l.rel='stylesheet';
     l.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
-    l.dataset.snArZoneMapFix166='1';
+    l.dataset.snArZoneMapFix167='1';
     document.head.appendChild(l);
   }
+}
+
+function sanitizeMapDom(root=$('#snArZoneMap')){
+  if(!root)return;
+  root.querySelectorAll('img.leaflet-tile,img.leaflet-marker-icon,img.leaflet-marker-shadow').forEach(img=>{
+    img.classList.remove('sn59-media','sn59-loading','sn59-loaded');
+    try{delete img.dataset.sn59Media;}catch{}
+  });
+  root.querySelectorAll('.leaflet-tile-container,.leaflet-layer,.leaflet-pane').forEach(el=>{
+    el.classList.remove('sn59-media-shell','sn59-waiting');
+  });
+}
+
+function startDomProtection(){
+  if(window.__snazzleLeafletDomProtect167)return;
+  window.__snazzleLeafletDomProtect167=true;
+  const run=()=>sanitizeMapDom();
+  const mo=new MutationObserver(records=>{
+    let relevant=false;
+    for(const r of records){
+      const target=r.target;
+      if(target?.closest?.('#snArZoneMap')||[...r.addedNodes||[]].some(n=>n?.nodeType===1&&(n.id==='snArZoneMap'||n.closest?.('#snArZoneMap')||n.querySelector?.('#snArZoneMap,.leaflet-tile')))){
+        relevant=true;break;
+      }
+    }
+    if(relevant)queueMicrotask(run);
+  });
+  if(document.body)mo.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+  run();
 }
 
 function loadScript(src){
@@ -59,34 +101,33 @@ function loadScript(src){
 
 async function ensureLeaflet(){
   installCss();
+  startDomProtection();
   if(window.L)return window.L;
   try{return await loadScript('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js');}
   catch{return await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');}
 }
 
+function isZoneMap(map){return map?.getContainer?.()?.id==='snArZoneMap';}
+
 function stabilizeMap(map){
   if(!map)return;
   const fix=()=>{
-    try{
-      map.invalidateSize({pan:false,animate:false});
-      map.eachLayer?.(layer=>{if(layer?.redraw&&layer?._url)layer.redraw();});
-    }catch{}
+    sanitizeMapDom(map.getContainer?.());
+    try{map.invalidateSize({pan:false,animate:false});}catch{}
   };
-  [0,60,180,420,850,1500].forEach(ms=>setTimeout(fix,ms));
+  [0,80,240,650].forEach(ms=>setTimeout(fix,ms));
 }
-
-function isZoneMap(map){return map?.getContainer?.()?.id==='snArZoneMap';}
 
 function attachResizeFix(map){
   const el=map?.getContainer?.();
-  if(!el||el.dataset.snMapResize166)return;
-  el.dataset.snMapResize166='1';
+  if(!el||el.dataset.snMapResize167)return;
+  el.dataset.snMapResize167='1';
   if(window.ResizeObserver){
     const ro=new ResizeObserver(()=>stabilizeMap(map));
     ro.observe(el);
-    el.__snArZoneResize166=ro;
+    el.__snArZoneResize167=ro;
   }
-  map.on?.('zoomend moveend resize',()=>stabilizeMap(map));
+  map.on?.('zoomend moveend',()=>{sanitizeMapDom(el);});
   window.addEventListener('orientationchange',()=>stabilizeMap(map),{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)stabilizeMap(map);});
 }
@@ -97,26 +138,25 @@ function installLeafletPatches(L){
 
   const originalMap=L.map.bind(L);
   const originalTileLayer=L.tileLayer.bind(L);
-
   const providers=[
     {
-      url:'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-      options:{maxZoom:20,attribution:'© OpenStreetMap © CARTO',updateWhenIdle:false,updateWhenZooming:true,keepBuffer:4,detectRetina:false}
+      url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      options:{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO',updateWhenIdle:true,updateWhenZooming:false,keepBuffer:3,detectRetina:false}
     },
     {
       url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      options:{maxZoom:19,attribution:'© OpenStreetMap',updateWhenIdle:false,updateWhenZooming:true,keepBuffer:4,detectRetina:false}
+      options:{maxZoom:19,attribution:'© OpenStreetMap',updateWhenIdle:true,updateWhenZooming:false,keepBuffer:3,detectRetina:false}
     },
     {
       url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-      options:{maxZoom:19,attribution:'Tiles © Esri',updateWhenIdle:false,updateWhenZooming:true,keepBuffer:4,detectRetina:false}
+      options:{maxZoom:19,attribution:'Tiles © Esri',updateWhenIdle:true,updateWhenZooming:false,keepBuffer:3,detectRetina:false}
     }
   ];
 
   function removeBaseLayers(map){
     try{
       map.eachLayer(layer=>{
-        if(layer?._url && !(layer instanceof L.Circle) && !(layer instanceof L.Marker))map.removeLayer(layer);
+        if(layer?._url)map.removeLayer(layer);
       });
     }catch{}
   }
@@ -127,26 +167,26 @@ function installLeafletPatches(L){
     const p=providers[i];
     removeBaseLayers(map);
     const layer=originalTileLayer(p.url,p.options);
-    map.__snProvider166=i;
-    map.__snBase166=layer;
+    map.__snProvider167=i;
+    map.__snBase167=layer;
     let loaded=0,errors=0,switched=false;
     const next=()=>{
       if(switched||i>=providers.length-1)return;
       switched=true;
       try{map.removeLayer(layer);}catch{}
       addProvider(map,i+1);
-      stabilizeMap(map);
     };
-    layer.on('tileload',()=>{loaded++;});
-    layer.on('tileerror',()=>{errors++;if(errors>=2)next();});
+    layer.on('tileload',()=>{loaded++;sanitizeMapDom(map.getContainer());});
+    layer.on('tileerror',()=>{errors++;if(errors>=3)next();});
     layer.addTo(map);
+    stabilizeMap(map);
     setTimeout(()=>{
       if(!isZoneMap(map)||!$('#snArZoneModal')?.classList.contains('show'))return;
-      const imgs=[...map.getContainer().querySelectorAll('.leaflet-tile-pane img.leaflet-tile')];
+      sanitizeMapDom(map.getContainer());
+      const imgs=[...map.getContainer().querySelectorAll('img.leaflet-tile')];
       const visible=imgs.some(img=>img.complete&&img.naturalWidth>0);
       if(!loaded&&!visible)next();
-    },1600);
-    stabilizeMap(map);
+    },2200);
     return layer;
   }
 
@@ -154,12 +194,11 @@ function installLeafletPatches(L){
     const map=originalMap(target,options);
     const id=typeof target==='string'?target:target?.id;
     if(id==='snArZoneMap'){
+      window.__snazzleZoneMap167=map;
       window.__snazzleZoneMap166=map;
       window.__snazzleZoneMap112=map;
       attachResizeFix(map);
-      setTimeout(()=>{
-        if(isZoneMap(map)&&!map.__snBase166)addProvider(map,0);
-      },0);
+      setTimeout(()=>{if(isZoneMap(map)&&!map.__snBase167)addProvider(map,0);},0);
       stabilizeMap(map);
     }
     return map;
@@ -172,13 +211,12 @@ function installLeafletPatches(L){
     layer.on('add',()=>{
       const map=layer._map;
       if(!isZoneMap(map))return;
-      // De oorspronkelijke OSM-laag uit de AR-module wordt direct vervangen door onze mobiele kaartlaag.
-      if(!map.__snBase166){
+      if(!map.__snBase167){
         setTimeout(()=>{
           try{if(map.hasLayer(layer))map.removeLayer(layer);}catch{}
-          if(!map.__snBase166)addProvider(map,0);
+          if(!map.__snBase167)addProvider(map,0);
         },0);
-      }else if(layer!==map.__snBase166){
+      }else if(layer!==map.__snBase167){
         setTimeout(()=>{try{if(map.hasLayer(layer))map.removeLayer(layer);}catch{}},0);
       }
     });
@@ -195,7 +233,6 @@ function prepare(){
   return readyPromise;
 }
 
-// Zorg dat de fix vóór het openen van de zonekaart actief is.
 document.addEventListener('click',async e=>{
   const btn=e.target?.closest?.('#snArZoneOpen');
   if(!btn||patched)return;
@@ -207,9 +244,10 @@ document.addEventListener('click',async e=>{
 const modalObserver=new MutationObserver(()=>{
   const modal=$('#snArZoneModal');
   if(!modal?.classList.contains('show'))return;
-  const map=window.__snazzleZoneMap166||window.__snazzleZoneMap112;
+  const map=window.__snazzleZoneMap167||window.__snazzleZoneMap166||window.__snazzleZoneMap112;
+  sanitizeMapDom();
   if(map){
-    if(!map.__snBase166){
+    if(!map.__snBase167){
       try{const L=window.L;if(L)installLeafletPatches(L);}catch{}
     }
     stabilizeMap(map);
@@ -217,5 +255,7 @@ const modalObserver=new MutationObserver(()=>{
 });
 if(document.body)modalObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
 
+installCss();
+startDomProtection();
 prepare().catch(()=>{});
-window.SnazzleArZoneMapFixV112={prepare,stabilize:()=>stabilizeMap(window.__snazzleZoneMap166||window.__snazzleZoneMap112)};
+window.SnazzleArZoneMapFixV112={prepare,stabilize:()=>stabilizeMap(window.__snazzleZoneMap167||window.__snazzleZoneMap166||window.__snazzleZoneMap112),sanitize:sanitizeMapDom};
