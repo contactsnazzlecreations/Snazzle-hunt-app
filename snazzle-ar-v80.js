@@ -1,4 +1,4 @@
-// Snazzle AR v81 — walk-to-catch GPS + camera prototype.
+// Snazzle AR UI shell v163 — live GPS + camera interface.
 // GPS is used only while the AR screen is open; exact coordinates are never persisted.
 
 const AR_COLLECTION_KEY = 'snazzleARCollection';
@@ -89,19 +89,19 @@ function installUi(){
   const launch = document.createElement('button');
   launch.id = 'snArLaunch';
   launch.className = 'sn-ar-launch';
-  launch.innerHTML = `<span class="sn-ar-icon">📷</span><span class="sn-ar-copy"><strong>Snazzle AR</strong><small>Loop naar een verborgen Snazzle en vang hem</small></span><span class="sn-ar-tag">TEST</span><span class="sn-ar-count" id="snArCount">0</span>`;
+  launch.innerHTML = `<span class="sn-ar-icon">📷</span><span class="sn-ar-copy"><strong>Snazzle AR</strong><small>Zoek echte geplaatste Snazzles met camera en GPS</small></span><span class="sn-ar-tag">LIVE</span><span class="sn-ar-count" id="snArCount">0</span>`;
   quick.parentNode.insertBefore(launch, quick);
 
   document.body.insertAdjacentHTML('beforeend', `
     <div class="sn-ar-intro" id="snArIntro" role="dialog" aria-modal="true">
       <div class="sn-ar-panel">
-        <div class="sn-ar-badge">FASE 1 · GPS + CAMERA</div>
-        <h2>Loop naar een verborgen Snazzle ✨</h2>
-        <p>Start buiten en loop een paar meter in de richting waarin je wilt zoeken. De app zet Scout Snazzle dan ongeveer ${TEST_DISTANCE_METERS} meter vanaf je startpunt in die richting. Hij blijft onzichtbaar tot je dichtbij bent.</p>
-        <div class="sn-ar-status" id="snArStatus">Klaar om te testen.</div>
-        <button class="sn-ar-primary" id="snArStart">Start 20-meter test</button>
+        <div class="sn-ar-badge">SNAZZLE AR · GPS + CAMERA</div>
+        <h2>Zoek een verborgen Snazzle ✨</h2>
+        <p>Bekijk eerst ongeveer waar Snazzles zitten op de kaart, en start daarna de AR-zoektocht. Tijdens het lopen blijft de camera afgeschermd zodat je voor je kunt kijken.</p>
+        <div class="sn-ar-status" id="snArStatus">AR klaarzetten…</div>
+        <button class="sn-ar-primary" id="snArStart">Zoek AR Snazzle</button>
         <button class="sn-ar-secondary" id="snArCancel">Nog niet</button>
-        <p class="sn-ar-privacy">🔒 GPS wordt alleen tijdens deze test gebruikt. Je exacte positie wordt niet opgeslagen.</p>
+        <p class="sn-ar-privacy">🔒 Je GPS wordt alleen tijdens het zoeken gebruikt. De kaart toont geen exacte Snazzle-locaties en jouw route wordt niet opgeslagen.</p>
       </div>
     </div>
     <div class="sn-ar-overlay" id="snArOverlay">
@@ -278,18 +278,15 @@ function catchArSnazzle(){
 }
 
 function wireUi(){
+  // v163: this file only builds the shared AR interface.
+  // The live world module owns Start, GPS, camera, catch and close actions.
   $ar('#snArLaunch')?.addEventListener('click',()=>{
     const status = $ar('#snArStatus');
-    if(status) status.textContent = 'Klaar om te testen.';
+    if(status) status.textContent = 'AR openen…';
     $ar('#snArIntro')?.classList.add('show');
   });
   $ar('#snArCancel')?.addEventListener('click',()=> $ar('#snArIntro')?.classList.remove('show'));
-  $ar('#snArStart')?.addEventListener('click',startArTest);
-  $ar('#snArClose')?.addEventListener('click',stopArCamera);
-  $ar('#snArCatchDuck')?.addEventListener('click',catchArSnazzle);
-  $ar('#snArCatchHint')?.addEventListener('click',catchArSnazzle);
   $ar('#snArDone')?.addEventListener('click',()=> $ar('#snArResult')?.classList.remove('show'));
-  window.addEventListener('pagehide',stopArCamera);
 }
 
 function bootAr(){ installStyles(); installUi(); }
