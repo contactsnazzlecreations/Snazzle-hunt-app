@@ -1,6 +1,6 @@
-// Snazzle Hunt v164 — herstel AR live module koppeling.
+// Snazzle Hunt v165 — herstel en stabiliseer Snazzle-zonekaart op mobiel.
 
-const runtimeVersion = '20260830-v164-ar-world-link';
+const runtimeVersion = '20260830-v165-zone-map-visible';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -139,6 +139,7 @@ const backgroundBundles=[
   [
     './snazzle-ar-v80.js',
     './snazzle-ar-world-v85.js',
+    './snazzle-ar-zone-map-fix-v112.js',
     './snazzle-ar-safety-pass-v124.js',
     './snazzle-card-system-v2.js',
     './snazzle-card-worlds-v78.js',
