@@ -1,6 +1,6 @@
-// Snazzle Hunt v163 — vloeiende Snazzle AR flow + luisterverhalen HTTPS.
+// Snazzle Hunt v164 — herstel AR live module koppeling.
 
-const runtimeVersion = '20260830-v163-ar-smooth';
+const runtimeVersion = '20260830-v164-ar-world-link';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -138,6 +138,7 @@ await idle();
 const backgroundBundles=[
   [
     './snazzle-ar-v80.js',
+    './snazzle-ar-world-v85.js',
     './snazzle-ar-safety-pass-v124.js',
     './snazzle-card-system-v2.js',
     './snazzle-card-worlds-v78.js',
