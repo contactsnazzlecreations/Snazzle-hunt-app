@@ -1,0 +1,180 @@
+name: AR smooth flow v163
+
+on:
+  push:
+    paths:
+      - '.github/workflows/ar-smooth-v163.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-ar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove legacy AR test flow and smooth live AR
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          # 1) Legacy UI remains the shared shell, but it must no longer run its own 20 m test.
+          p = Path('snazzle-ar-v80.js')
+          s = p.read_text(encoding='utf-8')
+
+          replacements = {
+            '''launch.innerHTML = `<span class="sn-ar-icon">📷</span><span class="sn-ar-copy"><strong>Snazzle AR</strong><small>Loop naar een verborgen Snazzle en vang hem</small></span><span class="sn-ar-tag">TEST</span><span class="sn-ar-count" id="snArCount">0</span>`;''':
+            '''launch.innerHTML = `<span class="sn-ar-icon">📷</span><span class="sn-ar-copy"><strong>Snazzle AR</strong><small>Zoek echte geplaatste Snazzles met camera en GPS</small></span><span class="sn-ar-tag">LIVE</span><span class="sn-ar-count" id="snArCount">0</span>`;''',
+            '''<div class="sn-ar-badge">FASE 1 · GPS + CAMERA</div>''': '''<div class="sn-ar-badge">SNAZZLE AR · GPS + CAMERA</div>''',
+            '''<h2>Loop naar een verborgen Snazzle ✨</h2>''': '''<h2>Zoek een verborgen Snazzle ✨</h2>''',
+            '''<p>Start buiten en loop een paar meter in de richting waarin je wilt zoeken. De app zet Scout Snazzle dan ongeveer ${TEST_DISTANCE_METERS} meter vanaf je startpunt in die richting. Hij blijft onzichtbaar tot je dichtbij bent.</p>''': '''<p>Bekijk eerst ongeveer waar Snazzles zitten op de kaart, en start daarna de AR-zoektocht. Tijdens het lopen blijft de camera afgeschermd zodat je voor je kunt kijken.</p>''',
+            '''<div class="sn-ar-status" id="snArStatus">Klaar om te testen.</div>''': '''<div class="sn-ar-status" id="snArStatus">AR klaarzetten…</div>''',
+            '''<button class="sn-ar-primary" id="snArStart">Start 20-meter test</button>''': '''<button class="sn-ar-primary" id="snArStart">Zoek AR Snazzle</button>''',
+            '''<p class="sn-ar-privacy">🔒 GPS wordt alleen tijdens deze test gebruikt. Je exacte positie wordt niet opgeslagen.</p>''': '''<p class="sn-ar-privacy">🔒 Je GPS wordt alleen tijdens het zoeken gebruikt. De kaart toont geen exacte Snazzle-locaties en jouw route wordt niet opgeslagen.</p>''',
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'v80 expected text not found: {old[:80]}')
+              s = s.replace(old, new, 1)
+
+          old_wire = '''function wireUi(){
+  $ar('#snArLaunch')?.addEventListener('click',()=>{
+    const status = $ar('#snArStatus');
+    if(status) status.textContent = 'Klaar om te testen.';
+    $ar('#snArIntro')?.classList.add('show');
+  });
+  $ar('#snArCancel')?.addEventListener('click',()=> $ar('#snArIntro')?.classList.remove('show'));
+  $ar('#snArStart')?.addEventListener('click',startArTest);
+  $ar('#snArClose')?.addEventListener('click',stopArCamera);
+  $ar('#snArCatchDuck')?.addEventListener('click',catchArSnazzle);
+  $ar('#snArCatchHint')?.addEventListener('click',catchArSnazzle);
+  $ar('#snArDone')?.addEventListener('click',()=> $ar('#snArResult')?.classList.remove('show'));
+  window.addEventListener('pagehide',stopArCamera);
+}'''
+          new_wire = '''function wireUi(){
+  // v163: this file only builds the shared AR interface.
+  // The live world module owns Start, GPS, camera, catch and close actions.
+  $ar('#snArLaunch')?.addEventListener('click',()=>{
+    const status = $ar('#snArStatus');
+    if(status) status.textContent = 'AR openen…';
+    $ar('#snArIntro')?.classList.add('show');
+  });
+  $ar('#snArCancel')?.addEventListener('click',()=> $ar('#snArIntro')?.classList.remove('show'));
+  $ar('#snArDone')?.addEventListener('click',()=> $ar('#snArResult')?.classList.remove('show'));
+}'''
+          if old_wire not in s:
+              raise SystemExit('v80 wireUi block not found')
+          s = s.replace(old_wire, new_wire, 1)
+          s = s.replace('// Snazzle AR v81 — walk-to-catch GPS + camera prototype.', '// Snazzle AR UI shell v163 — live GPS + camera interface.', 1)
+          p.write_text(s, encoding='utf-8')
+
+          # 2) Live AR world: cache world data and run GPS + camera concurrently.
+          p = Path('snazzle-ar-world-v85.js')
+          s = p.read_text(encoding='utf-8')
+
+          old_vars = '''let world=[],target=null,stream=null,watchId=null,armed=false,currentAccuracy=0;
+let zoneMap=null,zoneLayer=null,leafletPromise=null;'''
+          new_vars = '''let world=[],target=null,stream=null,watchId=null,armed=false,currentAccuracy=0;
+let worldLoadedAt=0,worldPromise=null;
+let zoneMap=null,zoneLayer=null,leafletPromise=null;'''
+          if old_vars not in s:
+              raise SystemExit('world variable block not found')
+          s = s.replace(old_vars, new_vars, 1)
+
+          old_load = '''async function loadWorld(){
+  await waitForUser();
+  const snap=await getDoc(WORLD_DOC),data=snap.exists()?snap.data():{};
+  world=Array.isArray(data.points)?data.points.filter(p=>p&&p.active!==false&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))):[];
+  return world;
+}'''
+          new_load = '''async function loadWorld(force=false){
+  const now=Date.now();
+  if(!force&&worldLoadedAt&&now-worldLoadedAt<30000)return world;
+  if(!force&&worldPromise)return worldPromise;
+  worldPromise=(async()=>{
+    await waitForUser();
+    const snap=await getDoc(WORLD_DOC),data=snap.exists()?snap.data():{};
+    world=Array.isArray(data.points)?data.points.filter(p=>p&&p.active!==false&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))):[];
+    worldLoadedAt=Date.now();
+    return world;
+  })();
+  try{return await worldPromise;}finally{worldPromise=null;}
+}'''
+          if old_load not in s:
+              raise SystemExit('loadWorld block not found')
+          s = s.replace(old_load, new_load, 1)
+
+          old_start = '''async function startReal(e){
+  e?.preventDefault?.();e?.stopImmediatePropagation?.();
+  const btn=$('#snArStart'),status=$('#snArStatus');if(btn)btn.disabled=true;if(status)status.textContent='📍 Actieve AR Snazzles zoeken…';
+  try{
+    await loadWorld();const choices=villagePoints();if(!choices.length){if(status)status.textContent=`ℹ️ Er staat nu geen actieve AR Snazzle in ${localStorage.getItem('snazzleVillage')||'dit dorp'}.`;return;}
+    const pos=await geoOnce(),here=point(pos);target=choices.slice().sort((a,b)=>dist(here,a)-dist(here,b))[0];setTargetVisual();setVisible(false);
+    const remaining=Math.round(dist(here,{lat:Number(target.lat),lon:Number(target.lon)}));currentAccuracy=Math.round(Number(pos.coords.accuracy||0));
+    if(status)status.textContent=`✅ ${normalizeRarity(target.rarity)}-signaal gevonden · ongeveer ${remaining} m verderop.`;
+    stream=await camera();const video=$('#snArCamera');if(video){video.srcObject=stream;await video.play().catch(()=>{});}$('#snArIntro')?.classList.remove('show');$('#snArOverlay')?.classList.add('show');
+    const hud=$('#snArHudText'),box=$('#snArDistance');if(hud)hud.textContent=`${normalizeRarity(target.rarity)} Snazzle-signaal actief in ${target.village} · GPS ±${currentAccuracy} m`;if(box)box.textContent=`Nog ongeveer ${remaining} meter… 👣`;startWatch();update(pos);
+  }catch(err){stop();if(status)status.textContent='⚠️ '+(err?.message||'AR kon niet starten.');}finally{if(btn)btn.disabled=false;}
+}'''
+          new_start = '''async function startReal(e){
+  e?.preventDefault?.();e?.stopImmediatePropagation?.();
+  const btn=$('#snArStart'),status=$('#snArStatus');
+  if(btn)btn.disabled=true;
+  if(status)status.textContent='🔎 Snazzle-signalen klaarzetten…';
+  try{
+    await loadWorld();
+    const choices=villagePoints();
+    if(!choices.length){if(status)status.textContent=`ℹ️ Er staat nu geen actieve AR Snazzle in ${localStorage.getItem('snazzleVillage')||'dit dorp'}.`;return;}
+
+    // GPS starts immediately while the camera opens, so the player never waits through two serial steps.
+    if(status)status.textContent='📍 GPS en camera starten…';
+    const gpsPromise=geoOnce();
+    stream=await camera();
+    const video=$('#snArCamera');
+    if(video){video.srcObject=stream;await video.play().catch(()=>{});}
+    $('#snArIntro')?.classList.remove('show');
+    $('#snArOverlay')?.classList.add('show');
+    const hud=$('#snArHudText'),box=$('#snArDistance');
+    if(hud)hud.textContent='📍 GPS nauwkeurig bepalen…';
+    if(box)box.textContent='Even je positie vastzetten…';
+
+    const pos=await gpsPromise,here=point(pos);
+    target=choices.slice().sort((a,b)=>dist(here,a)-dist(here,b))[0];
+    setTargetVisual();setVisible(false);
+    const remaining=Math.round(dist(here,{lat:Number(target.lat),lon:Number(target.lon)}));
+    currentAccuracy=Math.round(Number(pos.coords.accuracy||0));
+    if(hud)hud.textContent=`${normalizeRarity(target.rarity)} Snazzle-signaal actief in ${target.village} · GPS ±${currentAccuracy} m`;
+    if(box)box.textContent=`Nog ongeveer ${remaining} meter… 👣`;
+    startWatch();update(pos);
+  }catch(err){stop();if(status)status.textContent='⚠️ '+(err?.message||'AR kon niet starten.');}
+  finally{if(btn)btn.disabled=false;}
+}'''
+          if old_start not in s:
+              raise SystemExit('startReal block not found')
+          s = s.replace(old_start, new_start, 1)
+
+          # Warm the non-location world data shortly after the live module is wired.
+          old_pagehide = '''  window.addEventListener('pagehide',stop,{once:true});
+}'''
+          new_pagehide = '''  window.addEventListener('pagehide',stop,{once:true});
+  setTimeout(()=>loadWorld().catch(()=>{}),450);
+}'''
+          if old_pagehide not in s:
+              raise SystemExit('wire tail not found')
+          s = s.replace(old_pagehide, new_pagehide, 1)
+          s = s.replace('// Snazzle AR World v85.3 — permanente AR-punten + veilige openbare zoekzones.', '// Snazzle AR World v163 — vloeiende live AR + permanente veilige zoekzones.', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit AR cleanup
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "Snazzle App Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add snazzle-ar-v80.js snazzle-ar-world-v85.js
+          git commit -m "Smooth Snazzle AR flow v163"
+          git push
