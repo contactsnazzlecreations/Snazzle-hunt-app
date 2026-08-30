@@ -1,6 +1,6 @@
-// Snazzle Hunt v172 — Snazzle-zones knop direct en robuust op mobiel.
+// Snazzle Hunt v173 — Snazzle-zones openen altijd via de stabiele kaartlaag.
 
-const runtimeVersion = '20260830-v172-zone-direct-touch';
+const runtimeVersion = '20260830-v173-zone-stable-tap';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -56,28 +56,28 @@ installMobilePerformanceMode();
 let zoneOpening=false;
 async function openZonesDirect(e,btn){
   e?.preventDefault?.();
+  e?.stopImmediatePropagation?.();
   e?.stopPropagation?.();
   if(zoneOpening)return;
   zoneOpening=true;
   const oldText=btn?.textContent;
   if(btn){btn.disabled=false;btn.textContent='🗺️ Kaart openen…';}
   try{
+    // De stabiele v169-kaart heeft de AR-wereld alleen nodig als databron.
+    // Laad daarom eerst de werelddata en daarna altijd v169; de oudere kaartfunctie
+    // uit snazzle-ar-world-v85.js is alleen nog een laatste fallback.
+    if(!window.SnazzleArWorldV85?.reload){
+      await safeImport('./snazzle-ar-world-v85.js?direct=v173');
+    }
+    if(!window.SnazzleZoneMapV169?.open){
+      await safeImport('./snazzle-zone-map-v169.js?direct=v173');
+    }
     if(window.SnazzleZoneMapV169?.open){
-      await window.SnazzleZoneMapV169.open(e);
+      await window.SnazzleZoneMapV169.open();
       return;
     }
     if(window.SnazzleArWorldV85?.openZones){
-      await window.SnazzleArWorldV85.openZones(e);
-      return;
-    }
-    await safeImport('./snazzle-ar-world-v85.js?direct=v172');
-    await safeImport('./snazzle-zone-map-v169.js?direct=v172');
-    if(window.SnazzleZoneMapV169?.open){
-      await window.SnazzleZoneMapV169.open(e);
-      return;
-    }
-    if(window.SnazzleArWorldV85?.openZones){
-      await window.SnazzleArWorldV85.openZones(e);
+      await window.SnazzleArWorldV85.openZones();
       return;
     }
     throw new Error('Kaartfunctie is nog niet geladen.');
@@ -92,21 +92,25 @@ async function openZonesDirect(e,btn){
 window.__snazzleOpenZonesDirect=openZonesDirect;
 
 function armZoneButton(btn){
-  if(!btn||btn.dataset.snZoneDirect172==='1')return;
-  btn.dataset.snZoneDirect172='1';
+  if(!btn||btn.dataset.snZoneDirect173==='1')return;
+  btn.dataset.snZoneDirect173='1';
   btn.disabled=false;
   btn.style.pointerEvents='auto';
   btn.style.touchAction='manipulation';
   btn.style.position='relative';
   btn.style.zIndex='30';
   btn.onclick=e=>openZonesDirect(e,btn);
-  btn.addEventListener('touchend',e=>openZonesDirect(e,btn),{passive:false});
-  btn.addEventListener('pointerup',e=>openZonesDirect(e,btn));
+  btn.addEventListener('pointerdown',e=>openZonesDirect(e,btn),{capture:true});
+  btn.addEventListener('touchstart',e=>openZonesDirect(e,btn),{capture:true,passive:false});
 }
 function armExistingZoneButton(){armZoneButton(document.getElementById('snArZoneOpen'));}
 const zoneButtonObserver=new MutationObserver(armExistingZoneButton);
 if(document.body)zoneButtonObserver.observe(document.body,{childList:true,subtree:true});
 document.addEventListener('DOMContentLoaded',armExistingZoneButton,{once:true});
+document.addEventListener('pointerdown',e=>{
+  const btn=e.target?.closest?.('#snArZoneOpen');
+  if(btn)openZonesDirect(e,btn);
+},true);
 document.addEventListener('click',e=>{
   const btn=e.target?.closest?.('#snArZoneOpen');
   if(btn)openZonesDirect(e,btn);
