@@ -1,6 +1,6 @@
-// Snazzle Hunt v173 — Snazzle-zones openen altijd via de stabiele kaartlaag.
+// Snazzle Hunt v174 — native Snazzle-zones link op mobiel.
 
-const runtimeVersion = '20260830-v173-zone-stable-tap';
+const runtimeVersion = '20260830-v174-zone-native-link';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -63,9 +63,6 @@ async function openZonesDirect(e,btn){
   const oldText=btn?.textContent;
   if(btn){btn.disabled=false;btn.textContent='🗺️ Kaart openen…';}
   try{
-    // De stabiele v169-kaart heeft de AR-wereld alleen nodig als databron.
-    // Laad daarom eerst de werelddata en daarna altijd v169; de oudere kaartfunctie
-    // uit snazzle-ar-world-v85.js is alleen nog een laatste fallback.
     if(!window.SnazzleArWorldV85?.reload){
       await safeImport('./snazzle-ar-world-v85.js?direct=v173');
     }
