@@ -1,6 +1,6 @@
-// Snazzle Hunt v169 — zelfstandige canvas-zonekaart voor stabiele mobiele weergave.
+// Snazzle Hunt v170 — AR-beheer direct laden zodat het beheermenu compleet is.
 
-const runtimeVersion = '20260830-v169-zone-canvas-stable';
+const runtimeVersion = '20260830-v170-ar-admin-direct';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -76,6 +76,9 @@ await Promise.all([
 
 await import(fresh('./app-core.js'));
 await safeImport('./snazzle-admin-mfa-v141.js');
+// AR-beheer mag niet wachten op alle achtergrondmodules: anders kan de knop ontbreken.
+// Deze module plaatst de AR-knop in Beheer en verbergt de interne [SYSTEEM] AR-WERELD-hunt.
+await safeImport('./snazzle-ar-admin-display-v84.js');
 
 await Promise.all([
   safeImport('./snazzle-village-visibility-v120.js'),
