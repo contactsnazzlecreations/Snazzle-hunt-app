@@ -1,42 +1,25 @@
-// Snazzle Hunt v175 — vaste X-sluitknop voor Snazzle AR.
+// Snazzle Hunt v176 — snelle AR-start, minder dubbele handlers en directe mobiele respons.
 
-const runtimeVersion = '20260830-v175-ar-intro-close';
-const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
-window.__snazzleRuntimeVersion = runtimeVersion;
-window.__snazzleFresh = fresh;
-
-function refreshLocalStyles(){
-  document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link=>{
-    try{
-      const url=new URL(link.getAttribute('href'),location.href);
-      if(url.origin!==location.origin) return;
-      if(!url.pathname.includes('/Snazzle-hunt-app/')) return;
-      if(url.searchParams.get('fresh')===runtimeVersion) return;
-      url.searchParams.set('fresh',runtimeVersion);
-      link.href=url.href;
-    }catch{}
-  });
-}
-const headObserver=new MutationObserver(refreshLocalStyles);
-headObserver.observe(document.head,{childList:true,subtree:true});
+const runtimeVersion='20260830-v176-ar-fast-start';
+const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
+window.__snazzleRuntimeVersion=runtimeVersion;
+window.__snazzleFresh=fresh;
 
 async function safeImport(path){
   try{return await import(fresh(path));}
   catch(err){console.error(`Snazzle module kon niet laden: ${path}`,err);return null;}
 }
-async function loadSequence(paths){
-  for(const path of paths) await safeImport(path);
-}
+async function loadSequence(paths){for(const path of paths)await safeImport(path);}
 const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
 const idle=()=>new Promise(resolve=>{
-  if('requestIdleCallback' in window) requestIdleCallback(()=>resolve(),{timeout:700});
-  else setTimeout(resolve,80);
+  if('requestIdleCallback' in window)requestIdleCallback(()=>resolve(),{timeout:650});
+  else setTimeout(resolve,70);
 });
 
 function installMobilePerformanceMode(){
-  if(document.getElementById('snFastMobileV130')) return;
+  if(document.getElementById('snFastMobileV176'))return;
   const style=document.createElement('style');
-  style.id='snFastMobileV130';
+  style.id='snFastMobileV176';
   style.textContent=`
     @media (max-width:700px),(pointer:coarse){
       body{animation:none!important;background-size:100% 100%!important}
@@ -46,78 +29,30 @@ function installMobilePerformanceMode(){
         backdrop-filter:none!important;-webkit-backdrop-filter:none!important
       }
       .quick-menu-panel,.panel{will-change:transform}
-      #snArZoneOpen{position:relative!important;z-index:30!important;pointer-events:auto!important;touch-action:manipulation!important}
+      #snArStart,#snArZoneOpen,#snArZoneNativeOpen,#snArIntroCloseV175{
+        touch-action:manipulation!important;pointer-events:auto!important
+      }
     }
   `;
   document.head.appendChild(style);
 }
 installMobilePerformanceMode();
 
-let zoneOpening=false;
-async function openZonesDirect(e,btn){
-  e?.preventDefault?.();
-  e?.stopImmediatePropagation?.();
-  e?.stopPropagation?.();
-  if(zoneOpening)return;
-  zoneOpening=true;
-  const oldText=btn?.textContent;
-  if(btn){btn.disabled=false;btn.textContent='🗺️ Kaart openen…';}
-  try{
-    if(!window.SnazzleArWorldV85?.reload){
-      await safeImport('./snazzle-ar-world-v85.js?direct=v173');
-    }
-    if(!window.SnazzleZoneMapV169?.open){
-      await safeImport('./snazzle-zone-map-v169.js?direct=v173');
-    }
-    if(window.SnazzleZoneMapV169?.open){
-      await window.SnazzleZoneMapV169.open();
-      return;
-    }
-    if(window.SnazzleArWorldV85?.openZones){
-      await window.SnazzleArWorldV85.openZones();
-      return;
-    }
-    throw new Error('Kaartfunctie is nog niet geladen.');
-  }catch(err){
-    console.error('Snazzle-zones openen mislukt',err);
-    alert('De Snazzle-zones konden niet openen. Probeer de app één keer opnieuw te openen.');
-  }finally{
-    zoneOpening=false;
-    if(btn&&document.contains(btn))btn.textContent=oldText||'🗺️ Bekijk Snazzle-zones';
-  }
+function refreshLocalStyles(){
+  document.querySelectorAll('link[rel="stylesheet"][href]').forEach(link=>{
+    try{
+      const url=new URL(link.getAttribute('href'),location.href);
+      if(url.origin!==location.origin)return;
+      if(!url.pathname.includes('/Snazzle-hunt-app/'))return;
+      if(url.searchParams.get('fresh')===runtimeVersion)return;
+      url.searchParams.set('fresh',runtimeVersion);
+      link.href=url.href;
+    }catch{}
+  });
 }
-window.__snazzleOpenZonesDirect=openZonesDirect;
-
-function armZoneButton(btn){
-  if(!btn||btn.dataset.snZoneDirect173==='1')return;
-  btn.dataset.snZoneDirect173='1';
-  btn.disabled=false;
-  btn.style.pointerEvents='auto';
-  btn.style.touchAction='manipulation';
-  btn.style.position='relative';
-  btn.style.zIndex='30';
-  btn.onclick=e=>openZonesDirect(e,btn);
-  btn.addEventListener('pointerdown',e=>openZonesDirect(e,btn),{capture:true});
-  btn.addEventListener('touchstart',e=>openZonesDirect(e,btn),{capture:true,passive:false});
-}
-function armExistingZoneButton(){armZoneButton(document.getElementById('snArZoneOpen'));}
-const zoneButtonObserver=new MutationObserver(armExistingZoneButton);
-if(document.body)zoneButtonObserver.observe(document.body,{childList:true,subtree:true});
-document.addEventListener('DOMContentLoaded',armExistingZoneButton,{once:true});
-document.addEventListener('pointerdown',e=>{
-  const btn=e.target?.closest?.('#snArZoneOpen');
-  if(btn)openZonesDirect(e,btn);
-},true);
-document.addEventListener('click',e=>{
-  const btn=e.target?.closest?.('#snArZoneOpen');
-  if(btn)openZonesDirect(e,btn);
-},true);
 
 for(const href of ['./snazzle-magic-theme.css','./snazzle-enchanted-layer.css','./snazzle-professional-v53.css','./snazzle-final-polish-v59.css']){
-  const l=document.createElement('link');
-  l.rel='stylesheet';
-  l.href=fresh(href);
-  document.head.appendChild(l);
+  const l=document.createElement('link');l.rel='stylesheet';l.href=fresh(href);document.head.appendChild(l);
 }
 refreshLocalStyles();
 
@@ -130,25 +65,38 @@ function suppressLateStartupOverlays(){
 suppressLateStartupOverlays();
 window.__snazzleReleaseBoot=()=>{};
 
+// Eerst alleen de lichte stabiliteitslaag en de kern van de app.
 await Promise.all([
   safeImport('./snazzle-runtime-stability-v71.js'),
   safeImport('./snazzle-image-stability-v72.js')
 ]);
-
 await import(fresh('./app-core.js'));
-await safeImport('./snazzle-admin-mfa-v141.js');
-await safeImport('./snazzle-ar-admin-display-v84.js');
-await safeImport('./snazzle-ar-intro-close-v175.js');
+suppressLateStartupOverlays();
+await nextPaint();
 
+// AR krijgt vanaf v176 voorrang. Daardoor hoeft de gebruiker niet meer te wachten
+// tot alle spellen, kaarten, shop- en beheermodules geladen zijn.
+await safeImport('./snazzle-ar-v80.js');
 await Promise.all([
+  safeImport('./snazzle-ar-intro-close-v175.js'),
+  safeImport('./snazzle-zone-button-v176.js')
+]);
+await safeImport('./snazzle-ar-world-v85.js');
+await safeImport('./snazzle-zone-map-v169.js');
+await safeImport('./snazzle-ar-safety-pass-v124.js');
+
+// Beheer en de primaire navigatie daarna direct beschikbaar maken.
+await Promise.all([
+  safeImport('./snazzle-admin-mfa-v141.js'),
+  safeImport('./snazzle-ar-admin-display-v84.js'),
   safeImport('./snazzle-village-visibility-v120.js'),
   safeImport('./snazzle-main-menu-v129.js'),
   safeImport('./snazzle-central-assets-v48.js')
 ]);
 
 (function installHeroQuack(){
-  const hero=document.getElementById('hero');
-  if(!hero)return;
+  const hero=document.getElementById('hero');if(!hero||hero.dataset.snQuack176)return;
+  hero.dataset.snQuack176='1';
   let audioContext=null;
   const hasSnazzleHero=()=>getComputedStyle(hero).backgroundImage.includes('url(');
   const playQuack=()=>{
@@ -163,10 +111,7 @@ await Promise.all([
   hero.addEventListener('click',()=>{if(hasSnazzleHero())playQuack();});
 })();
 
-window.__snazzleReleaseBoot?.();
-suppressLateStartupOverlays();
-await nextPaint();
-
+// Belangrijke gewone functies parallel laden zonder de AR-interface te blokkeren.
 const fastBundles=[
   [
     './snazzle-auto-update-v51.js',
@@ -194,16 +139,13 @@ const fastBundles=[
   ],
   ['./snazzle-news-v46.js']
 ];
+Promise.allSettled(fastBundles.map(loadSequence)).then(refreshLocalStyles);
 
-Promise.allSettled(fastBundles.map(loadSequence)).then(()=>refreshLocalStyles());
 await idle();
 
+// Zwaardere en minder tijdkritische functies pas daarna op de achtergrond.
 const backgroundBundles=[
   [
-    './snazzle-ar-v80.js',
-    './snazzle-ar-world-v85.js',
-    './snazzle-zone-map-v169.js',
-    './snazzle-ar-safety-pass-v124.js',
     './snazzle-card-system-v2.js',
     './snazzle-card-worlds-v78.js',
     './snazzle-card-world-prompt-v79.js',
@@ -258,28 +200,27 @@ const backgroundBundles=[
 
 Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   refreshLocalStyles();
-  armExistingZoneButton();
   try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
   setTimeout(()=>{
     safeImport('./snazzle-ar-admin-v83.js');
     safeImport('./snazzle-ar-admin-display-v84.js');
     safeImport('./snazzle-ar-save-inline-v122.js?patch=20260827-1803');
-  },250);
+  },220);
 });
 
-(async function startShopLoader(){
-  try{
-    const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
-    const auth=getAuth();
-    let shopLoaded=false;
-    onAuthStateChanged(auth,async user=>{
-      if(!user||shopLoaded)return;
-      shopLoaded=true;
-      await safeImport('./shop.js');
-      await safeImport('./shop-email-settings.js');
-      refreshLocalStyles();
-    });
-  }catch(err){console.warn('Snazzle shop loader',err);}
+(function startShopLoader(){
+  (async()=>{
+    try{
+      const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');
+      const auth=getAuth();let shopLoaded=false;
+      onAuthStateChanged(auth,async user=>{
+        if(!user||shopLoaded)return;shopLoaded=true;
+        await safeImport('./shop.js');
+        await safeImport('./shop-email-settings.js');
+        refreshLocalStyles();
+      });
+    }catch(err){console.warn('Snazzle shop loader',err);}
+  })();
 })();
 
-setTimeout(()=>{refreshLocalStyles();headObserver.disconnect();},12000);
+setTimeout(refreshLocalStyles,2500);
