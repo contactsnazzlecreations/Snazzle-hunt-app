@@ -1,6 +1,6 @@
-// Snazzle Hunt v174 — native Snazzle-zones link op mobiel.
+// Snazzle Hunt v175 — vaste X-sluitknop voor Snazzle AR.
 
-const runtimeVersion = '20260830-v174-zone-native-link';
+const runtimeVersion = '20260830-v175-ar-intro-close';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -138,6 +138,7 @@ await Promise.all([
 await import(fresh('./app-core.js'));
 await safeImport('./snazzle-admin-mfa-v141.js');
 await safeImport('./snazzle-ar-admin-display-v84.js');
+await safeImport('./snazzle-ar-intro-close-v175.js');
 
 await Promise.all([
   safeImport('./snazzle-village-visibility-v120.js'),
