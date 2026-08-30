@@ -1,5 +1,5 @@
-// Snazzle Zone Map v169 — zelfstandige, stabiele kaartlaag voor mobiel.
-// Tekent kaarttegels op canvas zodat algemene afbeeldings-effecten in de app Leaflet niet meer kunnen verstoren.
+// Snazzle Zone Map v174 — stabiele kaartlaag + native mobiele zone-link.
+// De zichtbare zoneknop wordt een echte link naar een zelfstandige kaartpagina.
 
 const $=s=>document.querySelector(s);
 let map=null,zoneLayer=null,baseLayer=null,leafletPromise=null,opening=false;
@@ -30,6 +30,7 @@ function installCss(){
     #snArZoneMap .leaflet-control-container{display:block!important;visibility:visible!important;opacity:1!important}
     #snArZoneMapStatus{margin:0 12px 9px;padding:8px 10px;border-radius:12px;background:#fffaf0;color:#5d492f;border:1px solid #d0b47b;font-size:11px;font-weight:850;line-height:1.35}
     #snArZoneMapStatus[hidden]{display:none!important}
+    #snArZoneNativeOpen{text-decoration:none!important;text-align:center!important;display:flex!important;align-items:center!important;justify-content:center!important;pointer-events:auto!important;touch-action:manipulation!important}
   `;
   document.head.appendChild(s);
 }
@@ -241,11 +242,41 @@ async function openZones(e){
   }
 }
 
+// Oudere modalroute blijft beschikbaar als fallback voor bestaande code.
 document.addEventListener('click',e=>{
   const btn=e.target?.closest?.('#snArZoneOpen');
   if(!btn)return;
   openZones(e);
 },true);
+
+// Belangrijk voor Android/PWA: de zichtbare knop wordt een echte browserlink.
+// Zo is het openen niet meer afhankelijk van pointer/click handlers of de AR-module.
+function installNativeZoneLink(){
+  installCss();
+  if(document.getElementById('snArZoneNativeOpen'))return true;
+  const current=document.getElementById('snArZoneOpen');
+  if(!current||current.hidden)return false;
+  const link=document.createElement('a');
+  link.id='snArZoneNativeOpen';
+  link.className=current.className||'sn-ar-zone-btn';
+  link.href='./snazzle-zones.html?v=174';
+  link.textContent='🗺️ Bekijk Snazzle-zones';
+  link.setAttribute('role','button');
+  link.setAttribute('aria-label','Bekijk Snazzle-zones');
+  const guard=document.createElement('span');
+  guard.id='snArZoneOpen';
+  guard.hidden=true;
+  guard.setAttribute('aria-hidden','true');
+  current.replaceWith(link,guard);
+  return true;
+}
+
+const nativeZoneObserver=new MutationObserver(()=>{
+  if(installNativeZoneLink())nativeZoneObserver.disconnect();
+});
+if(document.body)nativeZoneObserver.observe(document.body,{childList:true,subtree:true});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installNativeZoneLink,{once:true});
+else installNativeZoneLink();
 
 window.addEventListener('orientationchange',()=>{setTimeout(()=>map?.invalidateSize({pan:false,animate:false}),180);},{passive:true});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>map?.invalidateSize({pan:false,animate:false}),120);});
