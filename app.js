@@ -1,6 +1,6 @@
-// Snazzle Hunt v162 — Luisterverhalen via betrouwbare Firestore HTTPS-route.
+// Snazzle Hunt v163 — vloeiende Snazzle AR flow + luisterverhalen HTTPS.
 
-const runtimeVersion = '20260830-v162-listen-https';
+const runtimeVersion = '20260830-v163-ar-smooth';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
