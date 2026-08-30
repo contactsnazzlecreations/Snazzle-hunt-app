@@ -1,6 +1,6 @@
-// Snazzle Hunt v171 — mobiele Snazzle-zones knop robuust openen.
+// Snazzle Hunt v172 — Snazzle-zones knop direct en robuust op mobiel.
 
-const runtimeVersion = '20260830-v171-zone-button-fix';
+const runtimeVersion = '20260830-v172-zone-direct-touch';
 const fresh = (path) => `${path}${path.includes('?') ? '&' : '?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion = runtimeVersion;
 window.__snazzleFresh = fresh;
@@ -46,23 +46,70 @@ function installMobilePerformanceMode(){
         backdrop-filter:none!important;-webkit-backdrop-filter:none!important
       }
       .quick-menu-panel,.panel{will-change:transform}
+      #snArZoneOpen{position:relative!important;z-index:30!important;pointer-events:auto!important;touch-action:manipulation!important}
     }
   `;
   document.head.appendChild(style);
 }
 installMobilePerformanceMode();
 
-// Mobiele hotfix: sommige Android-webviews sturen bij deze knop geen betrouwbare click door.
-// Pointer-up opent daarom direct de nieuwe zonekaart, met de AR-wereldkaart als veilige fallback.
-document.addEventListener('pointerup',e=>{
+let zoneOpening=false;
+async function openZonesDirect(e,btn){
+  e?.preventDefault?.();
+  e?.stopPropagation?.();
+  if(zoneOpening)return;
+  zoneOpening=true;
+  const oldText=btn?.textContent;
+  if(btn){btn.disabled=false;btn.textContent='🗺️ Kaart openen…';}
+  try{
+    if(window.SnazzleZoneMapV169?.open){
+      await window.SnazzleZoneMapV169.open(e);
+      return;
+    }
+    if(window.SnazzleArWorldV85?.openZones){
+      await window.SnazzleArWorldV85.openZones(e);
+      return;
+    }
+    await safeImport('./snazzle-ar-world-v85.js?direct=v172');
+    await safeImport('./snazzle-zone-map-v169.js?direct=v172');
+    if(window.SnazzleZoneMapV169?.open){
+      await window.SnazzleZoneMapV169.open(e);
+      return;
+    }
+    if(window.SnazzleArWorldV85?.openZones){
+      await window.SnazzleArWorldV85.openZones(e);
+      return;
+    }
+    throw new Error('Kaartfunctie is nog niet geladen.');
+  }catch(err){
+    console.error('Snazzle-zones openen mislukt',err);
+    alert('De Snazzle-zones konden niet openen. Probeer de app één keer opnieuw te openen.');
+  }finally{
+    zoneOpening=false;
+    if(btn&&document.contains(btn))btn.textContent=oldText||'🗺️ Bekijk Snazzle-zones';
+  }
+}
+window.__snazzleOpenZonesDirect=openZonesDirect;
+
+function armZoneButton(btn){
+  if(!btn||btn.dataset.snZoneDirect172==='1')return;
+  btn.dataset.snZoneDirect172='1';
+  btn.disabled=false;
+  btn.style.pointerEvents='auto';
+  btn.style.touchAction='manipulation';
+  btn.style.position='relative';
+  btn.style.zIndex='30';
+  btn.onclick=e=>openZonesDirect(e,btn);
+  btn.addEventListener('touchend',e=>openZonesDirect(e,btn),{passive:false});
+  btn.addEventListener('pointerup',e=>openZonesDirect(e,btn));
+}
+function armExistingZoneButton(){armZoneButton(document.getElementById('snArZoneOpen'));}
+const zoneButtonObserver=new MutationObserver(armExistingZoneButton);
+if(document.body)zoneButtonObserver.observe(document.body,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',armExistingZoneButton,{once:true});
+document.addEventListener('click',e=>{
   const btn=e.target?.closest?.('#snArZoneOpen');
-  if(!btn)return;
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  const zoneApi=window.SnazzleZoneMapV169;
-  if(zoneApi?.open){zoneApi.open(e);return;}
-  const worldApi=window.SnazzleArWorldV85;
-  if(worldApi?.openZones)worldApi.openZones(e);
+  if(btn)openZonesDirect(e,btn);
 },true);
 
 for(const href of ['./snazzle-magic-theme.css','./snazzle-enchanted-layer.css','./snazzle-professional-v53.css','./snazzle-final-polish-v59.css']){
@@ -89,8 +136,6 @@ await Promise.all([
 
 await import(fresh('./app-core.js'));
 await safeImport('./snazzle-admin-mfa-v141.js');
-// AR-beheer mag niet wachten op alle achtergrondmodules: anders kan de knop ontbreken.
-// Deze module plaatst de AR-knop in Beheer en verbergt de interne [SYSTEEM] AR-WERELD-hunt.
 await safeImport('./snazzle-ar-admin-display-v84.js');
 
 await Promise.all([
@@ -211,6 +256,7 @@ const backgroundBundles=[
 
 Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   refreshLocalStyles();
+  armExistingZoneButton();
   try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
   setTimeout(()=>{
     safeImport('./snazzle-ar-admin-v83.js');
