@@ -1,9 +1,9 @@
-// Snazzle Cards v205 — canonieke weergave van de 24 vaste SPARK/WILD-kaarten.
-// Gebruikt rechtstreeks de originele v133 kaartvellen en maakt per kaart een eigen volledige afbeelding.
+// Snazzle Cards v206 — vaste weergave van de 24 complete SPARK/WILD-kaarten.
+// Gebruikt de complete originele kaartvellen; geen oude herstelchunks meer.
 // De zichtbare laag is een span (geen img), zodat oude thumbnail-code hem niet kan overschrijven.
-import { assets } from './snazzle-card-assets-v133.js';
+import { assets } from './snazzle-card-assets-v133.js?v=206-complete-sheets';
 
-const VERSION='205.0-canonical-card-renderer';
+const VERSION='206.0-complete-original-card-renderer';
 const CARD_RE=/S01-([SW])(\d{2})/i;
 const cache=new Map();
 const sourceImages=new Map();
@@ -43,7 +43,6 @@ async function imageFor(number){
     const sw=Math.round((info.col+1)*cellW)-sx;
     const sh=Math.round((info.row+1)*cellH)-sy;
 
-    // Eén uniforme portretcanvas. De kaart wordt volledig ingepast; niets wordt afgesneden.
     const outW=180,outH=300;
     const canvas=document.createElement('canvas');
     canvas.width=outW;canvas.height=outH;
@@ -88,8 +87,8 @@ async function putLayer(box,number){
   if(!box||!infoFor(number))return false;
   let layer=box.querySelector(':scope > .sn-fixed-card-v205');
   if(!layer){layer=document.createElement('span');layer.className='sn-fixed-card-v205';box.appendChild(layer);}
-  if(layer.dataset.cardNumber===number&&layer.dataset.ready==='1')return true;
   layer.dataset.cardNumber=number;
+  layer.dataset.ready='0';
   const src=await imageFor(number);
   if(!layer.isConnected)return false;
   layer.style.backgroundImage=`url("${src}")`;
@@ -116,7 +115,7 @@ async function repair(){
 function queueRepair(){
   if(repairQueued)return;
   repairQueued=true;
-  requestAnimationFrame(()=>{repairQueued=false;repair().catch(err=>console.error('Snazzle Cards v205 repair',err));});
+  requestAnimationFrame(()=>{repairQueued=false;repair().catch(err=>console.error('Snazzle Cards v206 repair',err));});
 }
 
 function start(){
