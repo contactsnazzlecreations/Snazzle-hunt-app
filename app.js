@@ -1,6 +1,6 @@
-// Snazzle Hunt v190 — Leaflet-kaarttegels geïsoleerd van algemene afbeeldingspolish.
+// Snazzle Hunt v191 — AR kaart/camera knop direct gekoppeld via capture-bridge.
 
-const runtimeVersion='20260831-v190-leaflet-isolation';
+const runtimeVersion='20260831-v191-ar-click-bridge';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -78,7 +78,6 @@ function suppressLateStartupOverlays(){
 suppressLateStartupOverlays();
 window.__snazzleReleaseBoot=()=>{};
 
-// Alleen de lichte stabiliteitslagen en de Leaflet-isolatie eerst.
 await Promise.all([
   safeImport('./snazzle-runtime-stability-v71.js'),
   safeImport('./snazzle-image-stability-v72.js'),
@@ -88,7 +87,6 @@ await import(fresh('./app-core.js'));
 suppressLateStartupOverlays();
 await nextPaint();
 
-// AR wordt volledig opgebouwd vóór de overige zware functies.
 await safeImport('./snazzle-ar-v80.js');
 await Promise.all([
   safeImport('./snazzle-ar-intro-close-v175.js'),
@@ -98,7 +96,6 @@ await safeImport('./snazzle-ar-world-v85.js');
 await safeImport('./snazzle-zone-map-v169.js');
 await safeImport('./snazzle-ar-safety-pass-v124.js');
 
-// Houd automatisch bij of de gebruiker in een AR-scherm zit.
 function syncArPriority(){
   window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show');
 }
@@ -106,7 +103,6 @@ const arPriorityObserver=new MutationObserver(syncArPriority);
 if(document.body)arPriorityObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
 syncArPriority();
 
-// Primaire navigatie/beheer beschikbaar maken; daarna krijgt AR een korte exclusieve startperiode.
 await Promise.all([
   safeImport('./snazzle-admin-mfa-v141.js'),
   safeImport('./snazzle-ar-admin-display-v84.js'),
@@ -115,11 +111,10 @@ await Promise.all([
   safeImport('./snazzle-central-assets-v48.js')
 ]);
 
-// Deze modules voegen de actuele beheeronderdelen toe. AR beheer en de kaart/camera-
-// plaatsing worden samen geladen, zodat de knop direct beschikbaar is zodra Beheer opent.
 Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
   safeImport('./snazzle-ar-place-studio-v184.js'),
+  safeImport('./snazzle-ar-click-bridge-v191.js'),
   safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
@@ -149,7 +144,6 @@ Promise.allSettled([
   hero.addEventListener('click',()=>{if(hasSnazzleHero())playQuack();});
 })();
 
-// Geef de gebruiker enkele seconden waarin AR geen concurrentie krijgt van tientallen imports.
 await sleep(3200);
 await waitIfArPriority();
 
