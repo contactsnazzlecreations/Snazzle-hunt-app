@@ -1,6 +1,6 @@
-// Snazzle Hunt v197 — AR kaart, camera-herstel en plaatsen vanaf huis.
+// Snazzle Hunt v198 — robuuste adreszoeker en kaart-only plaatsing.
 
-const runtimeVersion='20260831-v197-camera-maponly';
+const runtimeVersion='20260831-v198-maponly-buttons';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -111,11 +111,12 @@ await Promise.all([
   safeImport('./snazzle-central-assets-v48.js')
 ]);
 
-// AR-beheer eerst; daarna de zelfstandige plaatsing met kaart, camera-herstel en kaart-only modus.
+// AR-beheer eerst; daarna plaatsing, kaartbediening en de v198 knop-/adresfix.
 // De oude Leaflet plaatsstudio wordt hier bewust niet meer geladen.
 await safeImport('./snazzle-ar-admin-v85.js');
 await safeImport('./snazzle-ar-place-rescue-v194.js');
 await safeImport('./snazzle-ar-map-gesture-fix-v196.js');
+await safeImport('./snazzle-ar-maponly-fix-v198.js');
 
 Promise.allSettled([
   safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
