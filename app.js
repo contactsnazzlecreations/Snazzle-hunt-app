@@ -1,6 +1,6 @@
-// Snazzle Hunt v178 — AR-prioriteit + vaste layout voor Zeldzame bezoeker.
+// Snazzle Hunt v179 — AR-prioriteit + vaste beeldzone voor magische popup.
 
-const runtimeVersion='20260831-v178-visitor-layout';
+const runtimeVersion='20260831-v179-magic-popup-layout';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -62,7 +62,7 @@ function refreshLocalStyles(){
   });
 }
 
-for(const href of ['./snazzle-magic-theme.css','./snazzle-enchanted-layer.css','./snazzle-professional-v53.css','./snazzle-final-polish-v59.css']){
+for(const href of ['./snazzle-magic-theme.css','./snazzle-enchanted-layer.css','./snazzle-professional-v53.css','./snazzle-final-polish-v59.css','./snazzle-magic-popup-v179.css']){
   const l=document.createElement('link');l.rel='stylesheet';l.href=fresh(href);document.head.appendChild(l);
 }
 refreshLocalStyles();
