@@ -1,6 +1,6 @@
-// Snazzle Hunt v177 — AR krijgt echte voorrang; achtergrondmodules pauzeren tijdens AR.
+// Snazzle Hunt v178 — AR-prioriteit + vaste layout voor Zeldzame bezoeker.
 
-const runtimeVersion='20260830-v177-ar-priority';
+const runtimeVersion='20260831-v178-visitor-layout';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
