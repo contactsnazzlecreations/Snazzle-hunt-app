@@ -1,6 +1,6 @@
-// Snazzle Hunt v180 — secret-meldingen verdwijnen betrouwbaar vanzelf.
+// Snazzle Hunt v181 — Google Maps opent betrouwbaar vanuit de AR-plaatsstudio.
 
-const runtimeVersion='20260831-v180-secret-auto-dismiss';
+const runtimeVersion='20260831-v181-ar-google-maps';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
