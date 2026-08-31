@@ -1,7 +1,8 @@
 import './snazzle-card-draft-link-v107.js';
+import './snazzle-card-thumb-crop-fix-v200.js';
 
 // Snazzle Card World Prompt v79 — bestaande spelers krijgen één keer duidelijk de WILD / SPARK / MIX-keuze.
-const VERSION='79.0.0';
+const VERSION='79.0.1-thumbfix';
 const PREF_KEY='snazzleCardWorldPreference';
 const NAME_KEY='snazzleName';
 const VALID=['wild','spark','mix'];
