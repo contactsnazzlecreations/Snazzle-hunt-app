@@ -1,11 +1,19 @@
 // Snazzle Cards v204 — definitieve zichtbare kaartweergave voor alle 24 vaste kaarten.
 // Gebruikt uitsluitend de originele SPARK- en WILD-kaartvellen; opgeslagen kapotte imageData wordt niet gebruikt voor deze 24 kaarten.
-// v204.4 gebruikt een eigen visuele overlay, zodat een oude gecachte observer de kaart niet meer grijs/wit/half kan terugzetten.
+// v204.5 toont de vaste kaarten via een eigen overlay die oude gecachte thumbnail-code niet kan overschrijven.
 import sparkSheetSrc from './snazzle-card-sheet-spark-v204.js';
 import wildSheetSrc from './snazzle-card-sheet-wild-v204.js';
 
-const VERSION='204.4-original-sheets-legacy-proof';
+const VERSION='204.5-original-sheets-legacy-proof';
 let mapPromise=null,queued=false;
+const FIXED_NAMES={
+  'STAR SPRINKLE':'S01-S01','MOON GLOW':'S01-S02','DREAM DANCER':'S01-S03','CRYSTAL POP':'S01-S04',
+  'BUBBLE BLOOM':'S01-S05','GLITTER GLIDE':'S01-S06','COMET DASH':'S01-S07','RAINBOW RUSH':'S01-S08',
+  'STARLIGHT HUG':'S01-S09','AURORA WHIRL':'S01-S10','SPARKLE SPROUT':'S01-S11','NOVA SHINE':'S01-S12',
+  'TRAIL BLAZER':'S01-W01','JUNGLE JAX':'S01-W02','MUD RUNNER':'S01-W03','STORM SCOUT':'S01-W04',
+  'BOULDER BUDDY':'S01-W05','NIGHT TRACKER':'S01-W06','RIVER RUSH':'S01-W07','FOREST FLASH':'S01-W08',
+  'THUNDER TREK':'S01-W09','SHADOW SCOUT':'S01-W10','WILD GUARDIAN':'S01-W11','ALPHA SNAZZLE':'S01-W12'
+};
 
 function installStyle(){
   let s=document.getElementById('snCardThumbFixV204Style');
@@ -69,17 +77,26 @@ async function buildMap(){
   })();
   return mapPromise;
 }
-function numberFrom(el){return String(el?.textContent||'').toUpperCase().match(/S01-[SW]\d{2}/)?.[0]||'';}
-function put(box,num,src){
+function numberFrom(el){
+  const text=String(el?.textContent||'').toUpperCase();
+  const direct=text.match(/S01-[SW]\d{2}/)?.[0];
+  if(direct)return direct;
+  for(const [name,num] of Object.entries(FIXED_NAMES))if(text.includes(name))return num;
+  return '';
+}
+function setOverlay(box,num,src){
   if(!box||!num||!src)return false;
-  box.style.setProperty('--sn-v204-card-image',`url("${src}")`);
-  box.dataset.snFixedCardV204=num;
-  let img=box.querySelector(':scope > img');
-  if(!img){
-    img=document.createElement('img');
-    if(box.classList.contains('sc2-media'))box.prepend(img);
-    else{box.textContent='';box.appendChild(img);}
+  const cssUrl=`url("${src}")`;
+  if(box.dataset.snFixedCardV204!==num||box.style.getPropertyValue('--sn-v204-card-image')!==cssUrl){
+    box.style.setProperty('--sn-v204-card-image',cssUrl);
+    box.dataset.snFixedCardV204=num;
   }
+  return true;
+}
+function putPreview(box,num,src){
+  if(!box||!src)return false;
+  let img=box.querySelector(':scope > img');
+  if(!img){img=document.createElement('img');box.textContent='';box.appendChild(img);}
   if(img.dataset.snFixedV204!==num||img.getAttribute('src')!==src){img.src=src;img.alt=num;img.dataset.snFixedV204=num;}
   return true;
 }
@@ -87,14 +104,14 @@ function repairPreview(map){
   const editor=document.getElementById('sc2Editor');
   if(!editor?.classList.contains('show'))return;
   const num=String(document.getElementById('sc2Number')?.value||'').toUpperCase().trim();
-  if(map[num])put(document.getElementById('sc2Preview'),num,map[num]);
+  if(map[num])putPreview(document.getElementById('sc2Preview'),num,map[num]);
 }
 async function repair(){
   installStyle();
   let map;try{map=await buildMap();}catch(err){console.error('Snazzle Cards v204:',err);return 0;}
   let fixed=0;
-  document.querySelectorAll('#sc2List .sc2-row').forEach(row=>{const n=numberFrom(row);if(map[n]&&put(row.querySelector('.sc2-thumb'),n,map[n]))fixed++;});
-  document.querySelectorAll('#sc2Grid .sc2-card,#sc2VaultGrid .sc2-card').forEach(card=>{const n=numberFrom(card);if(map[n]&&put(card.querySelector('.sc2-media'),n,map[n]))fixed++;});
+  document.querySelectorAll('#sc2List .sc2-row').forEach(row=>{const n=numberFrom(row);if(map[n]&&setOverlay(row.querySelector('.sc2-thumb'),n,map[n]))fixed++;});
+  document.querySelectorAll('#sc2Grid .sc2-card,#sc2VaultGrid .sc2-card').forEach(card=>{const n=numberFrom(card);if(map[n]&&setOverlay(card.querySelector('.sc2-media'),n,map[n]))fixed++;});
   repairPreview(map);
   return fixed;
 }
@@ -121,4 +138,4 @@ function start(){
 window.SnazzleCardThumbFixV204={version:VERSION,repair,buildMap};
 window.SnazzleCardThumbFixV202=window.SnazzleCardThumbFixV204;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-console.info('Snazzle Cards v204.4: 24 originele kaartafbeeldingen actief en legacy-proof.');
+console.info('Snazzle Cards v204.5: 24 originele kaartafbeeldingen actief en legacy-proof.');
