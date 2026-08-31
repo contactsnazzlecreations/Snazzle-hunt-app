@@ -1,167 +1,71 @@
-// Snazzle AR place rescue v194
-// Eén directe Android/PWA route voor de knop 'Plaats via kaart + camera'.
-// Geen laad-overlay en nooit wachten op Leaflet/GPS voordat het plaatsingsscherm zichtbaar wordt.
+// Snazzle AR directe plaatsing v195
+// Zelfstandig kaart + camera scherm voor Android/PWA.
+// Geen Leaflet, geen kaart-JS-CDN en geen import nodig voordat het scherm zichtbaar wordt.
 
-const BUTTON_SELECTOR_194='#snArStudioLaunch184,.sn-ar-studio-launch184';
-const BUTTON_LABEL_194='🗺️📷 Plaats via kaart + camera';
-let busy194=false;
-let importPromise194=null;
+const BUTTON_ID='snArStudioLaunch184';
+const BUTTON_LABEL='🗺️📷 Plaats via kaart + camera';
+const MODAL_ID='snArDirect195';
+const WORLD_ID='snazzle_ar_world_v1';
+const VILLAGE_CENTERS={Montfort:[51.1262,5.9488],Posterholt:[51.1230,6.0310],'Sint Odiliënberg':[51.1430,6.0000]};
+let stream=null,dragging=false,pointerId=null,previewUrl='',observer=null;
+let state={lat:51.1262,lon:5.9488,accuracy:0,source:'fallback',x:.5,y:.56,size:.34,rotation:0};
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function toast194(message){
-  const toast=document.getElementById('toast');
-  if(toast){
-    toast.textContent=message;
-    toast.classList.add('show');
-    clearTimeout(window.__snArRescueToast194);
-    window.__snArRescueToast194=setTimeout(()=>toast.classList.remove('show'),3200);
-  }else{
-    console.warn(message);
-  }
-}
+function formData(){return{name:($('#snArAdminName85')?.value||'Scout Snazzle').trim(),number:($('#snArAdminNumber85')?.value||'001').trim(),rarity:$('#snArAdminRarity85')?.value||'RARE',village:$('#snArAdminVillage85')?.value||'Montfort',radius:Number($('#snArAdminRadius85')?.value||7),file:$('#snArAdminImage85')?.files?.[0]||null};}
+function toast(message){const t=$('#toast');if(t){t.textContent=message;t.classList.add('show');clearTimeout(window.__snAr195Toast);window.__snAr195Toast=setTimeout(()=>t.classList.remove('show'),3200);}else console.warn(message);}
+function initialCenter(){try{const p=JSON.parse(localStorage.getItem('snazzleArLastPoint')||'null');if(Number.isFinite(p?.lat)&&Number.isFinite(p?.lon))return[p.lat,p.lon];}catch{}const v=formData().village;return VILLAGE_CENTERS[v]||VILLAGE_CENTERS.Montfort;}
+function saveLastPoint(){try{localStorage.setItem('snazzleArLastPoint',JSON.stringify({lat:state.lat,lon:state.lon}));}catch{}}
 
-function removeOldLoading194(){
-  document.getElementById('snArLaunchLoading192')?.remove();
-}
+function installStyles(){if($('#snArDirect195Style'))return;const s=document.createElement('style');s.id='snArDirect195Style';s.textContent=`
+#${BUTTON_ID}{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:9000!important}
+#${MODAL_ID}{position:fixed;inset:0;z-index:50000;background:#082419;display:none;overflow:auto;color:#2d2116;-webkit-overflow-scrolling:touch}
+#${MODAL_ID}.show{display:block!important}
+.sn195-shell{width:min(620px,100%);min-height:100%;margin:auto;background:linear-gradient(#fff1bd,#edd18e);padding:calc(12px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))}
+.sn195-head{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:12;background:#f5dda4f2;padding:8px 0 10px}.sn195-head h2{margin:0;flex:1;font-size:21px}.sn195-close{width:48px;height:48px;border:0;border-radius:15px;background:#5d3b28;color:white;font-size:24px;font-weight:1000}
+.sn195-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:7px 0 13px}.sn195-steps span{padding:8px 4px;border-radius:11px;text-align:center;background:#d9bd78;font-size:11px;font-weight:950}.sn195-steps span.on{background:#315d39;color:#fff}
+.sn195-card{background:#fff8e7;border:2px solid #bc995f;border-radius:19px;padding:13px;margin-bottom:12px}.sn195-card h3{margin:0 0 8px;font-size:18px}.sn195-card p{font-size:13px;font-weight:730;line-height:1.42;margin:5px 0 10px}
+.sn195-map{height:315px;border:3px solid #6c5435;border-radius:17px;overflow:hidden;background:#dfe8db;position:relative}.sn195-map iframe{width:100%;height:100%;border:0;pointer-events:none}.sn195-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:40px;z-index:3;filter:drop-shadow(0 2px 2px white)}
+.sn195-status{padding:10px 11px;border-radius:12px;background:#fff0c8;border:2px solid #d6a341;font-size:12px;font-weight:900;margin-top:9px}.sn195-status.ok{background:#e2f1c9;border-color:#83a94a;color:#315522}.sn195-status.err{background:#f5d0c7;border-color:#c06b5d;color:#762c24}
+.sn195-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}.sn195-actions.one{grid-template-columns:1fr}.sn195-actions button,.sn195-nudge button{min-height:48px;border:0;border-radius:14px;padding:10px;font-weight:1000}.sn195-primary{background:linear-gradient(#69c43a,#3b8b29);color:#fff;box-shadow:0 4px 0 #28661f}.sn195-secondary{background:#d5b36e;color:#302216}.sn195-blue{background:#3d6fc2;color:#fff}
+.sn195-nudge{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.sn195-nudge button{min-height:42px;background:#ead49c;color:#3a2b18}.sn195-nudge .gps{background:#5d8f45;color:white}.sn195-nudge .blank{visibility:hidden}
+.sn195-camera{height:min(65vh,520px);min-height:380px;border:3px solid #5f4a30;border-radius:19px;overflow:hidden;background:#10261b;position:relative;touch-action:none}.sn195-camera video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.sn195-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28),transparent 22%,transparent 75%,rgba(0,0,0,.4));pointer-events:none}.sn195-help{position:absolute;left:10px;right:10px;top:10px;z-index:4;background:#143d2fdd;color:#fff;border:2px solid #d6ef70;border-radius:12px;padding:8px;text-align:center;font-size:11px;font-weight:900;pointer-events:none}
+.sn195-object{position:absolute;left:50%;top:56%;width:34%;aspect-ratio:1;transform:translate(-50%,-50%);display:grid;place-items:center;z-index:3;touch-action:none;user-select:none;filter:drop-shadow(0 12px 8px rgba(0,0,0,.35))}.sn195-object img{max-width:100%;max-height:100%;object-fit:contain;pointer-events:none}.sn195-duck{font-size:clamp(72px,25vw,145px);line-height:1;pointer-events:none}.sn195-ring{position:absolute;inset:-8px;border:2px dashed #fff08a;border-radius:50%;pointer-events:none}.sn195-controls{display:grid;gap:9px;margin-top:11px}.sn195-control{display:grid;grid-template-columns:84px 1fr 48px;align-items:center;gap:8px;font-size:12px;font-weight:900}.sn195-control input{width:100%}.sn195-control output{text-align:right}.sn195-success{text-align:center;padding:22px 8px}.sn195-success b{display:block;font-size:46px}.sn195-success h3{font-size:25px;margin:6px 0}
+@media(max-width:390px){.sn195-map{height:280px}.sn195-actions{grid-template-columns:1fr}.sn195-control{grid-template-columns:74px 1fr 44px}}
+`;document.head.appendChild(s);}
 
-function style194(){
-  if(document.getElementById('snArRescueStyle194')) return;
-  const s=document.createElement('style');
-  s.id='snArRescueStyle194';
-  s.textContent=`
-    #snArStudioLaunch184,.sn-ar-studio-launch184{
-      pointer-events:auto!important;
-      touch-action:manipulation!important;
-      position:relative!important;
-      z-index:8000!important;
-    }
-    #snArStudioV184{z-index:30000!important}
-  `;
-  document.head.appendChild(s);
-}
+function ensureModal(){installStyles();let el=$('#'+MODAL_ID);if(el)return el;el=document.createElement('div');el.id=MODAL_ID;el.innerHTML=`<div class="sn195-shell"><div class="sn195-head"><h2>Snazzle precies plaatsen 🗺️📷</h2><button type="button" class="sn195-close" id="sn195Close">×</button></div><div class="sn195-steps"><span id="sn195StepMap" class="on">1 · Kaart</span><span id="sn195StepCam">2 · Camera</span><span id="sn195StepSave">3 · Opslaan</span></div>
+<section id="sn195MapSection"><div class="sn195-card"><h3>1. Controleer de vaste plek</h3><p>De kaart hieronder gebruikt geen zware kaartmodule. De pin is de locatie die wordt opgeslagen. Gebruik GPS of de pijltjes om de plek enkele meters bij te sturen.</p><div class="sn195-map"><iframe id="sn195MapFrame" title="Kaartcontrole"></iframe><div class="sn195-pin">📍</div></div><div class="sn195-status" id="sn195LocationStatus">📍 Kaart klaar · GPS zoeken…</div><div class="sn195-nudge"><span class="blank"></span><button type="button" data-nudge="n">↑ Noord</button><span class="blank"></span><button type="button" data-nudge="w">← West</button><button type="button" class="gps" id="sn195Gps">🎯 GPS</button><button type="button" data-nudge="e">Oost →</button><span class="blank"></span><button type="button" data-nudge="s">↓ Zuid</button><span class="blank"></span></div><div class="sn195-actions"><button type="button" class="sn195-secondary" id="sn195Google">🗺️ Open Google Maps</button><button type="button" class="sn195-primary" id="sn195ToCamera">📷 Plek klopt — camera</button></div></div></section>
+<section id="sn195CamSection" hidden><div class="sn195-card"><h3>2. Zet de Snazzle in beeld</h3><p>Sleep de Snazzle naar de juiste plek. Stel grootte en draaiing af en zet hem daarna vast.</p><div class="sn195-camera" id="sn195Camera"><video id="sn195Video" autoplay muted playsinline></video><div class="sn195-shade"></div><div class="sn195-help">Sleep de Snazzle naar de juiste plek in beeld</div><div class="sn195-object" id="sn195Object"><div class="sn195-ring"></div><div class="sn195-duck" id="sn195Duck">🦆</div><img id="sn195Image" alt="Snazzle" hidden></div></div><div class="sn195-controls"><label class="sn195-control">Grootte <input id="sn195Size" type="range" min="18" max="62" value="34"><output id="sn195SizeOut">34%</output></label><label class="sn195-control">Draaien <input id="sn195Rotate" type="range" min="-180" max="180" value="0"><output id="sn195RotateOut">0°</output></label></div><div class="sn195-status" id="sn195CameraStatus">Camera klaarzetten…</div><div class="sn195-actions"><button type="button" class="sn195-secondary" id="sn195BackMap">← Kaart</button><button type="button" class="sn195-primary" id="sn195Save">🔒 Snazzle hier vastzetten</button></div></div></section>
+<section id="sn195DoneSection" hidden><div class="sn195-card sn195-success"><b>✅</b><h3>Snazzle geplaatst</h3><p id="sn195DoneText"></p><div class="sn195-actions one"><button type="button" class="sn195-primary" id="sn195DoneClose">Klaar</button></div></div></section></div>`;document.body.appendChild(el);wireModal();return el;}
 
-function findButton194(){
-  return document.querySelector(BUTTON_SELECTOR_194)
-    || [...document.querySelectorAll('#snArAdminV85 button')]
-      .find(b=>/Plaats via kaart\s*\+\s*camera/i.test(b.textContent||''))
-    || null;
-}
+function mapUrl(){const dLat=.0022,dLon=.0036;const l=(state.lon-dLon).toFixed(6),r=(state.lon+dLon).toFixed(6),b=(state.lat-dLat).toFixed(6),t=(state.lat+dLat).toFixed(6);return`https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(`${l},${b},${r},${t}`)}&layer=mapnik&marker=${encodeURIComponent(`${state.lat.toFixed(6)},${state.lon.toFixed(6)}`)}`;}
+function updateMap(label=''){const f=$('#sn195MapFrame');if(f)f.src=mapUrl();const s=$('#sn195LocationStatus');if(s){s.className='sn195-status'+(state.source==='gps'?' ok':'');const acc=state.accuracy?` · GPS ±${Math.round(state.accuracy)} m`:state.source==='manual'?' · handmatig bijgestuurd':' · GPS zoeken…';s.textContent=`📍 ${state.lat.toFixed(6)}, ${state.lon.toFixed(6)}${acc}${label?` · ${label}`:''}`;}saveLastPoint();}
+function requestPos(high,timeout,age){return new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('GPS wordt niet ondersteund.'));navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:high,timeout,maximumAge:age});});}
+async function locate(){const s=$('#sn195LocationStatus');if(s){s.className='sn195-status';s.textContent='📍 GPS zoeken…';}let found=false;try{const p=await requestPos(false,5000,180000);found=true;state.lat=Number(p.coords.latitude);state.lon=Number(p.coords.longitude);state.accuracy=Number(p.coords.accuracy||0);state.source='gps';updateMap('snelle locatie');}catch{}try{const p=await requestPos(true,12000,0);found=true;state.lat=Number(p.coords.latitude);state.lon=Number(p.coords.longitude);state.accuracy=Number(p.coords.accuracy||0);state.source='gps';updateMap('nauwkeurig');}catch(err){if(!found&&s){s.className='sn195-status err';s.textContent=err?.code===1?'⚠️ Locatietoestemming geweigerd. Gebruik de kaartpijltjes of geef locatie-toegang.':'⚠️ GPS reageert niet. Gebruik de kaartpijltjes of probeer GPS opnieuw.';}}}
+function nudge(dir){const step=.00005;if(dir==='n')state.lat+=step;if(dir==='s')state.lat-=step;if(dir==='e')state.lon+=step;if(dir==='w')state.lon-=step;state.accuracy=0;state.source='manual';updateMap('± 5 m bijgestuurd');}
 
-function harden194(){
-  style194();
-  removeOldLoading194();
-  const btn=findButton194();
-  if(!btn) return false;
-  btn.id='snArStudioLaunch184';
-  btn.type='button';
-  btn.disabled=false;
-  btn.removeAttribute('disabled');
-  btn.removeAttribute('aria-disabled');
-  btn.style.setProperty('pointer-events','auto','important');
-  btn.style.setProperty('touch-action','manipulation','important');
-  btn.style.setProperty('position','relative','important');
-  btn.style.setProperty('z-index','8000','important');
-  btn.dataset.snRescue194='1';
-  if(!btn.textContent?.trim()) btn.textContent=BUTTON_LABEL_194;
-  return true;
-}
+function showStep(step){$('#sn195MapSection').hidden=step!=='map';$('#sn195CamSection').hidden=step!=='cam';$('#sn195DoneSection').hidden=step!=='done';$('#sn195StepMap').classList.toggle('on',step==='map');$('#sn195StepCam').classList.toggle('on',step==='cam');$('#sn195StepSave').classList.toggle('on',step==='done');}
+function setPreview(){if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}const file=formData().file,img=$('#sn195Image'),duck=$('#sn195Duck');if(file){previewUrl=URL.createObjectURL(file);img.src=previewUrl;img.hidden=false;duck.hidden=true;}else{img.removeAttribute('src');img.hidden=true;duck.hidden=false;}}
+function applyPlacement(){const o=$('#sn195Object');if(!o)return;o.style.left=`${state.x*100}%`;o.style.top=`${state.y*100}%`;o.style.width=`${state.size*100}%`;const content=!$('#sn195Image')?.hidden?$('#sn195Image'):$('#sn195Duck');if(content)content.style.transform=`rotate(${state.rotation}deg)`;$('#sn195SizeOut').textContent=`${Math.round(state.size*100)}%`;$('#sn195RotateOut').textContent=`${Math.round(state.rotation)}°`;}
+async function startCamera(){stopCamera();const s=$('#sn195CameraStatus');if(s){s.className='sn195-status';s.textContent='📷 Camera openen…';}try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Camera wordt niet ondersteund.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const v=$('#sn195Video');v.srcObject=stream;await v.play().catch(()=>{});setPreview();applyPlacement();if(s){s.className='sn195-status ok';s.textContent='✅ Camera actief. Sleep de Snazzle naar de juiste plek.';}}catch(err){if(s){s.className='sn195-status err';s.textContent='⚠️ Camera kon niet openen. Controleer de cameratoestemming.';}throw err;}}
+function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}const v=$('#sn195Video');if(v)v.srcObject=null;}
+function dragStart(e){dragging=true;pointerId=e.pointerId;$('#sn195Object')?.setPointerCapture?.(e.pointerId);dragMove(e);}
+function dragMove(e){if(!dragging||e.pointerId!==pointerId)return;const r=$('#sn195Camera')?.getBoundingClientRect();if(!r)return;state.x=Math.max(.06,Math.min(.94,(e.clientX-r.left)/r.width));state.y=Math.max(.12,Math.min(.90,(e.clientY-r.top)/r.height));applyPlacement();e.preventDefault();}
+function dragEnd(e){if(e.pointerId===pointerId){dragging=false;pointerId=null;}}
 
-function studioVisible194(){
-  return !!document.getElementById('snArStudioV184')?.classList.contains('show');
-}
+async function savePoint(){const btn=$('#sn195Save'),status=$('#sn195CameraStatus'),f=formData();if(f.name.length<2){status.className='sn195-status err';status.textContent='⚠️ Vul eerst een naam voor de Snazzle in.';return;}if(!Number.isFinite(state.lat)||!Number.isFinite(state.lon)){status.className='sn195-status err';status.textContent='⚠️ Er is geen geldige locatie.';return;}btn.disabled=true;status.className='sn195-status';status.textContent='☁️ Plaatsing opslaan…';try{const [{getAuth},{getFirestore,doc,getDoc,setDoc},{getStorage,ref,uploadBytes,getDownloadURL}]=await Promise.all([import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js'),import('https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js'),import('https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js')]);const auth=getAuth();if(!auth.currentUser)throw new Error('Je bent niet meer ingelogd als beheerder.');const db=getFirestore(),storage=getStorage(),worldDoc=doc(db,'hunts',WORLD_ID);const id=`ar_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;let imageUrl='';if(f.file){if(f.file.size>8*1024*1024)throw new Error('Afbeelding is groter dan 8 MB.');const safe=(f.file.name||'snazzle.png').replace(/[^a-zA-Z0-9._-]+/g,'-');const target=ref(storage,`listen-stories/images/${auth.currentUser.uid}/ar-${id}-${safe}`);await uploadBytes(target,f.file,{contentType:f.file.type||'image/png'});imageUrl=await getDownloadURL(target);}const snap=await getDoc(worldDoc),data=snap.exists()?snap.data():{},existing=Array.isArray(data.points)?data.points:[],now=new Date().toISOString();const point={id,name:f.name,number:f.number||'—',rarity:f.rarity,village:f.village,radius:f.radius,lat:state.lat,lon:state.lon,accuracy:state.accuracy,imageUrl,active:true,placement:{version:2,mode:'direct-map-camera',x:Number(state.x.toFixed(4)),y:Number(state.y.toFixed(4)),size:Number(state.size.toFixed(4)),rotation:Number(state.rotation.toFixed(1)),placedAt:now},createdAt:now,updatedAt:now,createdBy:auth.currentUser.uid};await setDoc(worldDoc,{_snazzleInternalType:'arWorld',title:'[SYSTEEM] AR-WERELD',village:'snazzle-internal',description:'Interne opslag voor permanente Snazzle AR-punten',rule:'',hint:'',foundMessage:'',imageUrl:'',start:'',end:'',mode:'draft',version:5,points:[...existing,point],updatedAt:now,updatedBy:auth.currentUser.uid},{merge:true});stopCamera();showStep('done');$('#sn195DoneText').innerHTML=`<b>${esc(point.name)}</b> is opgeslagen op ${point.lat.toFixed(6)}, ${point.lon.toFixed(6)}.<br>De camera-positie, grootte en draaiing zijn mee opgeslagen.`;window.SnazzleArAdminV85?.refresh?.();}catch(err){console.error('AR v195 opslaan',err);status.className='sn195-status err';status.textContent='⚠️ '+(err?.message||'Opslaan is mislukt.');}finally{btn.disabled=false;}}
 
-function importStudio194(){
-  if(window.SnazzleArPlaceStudioV184?.open) return Promise.resolve(window.SnazzleArPlaceStudioV184);
-  if(importPromise194) return importPromise194;
-  const version=encodeURIComponent(window.__snazzleRuntimeVersion||'v194');
-  const moduleUrl=`./snazzle-ar-place-studio-v184.js?rescue194=${version}`;
-  const attempt=import(moduleUrl).catch(err=>{
-    console.error('AR plaatsstudio import v194 mislukt',err);
-    return null;
-  });
-  const timeout=new Promise(resolve=>setTimeout(()=>resolve(null),4500));
-  importPromise194=Promise.race([attempt,timeout]).finally(()=>{importPromise194=null;});
-  return importPromise194;
-}
+function close(){stopCamera();if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}$('#'+MODAL_ID)?.classList.remove('show');document.body.style.overflow='';}
+function open(){const el=ensureModal();document.getElementById('snArLaunchLoading192')?.remove();document.getElementById('snArStudioV184')?.remove();const [lat,lon]=initialCenter();state={lat:Number(lat),lon:Number(lon),accuracy:0,source:'fallback',x:.5,y:.56,size:.34,rotation:0};$('#sn195Size').value='34';$('#sn195Rotate').value='0';showStep('map');el.classList.add('show');document.body.style.overflow='hidden';updateMap('kaart geopend');setTimeout(()=>locate().catch(()=>{}),20);}
 
-function callOpen194(api){
-  if(!api?.open) return false;
-  try{
-    // Bewust NIET awaiten: open() toont de modal vóór Leaflet/GPS wordt geladen.
-    const result=api.open();
-    Promise.resolve(result).catch(err=>console.warn('AR plaatsstudio achtergrondfout v194',err));
-    return true;
-  }catch(err){
-    console.error('AR plaatsstudio open v194 mislukt',err);
-    return false;
-  }
-}
+function wireModal(){$('#sn195Close').addEventListener('click',close);$('#sn195DoneClose').addEventListener('click',close);$('#sn195Gps').addEventListener('click',()=>locate().catch(()=>{}));document.querySelectorAll('[data-nudge]').forEach(b=>b.addEventListener('click',()=>nudge(b.dataset.nudge)));$('#sn195Google').addEventListener('click',()=>{const q=encodeURIComponent(`${state.lat.toFixed(7)},${state.lon.toFixed(7)}`);window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank','noopener');});$('#sn195ToCamera').addEventListener('click',()=>{showStep('cam');startCamera().catch(()=>{});});$('#sn195BackMap').addEventListener('click',()=>{stopCamera();showStep('map');});$('#sn195Save').addEventListener('click',savePoint);const obj=$('#sn195Object');obj.addEventListener('pointerdown',dragStart);obj.addEventListener('pointermove',dragMove);obj.addEventListener('pointerup',dragEnd);obj.addEventListener('pointercancel',dragEnd);$('#sn195Size').addEventListener('input',e=>{state.size=Number(e.target.value)/100;applyPlacement();});$('#sn195Rotate').addEventListener('input',e=>{state.rotation=Number(e.target.value);applyPlacement();});}
 
-async function open194(){
-  if(busy194 || studioVisible194()) return;
-  busy194=true;
-  removeOldLoading194();
-  harden194();
-
-  try{
-    let api=window.SnazzleArPlaceStudioV184;
-    if(api?.open){
-      callOpen194(api);
-      await new Promise(r=>setTimeout(r,80));
-      if(studioVisible194()) return;
-    }
-
-    api=await importStudio194();
-    if(!api?.open) api=window.SnazzleArPlaceStudioV184;
-    if(!callOpen194(api)) throw new Error('De plaatsmodule is niet beschikbaar.');
-
-    for(let i=0;i<15;i++){
-      await new Promise(r=>setTimeout(r,80));
-      if(studioVisible194()) return;
-    }
-    throw new Error('Het plaatsingsscherm werd niet zichtbaar.');
-  }catch(err){
-    console.error('Snazzle AR rescue v194',err);
-    toast194('⚠️ Plaatsingsscherm kon niet openen. Sluit Beheer en open het opnieuw.');
-  }finally{
-    busy194=false;
-    harden194();
-  }
-}
-
-function isMapButton194(target){
-  const btn=target?.closest?.('button,a');
-  return !!(btn && (
-    btn.matches?.(BUTTON_SELECTOR_194)
-    || /Plaats via kaart\s*\+\s*camera/i.test(btn.textContent||'')
-  ));
-}
-
-function intercept194(event){
-  if(!isMapButton194(event.target)) return;
-  event.preventDefault?.();
-  event.stopPropagation?.();
-  event.stopImmediatePropagation?.();
-  open194();
-}
-
-// Eén capture-route. Pointerdown is vroeg genoeg voor Android/PWA en voorkomt dubbele click-afhandeling.
-document.addEventListener('pointerdown',intercept194,true);
-document.addEventListener('click',event=>{
-  if(!isMapButton194(event.target)) return;
-  event.preventDefault?.();
-  event.stopPropagation?.();
-  event.stopImmediatePropagation?.();
-  if(!studioVisible194()) open194();
-},true);
-
-const observer194=new MutationObserver(()=>harden194());
-function boot194(){
-  harden194();
-  if(document.body) observer194.observe(document.body,{childList:true,subtree:true});
-  [50,150,400,900,1800,3500,7000].forEach(ms=>setTimeout(harden194,ms));
-}
-if(document.body) boot194();
-else document.addEventListener('DOMContentLoaded',boot194,{once:true});
-
-window.SnazzleArPlaceRescueV194={open:open194,harden:harden194};
-console.info('Snazzle AR place rescue v194 geladen');
+function installButton(){installStyles();const basic=$('#snArAdminPlace85');if(!basic)return false;let btn=$('#'+BUTTON_ID);if(!btn){btn=document.createElement('button');btn.id=BUTTON_ID;btn.type='button';btn.className='save sn-ar-studio-launch184';btn.textContent=BUTTON_LABEL;basic.insertAdjacentElement('afterend',btn);}btn.disabled=false;btn.removeAttribute('disabled');btn.removeAttribute('aria-disabled');btn.style.setProperty('pointer-events','auto','important');btn.style.setProperty('touch-action','manipulation','important');btn.style.setProperty('z-index','9000','important');return true;}
+function isButton(target){const b=target?.closest?.('button,a');return !!(b&&(b.id===BUTTON_ID||b.classList?.contains('sn-ar-studio-launch184')||/Plaats via kaart\s*\+\s*camera/i.test(b.textContent||'')));}
+function intercept(e){if(!isButton(e.target))return;e.preventDefault?.();e.stopPropagation?.();e.stopImmediatePropagation?.();if(!$('#'+MODAL_ID)?.classList.contains('show'))open();}
+document.addEventListener('pointerdown',intercept,true);document.addEventListener('click',intercept,true);
+function boot(){installButton();if(observer||!document.body)return;observer=new MutationObserver(()=>installButton());observer.observe(document.body,{childList:true,subtree:true});[50,150,400,900,1800,3500,7000].forEach(ms=>setTimeout(installButton,ms));}
+if(document.body)boot();else document.addEventListener('DOMContentLoaded',boot,{once:true});
+window.SnazzleArPlaceRescueV194={open,close,harden:installButton};
+console.info('Snazzle AR directe plaatsing v195 geladen');
