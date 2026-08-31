@@ -1,10 +1,10 @@
 // Snazzle Cards v204 — definitieve zichtbare kaartweergave voor alle 24 vaste kaarten.
 // Gebruikt uitsluitend de originele SPARK- en WILD-kaartvellen; opgeslagen kapotte imageData wordt niet gebruikt voor deze 24 kaarten.
-// v204.3 gebruikt bovendien een eigen visuele overlay, zodat een oude gecachte observer de kaart niet meer grijs/wit/half kan terugzetten.
+// v204.4 gebruikt een eigen visuele overlay, zodat een oude gecachte observer de kaart niet meer grijs/wit/half kan terugzetten.
 import sparkSheetSrc from './snazzle-card-sheet-spark-v204.js';
 import wildSheetSrc from './snazzle-card-sheet-wild-v204.js';
 
-const VERSION='204.3-original-sheets-legacy-proof';
+const VERSION='204.4-original-sheets-legacy-proof';
 let mapPromise=null,queued=false;
 
 function installStyle(){
@@ -25,10 +25,10 @@ function installStyle(){
     #sc2List .sc2-thumb>img{transform:none!important;filter:none!important}
     #sc2Grid .sc2-card.unlocked .sc2-media>img,#sc2VaultGrid .sc2-card.unlocked .sc2-media>img{transform:none!important}
 
-    /* De echte v204-afbeelding ligt boven eventuele oude/kapotte img-tags. */
-    #sc2List .sc2-thumb::after,
-    #sc2Grid .sc2-media::after,
-    #sc2VaultGrid .sc2-media::after{
+    /* Alleen de 24 vaste kaarten krijgen de legacy-proof overlay. Eigen uploads blijven ongemoeid. */
+    #sc2List .sc2-thumb[data-sn-fixed-card-v204]::after,
+    #sc2Grid .sc2-media[data-sn-fixed-card-v204]::after,
+    #sc2VaultGrid .sc2-media[data-sn-fixed-card-v204]::after{
       content:""!important;position:absolute!important;inset:0!important;
       display:block!important;pointer-events:none!important;
       background-image:var(--sn-v204-card-image)!important;
@@ -121,4 +121,4 @@ function start(){
 window.SnazzleCardThumbFixV204={version:VERSION,repair,buildMap};
 window.SnazzleCardThumbFixV202=window.SnazzleCardThumbFixV204;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-console.info('Snazzle Cards v204.3: 24 originele kaartafbeeldingen actief en legacy-proof.');
+console.info('Snazzle Cards v204.4: 24 originele kaartafbeeldingen actief en legacy-proof.');
