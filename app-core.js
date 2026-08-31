@@ -483,7 +483,21 @@ function ensureQuickMenu(){
     if(action==='event'){ setTimeout(()=>openEventPoster(),80); return; }
     if(action==='shop'){ openSheet('shopSheet'); return; }
     if(action==='profile'){ openSheet('profileSheet'); return; }
-    if(action==='admin'){ if(adminProfile) openSheet('adminSheet'); else openSheet('adminLogin'); }
+    if(action==='admin'){
+      if(!adminProfile){ openSheet('adminLogin'); return; }
+      const oldText=btn.querySelector('small')?.textContent||'';
+      const small=btn.querySelector('small');
+      btn.disabled=true;
+      if(small) small.textContent='Volledig beheer wordt geladen…';
+      try{ await window.__snazzleAdminUiReady; }
+      catch(e){ console.warn('Volledig beheermenu kon niet vooraf laden',e); }
+      finally{
+        btn.disabled=false;
+        if(small) small.textContent=oldText;
+      }
+      renderAdmin();
+      openSheet('adminSheet');
+    }
   });
 }
 
@@ -665,7 +679,13 @@ function renderAdmin(){
 }
 function renderAdminHunts(){
   const box=$('#adminHuntList'); if(!box) return; box.innerHTML='';
-  const visible=adminProfile?.role==='village_admin' ? hunts.filter(h=>h.village===adminProfile.village) : hunts;
+  const publicHunts=hunts.filter(h=>
+    h?.id!=='snazzle_ar_world_v1' &&
+    h?._snazzleInternalType!=='arWorld' &&
+    h?.village!=='snazzle-internal' &&
+    !/^\s*\[SYSTEEM\]/i.test(String(h?.title||''))
+  );
+  const visible=adminProfile?.role==='village_admin' ? publicHunts.filter(h=>h.village===adminProfile.village) : publicHunts;
   visible.slice().sort((a,b)=>String(b.start||'').localeCompare(String(a.start||''))).forEach(h=>{
     const st=statusOf(h), card=document.createElement('div'); card.className='listitem';
     card.innerHTML=`<strong>${esc(h.title)}</strong><span>📍 ${esc(h.village)}</span><span class="badge ${st}">${({live:'LIVE',planned:'INGEPLAND',draft:'CONCEPT',ended:'AFGELOPEN'}[st])}</span><button class="secondary" data-edit-hunt="${h.id}">Bewerken</button>`;
