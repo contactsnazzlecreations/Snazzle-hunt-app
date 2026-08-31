@@ -1,61 +1,74 @@
-// Snazzle AR zone map fix v168 — zonesknop altijd werkend + stabiele kaarttegels op mobiel.
+// Snazzle AR map fix v183 — stabiele kaarttegels voor zones én precies plaatsen.
 // De klik wordt centraal afgehandeld, zodat een later vervangen knop nooit zijn event-listener kwijt kan raken.
 
 let readyPromise=null;
 let patched=false;
 const $=s=>document.querySelector(s);
+const MANAGED_MAP_SELECTOR='#snArZoneMap,#snArMap90';
 
 function installCss(){
-  if(document.getElementById('snArZoneMapFix168Style'))return;
+  if(document.getElementById('snArZoneMapFix183Style'))return;
   const s=document.createElement('style');
-  s.id='snArZoneMapFix168Style';
+  s.id='snArZoneMapFix183Style';
   s.textContent=`
-    #snArZoneMap.leaflet-container{background:#dce9d7!important;position:relative!important}
+    #snArZoneMap.leaflet-container,#snArMap90.leaflet-container{background:#dce9d7!important;position:relative!important}
     #snArZoneMap .leaflet-map-pane,
     #snArZoneMap .leaflet-pane,
-    #snArZoneMap .leaflet-tile-pane{display:block!important;visibility:visible!important;opacity:1!important}
-    #snArZoneMap .leaflet-tile-container{visibility:visible!important;opacity:1!important}
-    #snArZoneMap img.leaflet-tile{
+    #snArZoneMap .leaflet-tile-pane,
+    #snArMap90 .leaflet-map-pane,
+    #snArMap90 .leaflet-pane,
+    #snArMap90 .leaflet-tile-pane{display:block!important;visibility:visible!important;opacity:1!important}
+    #snArZoneMap .leaflet-tile-container,#snArMap90 .leaflet-tile-container{visibility:visible!important;opacity:1!important}
+    #snArZoneMap img.leaflet-tile,#snArMap90 img.leaflet-tile{
       display:block!important;visibility:visible!important;opacity:1!important;
       max-width:none!important;max-height:none!important;width:256px!important;height:256px!important;
       object-fit:fill!important;filter:none!important;transition:none!important;animation:none!important
     }
-    #snArZoneMap .leaflet-tile-pane{z-index:200!important}
-    #snArZoneMap .leaflet-overlay-pane{z-index:400!important}
-    #snArZoneMap .leaflet-control-container{display:block!important;visibility:visible!important;opacity:1!important}
+    #snArZoneMap .leaflet-tile-pane,#snArMap90 .leaflet-tile-pane{z-index:200!important}
+    #snArZoneMap .leaflet-overlay-pane,#snArMap90 .leaflet-overlay-pane{z-index:400!important}
+    #snArZoneMap .leaflet-control-container,#snArMap90 .leaflet-control-container{display:block!important;visibility:visible!important;opacity:1!important}
   `;
   document.head.appendChild(s);
   if(!document.querySelector('link[href*="leaflet@1.9.4/dist/leaflet.css"],link[href*="leaflet.css"]')){
     const l=document.createElement('link');
     l.rel='stylesheet';
     l.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
-    l.dataset.snArZoneMapFix168='1';
+    l.dataset.snArZoneMapFix183='1';
     document.head.appendChild(l);
   }
 }
 
-function sanitizeMapDom(root=$('#snArZoneMap')){
-  if(!root)return;
-  root.querySelectorAll('img.leaflet-tile,img.leaflet-marker-icon,img.leaflet-marker-shadow').forEach(img=>{
-    img.classList.remove('sn59-media','sn59-loading','sn59-loaded');
-    try{delete img.dataset.sn59Media;}catch{}
-    img.style.opacity='1';
-    img.style.filter='none';
-  });
-  root.querySelectorAll('.leaflet-tile-container,.leaflet-layer,.leaflet-pane').forEach(el=>{
-    el.classList.remove('sn59-media-shell','sn59-waiting');
+function sanitizeMapDom(root=null){
+  const roots=root?[root]:[...document.querySelectorAll(MANAGED_MAP_SELECTOR)];
+  roots.forEach(mapRoot=>{
+    if(!mapRoot)return;
+    mapRoot.querySelectorAll('img.leaflet-tile,img.leaflet-marker-icon,img.leaflet-marker-shadow').forEach(img=>{
+      img.classList.remove('sn59-media','sn59-loading','sn59-loaded');
+      try{delete img.dataset.sn59Media;}catch{}
+      img.style.display='block';
+      img.style.visibility='visible';
+      img.style.opacity='1';
+      img.style.filter='none';
+    });
+    mapRoot.querySelectorAll('.leaflet-tile-container,.leaflet-layer,.leaflet-pane').forEach(el=>{
+      el.classList.remove('sn59-media-shell','sn59-waiting');
+    });
   });
 }
 
 function startDomProtection(){
-  if(window.__snazzleLeafletDomProtect168)return;
-  window.__snazzleLeafletDomProtect168=true;
+  if(window.__snazzleLeafletDomProtect183)return;
+  window.__snazzleLeafletDomProtect183=true;
   const mo=new MutationObserver(records=>{
     let relevant=false;
     for(const r of records){
-      if(r.target?.closest?.('#snArZoneMap')){relevant=true;break;}
+      if(r.target?.closest?.(MANAGED_MAP_SELECTOR)){relevant=true;break;}
       for(const n of r.addedNodes||[]){
-        if(n?.nodeType===1&&(n.id==='snArZoneMap'||n.closest?.('#snArZoneMap')||n.querySelector?.('#snArZoneMap,.leaflet-tile'))){relevant=true;break;}
+        if(n?.nodeType===1&&(
+          n.matches?.(MANAGED_MAP_SELECTOR) ||
+          n.closest?.(MANAGED_MAP_SELECTOR) ||
+          n.querySelector?.(`${MANAGED_MAP_SELECTOR},.leaflet-tile`)
+        )){relevant=true;break;}
       }
       if(relevant)break;
     }
@@ -89,7 +102,13 @@ async function ensureLeaflet(){
   catch{return await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');}
 }
 
-function isZoneMap(map){return map?.getContainer?.()?.id==='snArZoneMap';}
+function isManagedMap(map){return ['snArZoneMap','snArMap90'].includes(map?.getContainer?.()?.id);}
+function isManagedMapOpen(map){
+  const id=map?.getContainer?.()?.id;
+  if(id==='snArZoneMap')return !!$('#snArZoneModal')?.classList.contains('show');
+  if(id==='snArMap90')return !!$('#snArStudioV90')?.classList.contains('show');
+  return false;
+}
 
 function stabilizeMap(map){
   if(!map)return;
@@ -130,7 +149,7 @@ function installLeafletPatches(L){
   }
 
   function addProvider(map,index=0){
-    if(!isZoneMap(map))return null;
+    if(!isManagedMap(map))return null;
     const i=Math.max(0,Math.min(index,providers.length-1));
     const p=providers[i];
     removeBaseLayers(map);
@@ -149,7 +168,7 @@ function installLeafletPatches(L){
     layer.addTo(map);
     stabilizeMap(map);
     setTimeout(()=>{
-      if(!isZoneMap(map)||!$('#snArZoneModal')?.classList.contains('show'))return;
+      if(!isManagedMapOpen(map))return;
       const imgs=[...map.getContainer().querySelectorAll('img.leaflet-tile')];
       const visible=imgs.some(img=>img.complete&&img.naturalWidth>0);
       if(!loaded&&!visible)next();
@@ -160,12 +179,14 @@ function installLeafletPatches(L){
   const wrappedMap=function(target,options){
     const map=originalMap(target,options);
     const id=typeof target==='string'?target:target?.id;
-    if(id==='snArZoneMap'){
-      window.__snazzleZoneMap168=map;
-      window.__snazzleZoneMap167=map;
-      window.__snazzleZoneMap112=map;
+    if(id==='snArZoneMap'||id==='snArMap90'){
+      if(id==='snArZoneMap'){
+        window.__snazzleZoneMap168=map;
+        window.__snazzleZoneMap167=map;
+        window.__snazzleZoneMap112=map;
+      }else window.__snazzlePlaceMap183=map;
       attachResizeFix(map);
-      setTimeout(()=>{if(isZoneMap(map)&&!map.__snBase168)addProvider(map,0);},0);
+      setTimeout(()=>{if(isManagedMap(map)&&!map.__snBase168)addProvider(map,0);},0);
       stabilizeMap(map);
     }
     return map;
@@ -177,7 +198,7 @@ function installLeafletPatches(L){
     const layer=originalTileLayer(url,options);
     layer.on('add',()=>{
       const map=layer._map;
-      if(!isZoneMap(map))return;
+      if(!isManagedMap(map))return;
       if(!map.__snBase168){
         setTimeout(()=>{
           try{if(map.hasLayer(layer))map.removeLayer(layer);}catch{}
@@ -226,15 +247,23 @@ document.addEventListener('click',async e=>{
 },true);
 
 const modalObserver=new MutationObserver(()=>{
-  const modal=$('#snArZoneModal');
-  if(!modal?.classList.contains('show'))return;
-  const map=window.__snazzleZoneMap168||window.__snazzleZoneMap167||window.__snazzleZoneMap112;
+  const zoneOpen=$('#snArZoneModal')?.classList.contains('show');
+  const studioOpen=$('#snArStudioV90')?.classList.contains('show');
+  if(!zoneOpen&&!studioOpen)return;
+  const maps=[window.__snazzleZoneMap168||window.__snazzleZoneMap167||window.__snazzleZoneMap112,window.__snazzlePlaceMap183].filter(Boolean);
   sanitizeMapDom();
-  if(map)stabilizeMap(map);
+  maps.forEach(stabilizeMap);
 });
 if(document.body)modalObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
 
 installCss();
 startDomProtection();
 prepare().catch(()=>{});
-window.SnazzleArZoneMapFixV112={prepare,stabilize:()=>stabilizeMap(window.__snazzleZoneMap168||window.__snazzleZoneMap167||window.__snazzleZoneMap112),sanitize:sanitizeMapDom};
+window.SnazzleArZoneMapFixV112={
+  prepare,
+  stabilize:()=>[
+    window.__snazzleZoneMap168||window.__snazzleZoneMap167||window.__snazzleZoneMap112,
+    window.__snazzlePlaceMap183
+  ].filter(Boolean).forEach(stabilizeMap),
+  sanitize:sanitizeMapDom
+};
