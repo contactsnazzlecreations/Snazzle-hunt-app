@@ -1,6 +1,6 @@
-// Snazzle Hunt v183 — AR kaart + camera weer direct beschikbaar in Beheer.
+// Snazzle Hunt v184 — AR kaart direct zichtbaar; GPS verfijnt daarna op de achtergrond.
 
-const runtimeVersion='20260831-v183-ar-map-loader';
+const runtimeVersion='20260831-v184-ar-map-immediate';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -118,7 +118,7 @@ await Promise.all([
 // plaatsing worden samen geladen, zodat de knop direct beschikbaar is zodra Beheer opent.
 Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
-  safeImport('./snazzle-ar-place-studio-v90.js'),
+  safeImport('./snazzle-ar-place-studio-v184.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
   safeImport('./snazzle-parent-hub-v65.js'),
