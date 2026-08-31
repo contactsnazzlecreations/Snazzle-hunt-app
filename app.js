@@ -1,6 +1,6 @@
-// Snazzle Hunt v191 — AR kaart/camera knop direct gekoppeld via capture-bridge.
+// Snazzle Hunt v192 — robuuste AR kaartlauncher voor Android/PWA.
 
-const runtimeVersion='20260831-v191-ar-click-bridge';
+const runtimeVersion='20260831-v192-ar-launcher';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -114,7 +114,7 @@ await Promise.all([
 Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
   safeImport('./snazzle-ar-place-studio-v184.js'),
-  safeImport('./snazzle-ar-click-bridge-v191.js'),
+  safeImport('./snazzle-ar-launcher-v192.js'),
   safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
