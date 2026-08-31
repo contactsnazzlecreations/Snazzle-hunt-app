@@ -1,10 +1,12 @@
-// Snazzle Hunt v181 — Google Maps opent betrouwbaar vanuit de AR-plaatsstudio.
+// Snazzle Hunt v182 — Beheer opent pas zodra het volledige beheermenu klaarstaat.
 
-const runtimeVersion='20260831-v181-ar-google-maps';
+const runtimeVersion='20260831-v182-admin-menu-ready';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
 window.__snazzleArPriority=false;
+let markAdminUiReady;
+window.__snazzleAdminUiReady=new Promise(resolve=>{markAdminUiReady=resolve;});
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function safeImport(path){
@@ -111,6 +113,23 @@ await Promise.all([
   safeImport('./snazzle-main-menu-v129.js'),
   safeImport('./snazzle-central-assets-v48.js')
 ]);
+
+// Deze modules voegen de actuele beheeronderdelen toe. Sinds de AR-snelheidslaag
+// werden ze pas na enkele seconden geladen, waardoor een snelle tik op Beheer nog
+// het oude basispaneel met slechts vier tabbladen liet zien. Start ze direct en
+// laat app-core op deze gedeelde belofte wachten voordat Beheer wordt geopend.
+Promise.allSettled([
+  safeImport('./snazzle-ar-admin-v85.js'),
+  safeImport('./snazzle-news-v46.js'),
+  safeImport('./snazzle-listen-stories-v63.js'),
+  safeImport('./snazzle-parent-hub-v65.js'),
+  safeImport('./snazzle-card-system-v2.js'),
+  safeImport('./snazzle-world-hub-v47.js')
+]).then(()=>{
+  document.dispatchEvent(new CustomEvent('snazzle:admin-ui-ready'));
+  markAdminUiReady(true);
+  return true;
+});
 
 (function installHeroQuack(){
   const hero=document.getElementById('hero');if(!hero||hero.dataset.snQuack177)return;
