@@ -1,6 +1,6 @@
-// Snazzle Hunt v182 — Beheer opent pas zodra het volledige beheermenu klaarstaat.
+// Snazzle Hunt v183 — AR kaart + camera weer direct beschikbaar in Beheer.
 
-const runtimeVersion='20260831-v182-admin-menu-ready';
+const runtimeVersion='20260831-v183-ar-map-loader';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -114,12 +114,11 @@ await Promise.all([
   safeImport('./snazzle-central-assets-v48.js')
 ]);
 
-// Deze modules voegen de actuele beheeronderdelen toe. Sinds de AR-snelheidslaag
-// werden ze pas na enkele seconden geladen, waardoor een snelle tik op Beheer nog
-// het oude basispaneel met slechts vier tabbladen liet zien. Start ze direct en
-// laat app-core op deze gedeelde belofte wachten voordat Beheer wordt geopend.
+// Deze modules voegen de actuele beheeronderdelen toe. AR beheer en de kaart/camera-
+// plaatsing worden samen geladen, zodat de knop direct beschikbaar is zodra Beheer opent.
 Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
+  safeImport('./snazzle-ar-place-studio-v90.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
   safeImport('./snazzle-parent-hub-v65.js'),
