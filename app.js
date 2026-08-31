@@ -1,6 +1,6 @@
-// Snazzle Hunt v201 — definitieve individuele kaartminiaturen + robuuste adreszoeker en kaart-only plaatsing.
+// Snazzle Hunt v202 — alle SPARK- en WILD-kaarten zichtbaar + robuuste adreszoeker en kaart-only plaatsing.
 
-const runtimeVersion='20260831-v201-card-thumbs-no-sprite';
+const runtimeVersion='20260831-v202-all-card-thumbs';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -124,11 +124,11 @@ Promise.allSettled([
   safeImport('./snazzle-listen-stories-v63.js'),
   safeImport('./snazzle-parent-hub-v65.js'),
   safeImport('./snazzle-card-system-v2.js'),
-  safeImport('./snazzle-card-thumb-fix-v201.js'),
+  safeImport('./snazzle-card-thumb-fix-v202.js'),
   safeImport('./snazzle-world-hub-v47.js')
 ]).then(()=>{
   [60,320,900,1800].forEach(ms=>setTimeout(()=>{
-    window.SnazzleCardThumbFixV201?.repair?.();
+    window.SnazzleCardThumbFixV202?.repair?.();
     const adminSheet=document.getElementById('adminSheet');
     if(adminSheet) adminSheet.dispatchEvent(new MouseEvent('click',{bubbles:true}));
   },ms));
