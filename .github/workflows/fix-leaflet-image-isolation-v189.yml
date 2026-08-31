@@ -1,0 +1,33 @@
+name: Fix Leaflet image isolation v189
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-leaflet-image-isolation-v189.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Isolate Leaflet from global image polish
+        run: python .github/scripts/fix_leaflet_image_isolation_v189.py
+
+      - name: Commit v189 image isolation
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js snazzle-final-polish-v59.js snazzle-final-polish-v59.css snazzle-image-stability-v72.js
+          git commit -m "Isolate Leaflet tiles from Snazzle image polish v189"
+          git push
