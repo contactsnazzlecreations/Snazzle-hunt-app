@@ -1,6 +1,6 @@
-// Snazzle Hunt v184 — AR kaart direct zichtbaar; GPS verfijnt daarna op de achtergrond.
+// Snazzle Hunt v185 — AR kaarttegels krijgen automatische Android/PWA fallback.
 
-const runtimeVersion='20260831-v184-ar-map-immediate';
+const runtimeVersion='20260831-v185-ar-map-tile-rescue';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -119,6 +119,7 @@ await Promise.all([
 Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
   safeImport('./snazzle-ar-place-studio-v184.js'),
+  safeImport('./snazzle-ar-map-tile-rescue-v185.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
   safeImport('./snazzle-parent-hub-v65.js'),
