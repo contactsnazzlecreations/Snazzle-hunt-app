@@ -1,11 +1,6 @@
-import w1 from './snazzle-card-asset-wild-v133-part1.js';
-import w2 from './snazzle-card-asset-wild-v133-part2.js';
-import w3 from './snazzle-card-asset-wild-v133-part3.js';
-import s1 from './snazzle-card-asset-spark-v133-part1.js';
-import s2 from './snazzle-card-asset-spark-v133-part2.js';
-import s3 from './snazzle-card-asset-spark-v133-part3.js';
+// Snazzle Cards v206 — gebruik de complete originele kaartvellen.
+// De oude v133 herstelde chunks waren onvolledig en veroorzaakten grijze/halve kaarten.
+import wild from './snazzle-card-sheet-wild-v204.js?v=206-original';
+import spark from './snazzle-card-sheet-spark-v204.js?v=206-original';
 
-export const assets = {
-  wild: w1 + w2 + w3,
-  spark: s1 + s2 + s3
-};
+export const assets = { wild, spark };
