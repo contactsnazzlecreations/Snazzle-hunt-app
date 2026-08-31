@@ -1,7 +1,7 @@
 // Snazzle Hunt — 4 subtiele easter eggs op bestaande bediening.
 // Niets extra's staat zichtbaar op het scherm totdat een secret daadwerkelijk wordt gevonden.
 
-const V37='37.4.0-four-secrets';
+const V37='37.5.0-auto-dismiss';
 const FOUND_KEY='snazzleSecretsFoundV374';
 const q=(s,r=document)=>r.querySelector(s);
 
@@ -31,8 +31,8 @@ function ensureStyles(){
   const style=document.createElement('style');
   style.id='snazzleFourSecretsStyles';
   style.textContent=`
-    .sn-secret-card{position:fixed;left:50%;bottom:94px;z-index:9998;width:min(330px,88vw);transform:translate(-50%,18px) scale(.96);opacity:0;pointer-events:none;padding:14px 16px;border-radius:21px;background:linear-gradient(150deg,#fff6c9,#efd181);border:3px solid #bf8b37;box-shadow:0 13px 38px rgba(0,0,0,.38),0 5px 0 #6d431e;color:#382616;transition:opacity .2s ease,transform .2s ease}
-    .sn-secret-card.show{opacity:1;transform:translate(-50%,0) scale(1)}
+    .sn-secret-card{position:fixed;left:50%;bottom:94px;z-index:9998;width:min(330px,88vw);transform:translate(-50%,18px) scale(.96);opacity:0;visibility:hidden;pointer-events:none;padding:14px 16px;border-radius:21px;background:linear-gradient(150deg,#fff6c9,#efd181);border:3px solid #bf8b37;box-shadow:0 13px 38px rgba(0,0,0,.38),0 5px 0 #6d431e;color:#382616;transition:opacity .2s ease,transform .2s ease,visibility 0s linear .2s}
+    .sn-secret-card.show{opacity:1;visibility:visible;transform:translate(-50%,0) scale(1);transition-delay:0s}
     .sn-secret-card strong{display:block;padding-right:30px;font-size:17px;line-height:1.15}.sn-secret-card p{margin:5px 0 0;font-size:12px;line-height:1.38;font-weight:760;color:#654725}.sn-secret-progress{margin-top:8px;font-size:10px;font-weight:1000;letter-spacing:.3px;color:#2f6f39;text-transform:uppercase}
     .sn-secret-pop{animation:snSecretPop .58s ease}.sn-secret-spin{animation:snSecretSpin .85s cubic-bezier(.2,.8,.25,1)}
     .sn-secret-spark{position:fixed;z-index:9997;pointer-events:none;font-size:20px;animation:snSecretSpark .8s ease-out forwards;filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
@@ -66,6 +66,16 @@ function sound(kind){
   if(kind==='quack'){tone(470,.10,'sawtooth',.04);tone(260,.17,'square',.025,.08);}
 }
 
+let secretCardTimer=null;
+let secretCardRemoveTimer=null;
+function hideSecretCard(card){
+  if(!card)return;
+  card.classList.remove('show');
+  clearTimeout(secretCardRemoveTimer);
+  secretCardRemoveTimer=setTimeout(()=>{
+    if(!card.classList.contains('show'))card.remove();
+  },260);
+}
 function secretCard(id){
   const cfg=secrets[id];if(!cfg)return;
   const state=markFound(id);
@@ -75,8 +85,9 @@ function secretCard(id){
   }
   const progress=state.complete?'🏆 Alle 4 gevonden — Secret Master!':`🔐 Secret ${state.count}/4 gevonden`;
   card.innerHTML=`<strong>${cfg.title}</strong><p>${cfg.text}</p><div class="sn-secret-progress">${progress}</div>`;
+  clearTimeout(secretCardTimer);clearTimeout(secretCardRemoveTimer);
   card.classList.remove('show');void card.offsetWidth;card.classList.add('show');
-  clearTimeout(window.__snSecretCardTimer);window.__snSecretCardTimer=setTimeout(()=>card.classList.remove('show'),3600);
+  secretCardTimer=setTimeout(()=>hideSecretCard(card),3000);
 }
 
 function animateOnce(el,cls){
