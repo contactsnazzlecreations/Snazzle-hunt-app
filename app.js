@@ -1,6 +1,6 @@
-// Snazzle Hunt v188 — stabiele directe AR-kaartlaag zonder zoom-rescue.
+// Snazzle Hunt v190 — Leaflet-kaarttegels geïsoleerd van algemene afbeeldingspolish.
 
-const runtimeVersion='20260831-v188-ar-map-smooth';
+const runtimeVersion='20260831-v190-leaflet-isolation';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -78,10 +78,11 @@ function suppressLateStartupOverlays(){
 suppressLateStartupOverlays();
 window.__snazzleReleaseBoot=()=>{};
 
-// Alleen de lichte stabiliteitslaag en app-kern eerst.
+// Alleen de lichte stabiliteitslagen en de Leaflet-isolatie eerst.
 await Promise.all([
   safeImport('./snazzle-runtime-stability-v71.js'),
-  safeImport('./snazzle-image-stability-v72.js')
+  safeImport('./snazzle-image-stability-v72.js'),
+  safeImport('./snazzle-leaflet-isolation-v190.js')
 ]);
 await import(fresh('./app-core.js'));
 suppressLateStartupOverlays();
@@ -244,6 +245,7 @@ Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   await waitIfArPriority();
   setTimeout(()=>{
     safeImport('./snazzle-ar-admin-display-v84.js');
+    safeImport('./snazzle-leaflet-isolation-v190.js');
   },220);
 });
 
