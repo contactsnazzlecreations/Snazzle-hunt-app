@@ -1,0 +1,106 @@
+/* Snazzle Hunt v179 — vaste beeldzone voor de magische popup.
+   Voorkomt dat vervangbare Snazzle-afbeeldingen door titel of tekst heen lopen. */
+
+#snazzleMagicOverlay .magic-card{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  overflow:hidden!important;
+  isolation:isolate!important;
+}
+
+#snazzleMagicOverlay #magicBig{
+  width:108px!important;
+  height:108px!important;
+  min-width:108px!important;
+  min-height:108px!important;
+  max-width:108px!important;
+  max-height:108px!important;
+  flex:0 0 108px!important;
+  margin:0 auto 14px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  position:relative!important;
+  inset:auto!important;
+  float:none!important;
+  overflow:hidden!important;
+  line-height:1!important;
+  font-size:62px!important;
+  z-index:2!important;
+  box-sizing:border-box!important;
+  background-size:contain!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+
+/* Zodra er een eigen afbeelding voor deze verrassing is gekozen,
+   verdwijnt de emoji zodat er nooit twee figuren over elkaar staan. */
+#snazzleMagicOverlay #magicBig.v34-secret-custom{
+  font-size:0!important;
+  color:transparent!important;
+}
+
+#snazzleMagicOverlay #magicBig > img,
+#snazzleMagicOverlay #magicBig img{
+  position:static!important;
+  inset:auto!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  transform:none!important;
+  float:none!important;
+}
+
+#snazzleMagicOverlay .magic-card h2{
+  position:relative!important;
+  z-index:3!important;
+  width:100%!important;
+  margin:2px 0 8px!important;
+  line-height:1.15!important;
+  text-align:center!important;
+  clear:both!important;
+}
+
+#snazzleMagicOverlay .magic-card p{
+  position:relative!important;
+  z-index:3!important;
+  width:100%!important;
+  margin:0 0 16px!important;
+  line-height:1.42!important;
+  text-align:center!important;
+  clear:both!important;
+}
+
+#snazzleMagicOverlay .magic-card button{
+  position:relative!important;
+  z-index:3!important;
+  width:auto!important;
+  max-width:100%!important;
+  clear:both!important;
+}
+
+/* Ook op smallere telefoons blijft beeld, titel en tekst elk in hun eigen vak. */
+@media(max-width:390px){
+  #snazzleMagicOverlay .magic-card{padding:22px 18px 20px!important}
+  #snazzleMagicOverlay #magicBig{
+    width:96px!important;
+    height:96px!important;
+    min-width:96px!important;
+    min-height:96px!important;
+    max-width:96px!important;
+    max-height:96px!important;
+    flex-basis:96px!important;
+    margin-bottom:12px!important;
+  }
+  #snazzleMagicOverlay .magic-card h2{font-size:24px!important}
+}
