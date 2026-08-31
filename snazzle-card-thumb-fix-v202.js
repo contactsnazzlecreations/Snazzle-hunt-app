@@ -3,13 +3,16 @@
 import sparkSheetSrc from './snazzle-card-sheet-spark-v204.js';
 import wildSheetSrc from './snazzle-card-sheet-wild-v204.js';
 
-const VERSION='204-original-sheets-final';
+const VERSION='204.1-original-sheets-final';
 let mapPromise=null,observer=null,queued=false;
 
 function installStyle(){
   let s=document.getElementById('snCardThumbFixV204Style');
   if(!s){s=document.createElement('style');s.id='snCardThumbFixV204Style';document.head.appendChild(s);}
   s.textContent=`
+    #sc2List .sc2-row{grid-template-columns:64px 1fr!important}
+    #sc2List .sc2-thumb{width:64px!important;height:94px!important}
+    #sc2Grid .sc2-media,#sc2VaultGrid .sc2-media{aspect-ratio:5/8!important}
     #sc2List .sc2-thumb,#sc2Grid .sc2-media,#sc2VaultGrid .sc2-media,#sc2Preview{
       background:#17242e!important;background-image:none!important;overflow:hidden!important
     }
@@ -92,4 +95,4 @@ function start(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 window.SnazzleCardThumbFixV204={version:VERSION,repair,buildMap};
 window.SnazzleCardThumbFixV202=window.SnazzleCardThumbFixV204;
-console.info('Snazzle Cards v204: 24 originele kaartafbeeldingen actief.');
+console.info('Snazzle Cards v204.1: 24 originele kaartafbeeldingen actief.');
