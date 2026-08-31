@@ -1,6 +1,6 @@
-// Snazzle Hunt v179 — AR-prioriteit + vaste beeldzone voor magische popup.
+// Snazzle Hunt v180 — secret-meldingen verdwijnen betrouwbaar vanzelf.
 
-const runtimeVersion='20260831-v179-magic-popup-layout';
+const runtimeVersion='20260831-v180-secret-auto-dismiss';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
