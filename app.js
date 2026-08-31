@@ -1,6 +1,6 @@
-// Snazzle Hunt v202 — alle SPARK- en WILD-kaarten zichtbaar + robuuste adreszoeker en kaart-only plaatsing.
+// Snazzle Hunt v205 — canonieke volledige SPARK- en WILD-kaarten + robuuste adreszoeker en kaart-only plaatsing.
 
-const runtimeVersion='20260831-v202-all-card-thumbs';
+const runtimeVersion='20260831-v205-canonical-cards';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -124,11 +124,11 @@ Promise.allSettled([
   safeImport('./snazzle-listen-stories-v63.js'),
   safeImport('./snazzle-parent-hub-v65.js'),
   safeImport('./snazzle-card-system-v2.js'),
-  safeImport('./snazzle-card-thumb-fix-v202.js'),
+  safeImport('./snazzle-card-fixed-v205.js'),
   safeImport('./snazzle-world-hub-v47.js')
 ]).then(()=>{
   [60,320,900,1800].forEach(ms=>setTimeout(()=>{
-    window.SnazzleCardThumbFixV202?.repair?.();
+    window.SnazzleCardFixedV205?.repair?.();
     const adminSheet=document.getElementById('adminSheet');
     if(adminSheet) adminSheet.dispatchEvent(new MouseEvent('click',{bubbles:true}));
   },ms));
@@ -192,7 +192,6 @@ await waitIfArPriority();
 const backgroundBundles=[
   [
     './snazzle-card-system-v2.js',
-    './snazzle-card-rescue-v132.js',
     './snazzle-card-worlds-v78.js',
     './snazzle-card-world-prompt-v79.js',
     './snazzle-hunt-code-v2.js',
