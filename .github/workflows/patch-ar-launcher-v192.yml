@@ -1,0 +1,33 @@
+name: Patch AR launcher v192
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-ar-launcher-v192.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Patch app runtime and launcher
+        run: python .github/scripts/patch_ar_launcher_v192.py
+
+      - name: Commit v192 launcher
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js
+          git commit -m "Load robust AR map launcher v192"
+          git push
