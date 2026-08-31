@@ -1,0 +1,33 @@
+name: Patch AR map tile rescue v185
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-ar-map-tile-rescue-v185.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Patch app loader
+        run: python .github/scripts/patch_ar_map_tile_rescue_v185.py
+
+      - name: Commit AR map tile rescue
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js
+          git commit -m "Load AR map tile rescue v185"
+          git push
