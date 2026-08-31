@@ -1,6 +1,6 @@
-// Snazzle Hunt v186 — Leaflet kaarttegels worden op Android/PWA hard zichtbaar gemaakt.
+// Snazzle Hunt v187 — oude AR-kaartlagen verwijderd; alleen v85/v184 blijft actief.
 
-const runtimeVersion='20260831-v186-ar-map-visible';
+const runtimeVersion='20260831-v187-ar-single-studio';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -119,6 +119,7 @@ await Promise.all([
 Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
   safeImport('./snazzle-ar-place-studio-v184.js'),
+  safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
   safeImport('./snazzle-ar-map-tile-rescue-v185.js'),
   safeImport('./snazzle-ar-map-visibility-fix-v186.js'),
   safeImport('./snazzle-news-v46.js'),
@@ -244,9 +245,7 @@ Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
   try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
   await waitIfArPriority();
   setTimeout(()=>{
-    safeImport('./snazzle-ar-admin-v83.js');
     safeImport('./snazzle-ar-admin-display-v84.js');
-    safeImport('./snazzle-ar-save-inline-v122.js?patch=20260827-1803');
   },220);
 });
 
