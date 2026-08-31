@@ -4,9 +4,10 @@
 // Geen opgeslagen lege imageData en geen oude sprite/background-position meer.
 import { assets } from './snazzle-card-assets-v133.js';
 
-const VERSION='202-all-24-real-admin-thumbs';
-const ORIGINAL_SPARK_RAW='https://raw.githubusercontent.com/contactsnazzlecreations/Snazzle-hunt-app/8d5d155/snazzle-card-force-restore-v134.js';
-const ORIGINAL_SPARK_API='https://api.github.com/repos/contactsnazzlecreations/Snazzle-hunt-app/contents/snazzle-card-force-restore-v134.js?ref=8d5d155';
+const VERSION='202.1-all-24-real-admin-thumbs';
+const ORIGINAL_COMMIT='8d5d155f4e7df3d11bb1340c5b43baeaf7c68575';
+const ORIGINAL_SPARK_RAW=`https://raw.githubusercontent.com/contactsnazzlecreations/Snazzle-hunt-app/${ORIGINAL_COMMIT}/snazzle-card-force-restore-v134.js`;
+const ORIGINAL_SPARK_API=`https://api.github.com/repos/contactsnazzlecreations/Snazzle-hunt-app/contents/snazzle-card-force-restore-v134.js?ref=${ORIGINAL_COMMIT}`;
 let mapPromise=null;
 let observer=null;
 let queued=false;
@@ -44,8 +45,9 @@ async function originalSpark(){
     const r=await fetch(ORIGINAL_SPARK_API,{cache:'force-cache',headers:{Accept:'application/vnd.github+json'}});
     if(!r.ok)throw new Error(`GitHub ${r.status}`);
     const j=await r.json();
-    const text=decodeURIComponent(escape(atob(String(j.content||'').replace(/\s/g,''))));
-    return extractSpark(text);
+    const bin=atob(String(j.content||'').replace(/\s/g,''));
+    const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+    return extractSpark(new TextDecoder().decode(bytes));
   }catch(err){
     console.warn('Snazzle v202 API SPARK fallback',err);
     return assets.spark;
@@ -71,14 +73,12 @@ function cropSheet(sheet,cols,rows,prefix){
 async function buildMap(){
   if(mapPromise)return mapPromise;
   mapPromise=(async()=>{
-    const [spark,wild]=await Promise.all([loadImage(await originalSpark()),loadImage(assets.wild)]);
-    const map={
-      ...cropSheet(spark,6,2,'S01-S'),
-      ...cropSheet(wild,4,3,'S01-W')
-    };
+    const sparkSrc=await originalSpark();
+    const [spark,wild]=await Promise.all([loadImage(sparkSrc),loadImage(assets.wild)]);
+    const map={...cropSheet(spark,6,2,'S01-S'),...cropSheet(wild,4,3,'S01-W')};
     window.__snazzleCardThumbMapV202=map;
     return map;
-  })();
+  })().catch(err=>{mapPromise=null;throw err;});
   return mapPromise;
 }
 
@@ -118,7 +118,7 @@ function queueRepair(){
 function watch(){
   if(observer)observer.disconnect();
   observer=new MutationObserver(queueRepair);
-  observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','src','class']});
+  observer.observe(document.body,{subtree:true,childList:true});
 }
 
 function start(){
