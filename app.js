@@ -1,6 +1,6 @@
-// Snazzle Hunt v185 — AR kaarttegels krijgen automatische Android/PWA fallback.
+// Snazzle Hunt v186 — Leaflet kaarttegels worden op Android/PWA hard zichtbaar gemaakt.
 
-const runtimeVersion='20260831-v185-ar-map-tile-rescue';
+const runtimeVersion='20260831-v186-ar-map-visible';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -120,6 +120,7 @@ Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
   safeImport('./snazzle-ar-place-studio-v184.js'),
   safeImport('./snazzle-ar-map-tile-rescue-v185.js'),
+  safeImport('./snazzle-ar-map-visibility-fix-v186.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
   safeImport('./snazzle-parent-hub-v65.js'),
