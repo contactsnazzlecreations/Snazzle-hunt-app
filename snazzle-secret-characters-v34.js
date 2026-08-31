@@ -1,8 +1,8 @@
 // Snazzle Hunt v34 — ieder geheim/bewegend eendje afzonderlijk vervangbaar.
 // Alleen de afbeelding verandert; bestaande bewegingen, timers en klikacties blijven intact.
-// v34.1: de langslopende Snazzle gebruikt standaard de afbeelding van 'Snazzle gids / menu'.
+// v34.2: Zeldzame bezoeker gebruikt alleen zijn eigen beeldvak zodat de afbeelding nooit over popuptekst loopt.
 
-const V34='34.1.0';
+const V34='34.2.0';
 const q34=(s,r=document)=>r.querySelector(s);
 const qa34=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB34='snazzleVisualAssetsV28';
@@ -14,7 +14,7 @@ let timer34=null;
 const secretSlots34=[
   {key:'secretRunnerCharacter',fallbackKey:'guideCharacter',label:'🏃 Langslopende Snazzle',hint:'Het eendje dat af en toe door het scherm loopt. Zonder eigen afbeelding gebruikt hij automatisch Snazzle gids / menu.',targets:()=>qa34('#ui28Runner')},
   {key:'secretPeekerCharacter',label:'👀 Kijkende Snazzle',hint:'Het eendje dat stiekem vanaf de linker- of rechterkant kijkt.',targets:()=>qa34('#ui28Peeker')},
-  {key:'secretFloatingCharacter',label:'✨ Zwevende Snazzle',hint:'Het zwevende / onverwachte eendje dat als bezoeker verschijnt.',targets:()=>qa34('#snazzleVisitor b,#snazzleVisitor')},
+  {key:'secretFloatingCharacter',label:'👑 Zeldzame bezoeker / Crown Snazzle',hint:'De afbeelding in de popup “Zeldzame bezoeker!”. Deze krijgt een eigen vaste plek boven de tekst en loopt er niet meer doorheen.',targets:()=>qa34('#snazzleVisitor b')},
   {key:'secretSurpriseCharacter',label:'🎉 Verrassings-Snazzle',hint:'Het grote eendje dat bij een geheime vondst of verrassing verschijnt.',targets:()=>qa34('#magicBig')}
 ];
 
@@ -27,7 +27,8 @@ function ensureStyles34(){
     .v34-secret-custom>img,.v34-secret-custom img,.v34-secret-custom>.secret-emoji{opacity:0!important;visibility:hidden!important}
     #ui28Runner.v34-secret-custom,#ui28Peeker.v34-secret-custom{background-color:transparent!important}
     #magicBig.v34-secret-custom{min-width:82px;min-height:82px}
-    #snazzleVisitor b.v34-secret-custom{display:inline-block!important;min-width:42px;min-height:42px}
+    #snazzleVisitor b.v34-secret-custom{display:block!important;width:82px!important;height:82px!important;min-width:82px!important;min-height:82px!important;margin:0 auto 12px!important;position:relative!important;z-index:2!important;flex:0 0 82px!important}
+    #snazzleVisitor b.v34-secret-custom+*{position:relative;z-index:2}
     .v34-secret-section{margin-top:14px;padding:12px;border-radius:17px;background:#eef4d5;border:2px solid #9eae72;color:#354229}
     .v34-secret-section h4{margin:0;font-size:16px}.v34-secret-section>p{margin:5px 0 10px;font-size:10px;font-weight:780;line-height:1.45;color:#5d6c45}
     .v34-secret-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -39,7 +40,7 @@ function ensureStyles34(){
     .v34-secret-pick input{display:none!important}
     .v34-secret-clear{width:100%;margin-top:6px;padding:7px;border:0;border-radius:9px;background:#70513a;color:white;font-size:9px;font-weight:900}
     .v34-general-note{margin-top:9px;padding:8px 9px;border-radius:10px;background:#fff5cf;border:1px solid #d2b66f;font-size:9px;font-weight:800;line-height:1.4;color:#66512e}
-    @media(max-width:390px){.v34-secret-grid{grid-template-columns:1fr}.v34-secret-preview{height:115px}}
+    @media(max-width:390px){.v34-secret-grid{grid-template-columns:1fr}.v34-secret-preview{height:115px}#snazzleVisitor b.v34-secret-custom{width:74px!important;height:74px!important;min-width:74px!important;min-height:74px!important;flex-basis:74px!important}}
   `;
   document.head.appendChild(s);
 }
@@ -81,6 +82,13 @@ async function sourceForSlot34(slot){
 }
 
 async function applySecrets34(){
+  // Oudere v34-versies konden de bezoekersafbeelding per ongeluk op de hele popup zetten.
+  // Ruim die toestand altijd eerst op; de afbeelding hoort uitsluitend in het <b>-beeldvak.
+  const visitor=q34('#snazzleVisitor');
+  if(visitor){
+    visitor.classList.remove('v34-secret-custom');
+    visitor.style.removeProperty('--v34-secret-image');
+  }
   for(const slot of secretSlots34){
     const src=await sourceForSlot34(slot);
     for(const target of slot.targets()){
