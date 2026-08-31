@@ -1,0 +1,33 @@
+name: Fix AR map visibility v186
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-ar-map-visibility-v186.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Patch AR map visibility loader
+        run: python .github/scripts/fix_ar_map_visibility_v186.py
+
+      - name: Commit v186 loader
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js
+          git commit -m "Fix AR map visibility on Android PWA v186"
+          git push
