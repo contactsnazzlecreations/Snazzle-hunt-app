@@ -1,6 +1,6 @@
-// Snazzle Hunt v206 — complete originele SPARK- en WILD-kaarten + robuuste adreszoeker en kaart-only plaatsing.
+// Snazzle Hunt v207 — directe originele SPARK- en WILD-kaarten + robuuste adreszoeker en kaart-only plaatsing.
 
-const runtimeVersion='20260831-v206-complete-original-card-sheets';
+const runtimeVersion='20260831-v207-direct-card-sheets';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
