@@ -1,8 +1,8 @@
-// Snazzle AR launcher v192
+// Snazzle AR launcher v192.1
 // Robuuste Android/PWA launcher voor 'Plaats via kaart + camera'.
-// Werkt ook wanneer een transparante/andere laag de knop visueel overlapt.
+// Opent het plaatsingsscherm direct; de kaart/GPS mag daarna op de achtergrond laden.
 
-const V192='192.0.0';
+const V192='192.1.0';
 const BUTTON_ID='snArStudioLaunch184';
 let opening192=false;
 let lastStart192=0;
@@ -48,39 +48,15 @@ function hardenButton192(){
   btn.dataset.snLauncher192='1';
 }
 
-function loadingOverlay192(){
-  let el=document.getElementById('snArLaunchLoading192');
-  if(el) return el;
-  el=document.createElement('div');
-  el.id='snArLaunchLoading192';
-  el.style.cssText='position:fixed;inset:0;z-index:25000;background:rgba(4,24,15,.94);display:none;place-items:center;padding:24px;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;text-align:center';
-  el.innerHTML='<div style="max-width:330px;background:#fff1bd;color:#2f2417;border:4px solid #7a5631;border-radius:24px;padding:24px;box-shadow:0 18px 50px rgba(0,0,0,.4)"><div style="font-size:42px">🗺️</div><h2 style="margin:8px 0">Kaart openen…</h2><p id="snArLaunchMsg192" style="font-weight:750;line-height:1.4">Snazzle plaatsingsscherm wordt geladen.</p><button id="snArLaunchClose192" type="button" style="display:none;width:100%;margin-top:12px;border:0;border-radius:14px;padding:13px;background:#6b4229;color:#fff;font-weight:900">Sluiten</button></div>';
-  document.body.appendChild(el);
-  el.querySelector('#snArLaunchClose192')?.addEventListener('click',()=>{el.style.display='none';});
-  return el;
-}
-
-function showLoading192(message='Snazzle plaatsingsscherm wordt geladen.'){
-  const el=loadingOverlay192();
-  const msg=el.querySelector('#snArLaunchMsg192');
-  const close=el.querySelector('#snArLaunchClose192');
-  if(msg) msg.textContent=message;
-  if(close) close.style.display='none';
-  el.style.display='grid';
-}
-
-function showError192(message){
-  const el=loadingOverlay192();
-  const msg=el.querySelector('#snArLaunchMsg192');
-  const close=el.querySelector('#snArLaunchClose192');
-  if(msg) msg.textContent='⚠️ '+message;
-  if(close) close.style.display='block';
-  el.style.display='grid';
-}
-
-function hideLoading192(){
-  const el=document.getElementById('snArLaunchLoading192');
-  if(el) el.style.display='none';
+function notify192(message){
+  const toast=document.getElementById('toast');
+  if(toast){
+    toast.textContent=message;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),2600);
+  }else{
+    console.warn(message);
+  }
 }
 
 async function getStudio192(){
@@ -101,19 +77,45 @@ async function launch192(){
   const now=Date.now();
   if(opening192 || now-lastStart192<350) return;
   opening192=true; lastStart192=now;
-  showLoading192();
+
+  const btn=findMapButton192();
+  const oldText=btn?.textContent||'🗺️📷 Plaats via kaart + camera';
+  if(btn){
+    btn.disabled=false;
+    btn.textContent='🗺️ Kaart openen…';
+  }
+
   try{
     const api=await getStudio192();
     if(!api?.open) throw new Error('De AR-plaatsmodule kon niet worden geladen.');
-    await api.open();
+
+    // Belangrijk voor Android/PWA: niet wachten tot Leaflet/GPS klaar is.
+    // De async open()-functie bouwt en toont het scherm al vóór zijn eerste await.
+    const openingPromise=api.open();
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-    const modal=document.getElementById('snArStudioV184');
+
+    let modal=document.getElementById('snArStudioV184');
+    if(!modal?.classList.contains('show')){
+      // Geef een trager toestel nog kort de tijd, maar blokkeer nooit op kaart-CDN/GPS.
+      await Promise.race([
+        Promise.resolve(openingPromise).catch(()=>{}),
+        new Promise(r=>setTimeout(r,900))
+      ]);
+      modal=document.getElementById('snArStudioV184');
+    }
+
     if(!modal?.classList.contains('show')) throw new Error('Het plaatsingsscherm werd niet zichtbaar.');
-    hideLoading192();
+
+    // Eventuele kaartfout wordt in het geopende scherm zelf getoond.
+    Promise.resolve(openingPromise).catch(err=>console.warn('AR plaatsstudio achtergrondfout',err));
   }catch(err){
     console.error('v192 kaartlauncher fout',err);
-    showError192(err?.message||'Kaartscherm kon niet openen.');
+    notify192('⚠️ Kaartscherm kon niet openen. Tik nog één keer.');
   }finally{
+    if(btn?.isConnected){
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
     opening192=false;
   }
 }
