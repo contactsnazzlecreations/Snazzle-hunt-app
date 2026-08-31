@@ -1,10 +1,10 @@
-// v51 — veilige versiecontrole voor de publieke Snazzle-app.
-// Nieuwe code wordt nooit meer midden in het gebruik geforceerd geladen.
-// Firebase-inhoud (hunts, dorpen, nieuws en beelden) blijft live via listeners.
-// Een nieuwe programmaversie wordt vanzelf actief bij de volgende normale appstart.
+// v51.1 / runtime v193 — directe veilige activatie van nieuwe Snazzle-code.
+// Als GitHub main wijzigt, wordt de nieuwe runtime eenmalig geladen in plaats van
+// eindeloos te blijven hangen op 'actief bij volgende start'.
 
 const REPO_HEAD_URL='https://api.github.com/repos/contactsnazzlecreations/Snazzle-hunt-app/commits/main';
 const STORAGE_KEY='snazzleKnownRepoShaV51';
+const RELOAD_KEY='snazzleReloadedRepoShaV193';
 const CHECK_EVERY_MS=5*60*1000;
 
 let checking=false;
@@ -17,6 +17,26 @@ function toast(message){
   el.classList.add('show');
   clearTimeout(window.__autoUpdateToast);
   window.__autoUpdateToast=setTimeout(()=>el.classList.remove('show'),4200);
+}
+
+function activateUpdate(sha){
+  let reloaded='';
+  try{reloaded=sessionStorage.getItem(RELOAD_KEY)||'';}catch{}
+  if(reloaded===sha) return;
+  try{
+    sessionStorage.setItem(RELOAD_KEY,sha);
+    localStorage.setItem(STORAGE_KEY,sha);
+  }catch{}
+  toast('Nieuwe Snazzle-versie laden…');
+  setTimeout(()=>{
+    try{
+      const url=new URL(location.href);
+      url.searchParams.set('snv',sha.slice(0,10));
+      location.replace(url.href);
+    }catch{
+      location.reload();
+    }
+  },350);
 }
 
 async function checkForUpdate(){
@@ -34,18 +54,15 @@ async function checkForUpdate(){
     if(!sha) return;
 
     let known='';
-    try{ known=localStorage.getItem(STORAGE_KEY)||''; }catch{}
+    try{known=localStorage.getItem(STORAGE_KEY)||'';}catch{}
 
     if(!known){
-      try{ localStorage.setItem(STORAGE_KEY,sha); }catch{}
+      try{localStorage.setItem(STORAGE_KEY,sha);}catch{}
       return;
     }
 
     if(sha!==known){
-      // Belangrijk: alleen onthouden, nooit location.reload/replace uitvoeren.
-      // index.html haalt app.js bij een volgende normale start vers op.
-      try{ localStorage.setItem(STORAGE_KEY,sha); }catch{}
-      toast('Nieuwe Snazzle-versie staat klaar ✨ Actief bij de volgende start.');
+      activateUpdate(sha);
     }
   }catch(err){
     console.debug('Snazzle versiecontrole tijdelijk niet beschikbaar',err);
@@ -54,16 +71,15 @@ async function checkForUpdate(){
   }
 }
 
-// Controleer rustig na het openen en daarna periodiek, zonder de gebruiker te onderbreken.
-setTimeout(checkForUpdate,3500);
+setTimeout(checkForUpdate,2500);
 setInterval(checkForUpdate,CHECK_EVERY_MS);
 
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && Date.now()-lastCheckAt>60*1000) checkForUpdate();
+  if(document.visibilityState==='visible' && Date.now()-lastCheckAt>45*1000) checkForUpdate();
 });
 window.addEventListener('focus',()=>{
-  if(Date.now()-lastCheckAt>60*1000) checkForUpdate();
+  if(Date.now()-lastCheckAt>45*1000) checkForUpdate();
 });
-window.addEventListener('online',()=>setTimeout(checkForUpdate,1500));
+window.addEventListener('online',()=>setTimeout(checkForUpdate,1200));
 
 window.SnazzleAutoUpdate={checkNow:checkForUpdate};
