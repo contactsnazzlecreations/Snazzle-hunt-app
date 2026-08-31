@@ -1,6 +1,6 @@
-// Snazzle Hunt v192 — robuuste AR kaartlauncher voor Android/PWA.
+// Snazzle Hunt v194 — directe AR kaartplaatsing voor Android/PWA.
 
-const runtimeVersion='20260831-v192-ar-launcher';
+const runtimeVersion='20260831-v194-ar-place-rescue';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -111,10 +111,14 @@ await Promise.all([
   safeImport('./snazzle-central-assets-v48.js')
 ]);
 
+// AR-beheer en plaatsingsscherm bewust in vaste volgorde laden.
+// Hierdoor bestaat de plaatsstudio al vóór de kaartknop gebruikt kan worden en is
+// geen trage import op het moment van tikken nodig.
+await safeImport('./snazzle-ar-place-studio-v184.js');
+await safeImport('./snazzle-ar-admin-v85.js');
+await safeImport('./snazzle-ar-place-rescue-v194.js');
+
 Promise.allSettled([
-  safeImport('./snazzle-ar-admin-v85.js'),
-  safeImport('./snazzle-ar-place-studio-v184.js'),
-  safeImport('./snazzle-ar-launcher-v192.js'),
   safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
