@@ -1,9 +1,10 @@
 // Snazzle Cards v204 — definitieve zichtbare kaartweergave voor alle 24 vaste kaarten.
 // Gebruikt uitsluitend de originele SPARK- en WILD-kaartvellen; opgeslagen kapotte imageData wordt niet gebruikt voor deze 24 kaarten.
+// v204.3 gebruikt bovendien een eigen visuele overlay, zodat een oude gecachte observer de kaart niet meer grijs/wit/half kan terugzetten.
 import sparkSheetSrc from './snazzle-card-sheet-spark-v204.js';
 import wildSheetSrc from './snazzle-card-sheet-wild-v204.js';
 
-const VERSION='204.2-original-sheets-final';
+const VERSION='204.3-original-sheets-legacy-proof';
 let mapPromise=null,queued=false;
 
 function installStyle(){
@@ -11,8 +12,8 @@ function installStyle(){
   if(!s){s=document.createElement('style');s.id='snCardThumbFixV204Style';document.head.appendChild(s);}
   s.textContent=`
     #sc2List .sc2-row{grid-template-columns:64px 1fr!important}
-    #sc2List .sc2-thumb{width:64px!important;height:94px!important}
-    #sc2Grid .sc2-media,#sc2VaultGrid .sc2-media{aspect-ratio:5/8!important}
+    #sc2List .sc2-thumb{width:64px!important;height:94px!important;position:relative!important}
+    #sc2Grid .sc2-media,#sc2VaultGrid .sc2-media{aspect-ratio:5/8!important;position:relative!important}
     #sc2List .sc2-thumb,#sc2Grid .sc2-media,#sc2VaultGrid .sc2-media,#sc2Preview{
       background:#17242e!important;background-image:none!important;overflow:hidden!important
     }
@@ -23,6 +24,22 @@ function installStyle(){
     }
     #sc2List .sc2-thumb>img{transform:none!important;filter:none!important}
     #sc2Grid .sc2-card.unlocked .sc2-media>img,#sc2VaultGrid .sc2-card.unlocked .sc2-media>img{transform:none!important}
+
+    /* De echte v204-afbeelding ligt boven eventuele oude/kapotte img-tags. */
+    #sc2List .sc2-thumb::after,
+    #sc2Grid .sc2-media::after,
+    #sc2VaultGrid .sc2-media::after{
+      content:""!important;position:absolute!important;inset:0!important;
+      display:block!important;pointer-events:none!important;
+      background-image:var(--sn-v204-card-image)!important;
+      background-repeat:no-repeat!important;background-position:center!important;
+      background-size:contain!important;background-color:#17242e!important;
+      z-index:20!important
+    }
+    #sc2Grid .sc2-lock,#sc2Grid .sc2-rarity,#sc2Grid .sc2-num,
+    #sc2VaultGrid .sc2-lock,#sc2VaultGrid .sc2-rarity,#sc2VaultGrid .sc2-num{
+      position:absolute!important;z-index:30!important
+    }
   `;
 }
 
@@ -55,6 +72,8 @@ async function buildMap(){
 function numberFrom(el){return String(el?.textContent||'').toUpperCase().match(/S01-[SW]\d{2}/)?.[0]||'';}
 function put(box,num,src){
   if(!box||!num||!src)return false;
+  box.style.setProperty('--sn-v204-card-image',`url("${src}")`);
+  box.dataset.snFixedCardV204=num;
   let img=box.querySelector(':scope > img');
   if(!img){
     img=document.createElement('img');
@@ -102,4 +121,4 @@ function start(){
 window.SnazzleCardThumbFixV204={version:VERSION,repair,buildMap};
 window.SnazzleCardThumbFixV202=window.SnazzleCardThumbFixV204;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-console.info('Snazzle Cards v204.2: 24 originele kaartafbeeldingen actief.');
+console.info('Snazzle Cards v204.3: 24 originele kaartafbeeldingen actief en legacy-proof.');
