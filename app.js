@@ -1,6 +1,6 @@
-// Snazzle Hunt v187 — oude AR-kaartlagen verwijderd; alleen v85/v184 blijft actief.
+// Snazzle Hunt v188 — stabiele directe AR-kaartlaag zonder zoom-rescue.
 
-const runtimeVersion='20260831-v187-ar-single-studio';
+const runtimeVersion='20260831-v188-ar-map-smooth';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -120,8 +120,6 @@ Promise.allSettled([
   safeImport('./snazzle-ar-admin-v85.js'),
   safeImport('./snazzle-ar-place-studio-v184.js'),
   safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
-  safeImport('./snazzle-ar-map-tile-rescue-v185.js'),
-  safeImport('./snazzle-ar-map-visibility-fix-v186.js'),
   safeImport('./snazzle-news-v46.js'),
   safeImport('./snazzle-listen-stories-v63.js'),
   safeImport('./snazzle-parent-hub-v65.js'),

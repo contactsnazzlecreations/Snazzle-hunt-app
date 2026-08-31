@@ -1,5 +1,5 @@
-// Snazzle AR Place Studio v184 — kaart direct zichtbaar, GPS daarna verfijnen.
-// De kaart gebruikt OpenStreetMap/Leaflet zonder betaalde Maps API-key.
+// Snazzle AR Place Studio v188 — stabiele directe kaartlaag voor Android/PWA.
+// Leaflet gebruikt direct een stabiele Esri-kaartlaag; geen tegel-rescue tijdens zoomen.
 
 import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
@@ -73,13 +73,26 @@ function loadLeaflet(){
 
 function addTiles(L){
   tileErrors=0;usingFallbackTiles=false;
-  tileLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(map);
-  tileLayer.on('tileerror',()=>{tileErrors++;if(tileErrors>=4&&!usingFallbackTiles){usingFallbackTiles=true;try{tileLayer.remove();}catch{}tileLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'}).addTo(map);const c=$('#snArCoords184');if(c)c.textContent='🗺️ Alternatieve kaartlaag geladen · GPS wordt bepaald…';}});
+  // Android/PWA v188: gebruik rechtstreeks de kaartserver die op het toestel stabiel laadt.
+  // Geen tegel-omschakeling tijdens zoomen; daardoor geen grijs/wegvallend kaartbeeld meer.
+  tileLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:19,
+    attribution:'Tiles © Esri',
+    updateWhenIdle:true,
+    updateWhenZooming:false,
+    updateInterval:250,
+    keepBuffer:5
+  }).addTo(map);
+  tileLayer.on('tileerror',()=>{
+    tileErrors++;
+    const c=$('#snArCoords184');
+    if(c&&tileErrors>=3)c.textContent='⚠️ Een deel van de kaart kon niet laden · probeer één stap uit/in te zoomen';
+  });
 }
 
 async function ensureMap(resetView=true){
   const L=await loadLeaflet();
-  if(!map){map=L.map('snArMap184',{zoomControl:true,attributionControl:true}).setView([state.lat,state.lon],18);addTiles(L);map.on('dragstart',()=>{state.source='manual';state.accuracy=0;});map.on('moveend',()=>{const p=map.getCenter();state.lat=p.lat;state.lon=p.lng;saveLastPoint();updateCoords();});}
+  if(!map){map=L.map('snArMap184',{zoomControl:true,attributionControl:true,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false,zoomSnap:1,zoomDelta:1}).setView([state.lat,state.lon],18);addTiles(L);map.on('dragstart',()=>{state.source='manual';state.accuracy=0;});map.on('moveend',()=>{const p=map.getCenter();state.lat=p.lat;state.lon=p.lng;saveLastPoint();updateCoords();});}
   else if(resetView)map.setView([state.lat,state.lon],18);
   updateAccuracyCircle(L);
   setTimeout(()=>map?.invalidateSize(),80);
