@@ -1,6 +1,6 @@
-// Snazzle Hunt v194 — directe AR kaartplaatsing voor Android/PWA.
+// Snazzle Hunt v195 — zelfstandige AR kaart + camera plaatsing voor Android/PWA.
 
-const runtimeVersion='20260831-v194-ar-place-rescue';
+const runtimeVersion='20260831-v195-direct-map-camera';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -111,10 +111,8 @@ await Promise.all([
   safeImport('./snazzle-central-assets-v48.js')
 ]);
 
-// AR-beheer en plaatsingsscherm bewust in vaste volgorde laden.
-// Hierdoor bestaat de plaatsstudio al vóór de kaartknop gebruikt kan worden en is
-// geen trage import op het moment van tikken nodig.
-await safeImport('./snazzle-ar-place-studio-v184.js');
+// AR-beheer eerst; daarna de zelfstandige v195 plaatsing.
+// De oude Leaflet plaatsstudio wordt hier bewust niet meer geladen.
 await safeImport('./snazzle-ar-admin-v85.js');
 await safeImport('./snazzle-ar-place-rescue-v194.js');
 
