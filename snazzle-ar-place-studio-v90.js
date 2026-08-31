@@ -72,6 +72,17 @@ async function ensureMap(resetView){
 }
 function updateCoords(){const c=$('#snArCoords90');if(c&&Number.isFinite(state.lat))c.textContent=`📍 ${state.lat.toFixed(6)}, ${state.lon.toFixed(6)} · GPS ±${state.accuracy||'?'} m`;}
 
+function openGoogleMaps(){
+  if(!Number.isFinite(state.lat)||!Number.isFinite(state.lon)){
+    const c=$('#snArCoords90');
+    if(c)c.textContent='⚠️ Wacht tot de GPS-positie is bepaald.';
+    return;
+  }
+  const query=encodeURIComponent(`${state.lat.toFixed(7)},${state.lon.toFixed(7)}`);
+  // Rechtstreeks navigeren: Android/PWA blokkeert window.open soms als pop-up.
+  window.location.assign(`https://www.google.com/maps/search/?api=1&query=${query}`);
+}
+
 function formData(){return{name:($('#snArAdminName85')?.value||'Scout Snazzle').trim(),number:($('#snArAdminNumber85')?.value||'001').trim(),rarity:$('#snArAdminRarity85')?.value||'RARE',village:$('#snArAdminVillage85')?.value||'Montfort',radius:Number($('#snArAdminRadius85')?.value||7),file:$('#snArAdminImage85')?.files?.[0]||null};}
 function setPreview(){const f=formData().file,img=$('#snArPlaceImage90'),fallback=$('#snArPlaceFallback90');if(!img||!fallback)return;if(f){const url=URL.createObjectURL(f);img.src=url;img.hidden=false;fallback.hidden=true;}else{img.removeAttribute('src');img.hidden=true;fallback.hidden=false;}}
 
@@ -102,7 +113,7 @@ function close(){stopCamera();$('#snArStudioV90')?.classList.remove('show');}
 async function open(){modal();state={lat:null,lon:null,accuracy:0,x:.5,y:.56,size:.34,rotation:0,dragging:false,pointerId:null};$('#snArSize90').value='34';$('#snArRotate90').value='0';showStep('map');$('#snArStudioV90').classList.add('show');try{await locate(true);}catch{} }
 
 function wire(){
-  $('#snArStudioClose90').addEventListener('click',close);$('#snArDoneClose90').addEventListener('click',close);$('#snArRelocate90').addEventListener('click',()=>locate(true).catch(()=>{}));$('#snArGoogle90').addEventListener('click',()=>{if(Number.isFinite(state.lat))window.open(`https://www.google.com/maps?q=${state.lat},${state.lon}`,'_blank','noopener');});
+  $('#snArStudioClose90').addEventListener('click',close);$('#snArDoneClose90').addEventListener('click',close);$('#snArRelocate90').addEventListener('click',()=>locate(true).catch(()=>{}));$('#snArGoogle90').addEventListener('click',openGoogleMaps);
   $('#snArToCamera90').addEventListener('click',async()=>{if(!Number.isFinite(state.lat))return;showStep('cam');try{await startCamera();}catch{}});$('#snArBackMap90').addEventListener('click',()=>{stopCamera();showStep('map');setTimeout(()=>map?.invalidateSize(),60);});$('#snArSavePlacement90').addEventListener('click',()=>writePoint().catch(()=>{}));
   const obj=$('#snArPlaceObject90');obj.addEventListener('pointerdown',dragStart);obj.addEventListener('pointermove',dragMove);obj.addEventListener('pointerup',dragEnd);obj.addEventListener('pointercancel',dragEnd);
   $('#snArSize90').addEventListener('input',e=>{state.size=Number(e.target.value)/100;applyPlacement();});$('#snArRotate90').addEventListener('input',e=>{state.rotation=Number(e.target.value);applyPlacement();});
