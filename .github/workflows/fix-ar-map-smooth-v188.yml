@@ -1,0 +1,33 @@
+name: Fix AR map smooth v188
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-ar-map-smooth-v188.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Patch AR map for stable Android zoom
+        run: python .github/scripts/fix_ar_map_smooth_v188.py
+
+      - name: Commit v188 map changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js snazzle-ar-place-studio-v184.js
+          git commit -m "Make AR map zoom stable on Android v188"
+          git push
