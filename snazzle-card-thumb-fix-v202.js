@@ -3,8 +3,8 @@
 import sparkSheetSrc from './snazzle-card-sheet-spark-v204.js';
 import wildSheetSrc from './snazzle-card-sheet-wild-v204.js';
 
-const VERSION='204.1-original-sheets-final';
-let mapPromise=null,observer=null,queued=false;
+const VERSION='204.2-original-sheets-final';
+let mapPromise=null,queued=false;
 
 function installStyle(){
   let s=document.getElementById('snCardThumbFixV204Style');
@@ -56,8 +56,11 @@ function numberFrom(el){return String(el?.textContent||'').toUpperCase().match(/
 function put(box,num,src){
   if(!box||!num||!src)return false;
   let img=box.querySelector(':scope > img');
-  if(!img){img=document.createElement('img');box.replaceChildren(img);}
-  else if(box.children.length!==1)box.replaceChildren(img);
+  if(!img){
+    img=document.createElement('img');
+    if(box.classList.contains('sc2-media'))box.prepend(img);
+    else{box.textContent='';box.appendChild(img);}
+  }
   if(img.dataset.snFixedV204!==num||img.getAttribute('src')!==src){img.src=src;img.alt=num;img.dataset.snFixedV204=num;}
   return true;
 }
@@ -78,21 +81,25 @@ async function repair(){
 }
 function queueRepair(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;repair();});}
 function watch(){
-  if(observer)return;
-  observer=new MutationObserver(muts=>{if(muts.some(m=>m.type==='childList'&&m.addedNodes.length))queueRepair();});
+  if(window.__snazzleCardFixV204Observer)return;
+  const observer=new MutationObserver(muts=>{if(muts.some(m=>m.type==='childList'&&m.addedNodes.length))queueRepair();});
   observer.observe(document.body,{subtree:true,childList:true});
+  window.__snazzleCardFixV204Observer=observer;
 }
 function start(){
   installStyle();repair();watch();
-  document.addEventListener('click',e=>{
-    if(e.target.closest('[data-sc2edit],#adminSheet,[data-tab="cardsAdmin"],[data-tab="cards"],.admin-tab,#collectionSheet,[data-collection-tab]')){
-      [0,40,120,300,700].forEach(ms=>setTimeout(repair,ms));
-    }
-  },{passive:true});
-  document.addEventListener('input',e=>{if(e.target?.id==='sc2Number')setTimeout(repair,0);},{passive:true});
+  if(!window.__snazzleCardFixV204Events){
+    window.__snazzleCardFixV204Events=true;
+    document.addEventListener('click',e=>{
+      if(e.target.closest('[data-sc2edit],#adminSheet,[data-tab="cardsAdmin"],[data-tab="cards"],.admin-tab,#collectionSheet,[data-collection-tab]')){
+        [0,40,120,300,700].forEach(ms=>setTimeout(()=>window.SnazzleCardThumbFixV204?.repair?.(),ms));
+      }
+    },{passive:true});
+    document.addEventListener('input',e=>{if(e.target?.id==='sc2Number')setTimeout(()=>window.SnazzleCardThumbFixV204?.repair?.(),0);},{passive:true});
+  }
   [80,250,600,1200,2400,5000].forEach(ms=>setTimeout(repair,ms));
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 window.SnazzleCardThumbFixV204={version:VERSION,repair,buildMap};
 window.SnazzleCardThumbFixV202=window.SnazzleCardThumbFixV204;
-console.info('Snazzle Cards v204.1: 24 originele kaartafbeeldingen actief.');
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+console.info('Snazzle Cards v204.2: 24 originele kaartafbeeldingen actief.');
