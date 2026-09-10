@@ -1,10 +1,12 @@
-// Snazzle Cards v213 — vaste weergave van de 24 originele SPARK/WILD-kaarten.
-// Geen extern JPEG-bestand, geen canvas en geen opgeslagen foutieve imageData voor deze 24 kaarten.
-import ATLAS from './snazzle-card-atlas-v213.js?v=213';
-
-const VERSION='213.0-verified-original-atlas';
+// Snazzle Cards v217 — stabiele kaartweergave vanuit het echte JPEG-atlasbestand in de repo.
+// Herstelt thumbnails in Beheer én kaarten in de collectie en verwijdert oude lege atlas-overlays.
+const VERSION='217.0-stable-repo-atlas';
 const CARD_RE=/S01-([SW])(\d{2})/i;
-let ready=false,repairQueued=false;
+const ATLASES=[
+  './assets/cards/snazzle-cards-atlas-v209.jpg?v=217',
+  './assets/cards/snazzle-cards-atlas-v210.jpg?v=217'
+];
+let ready=false,repairQueued=false,atlasIndex=0;
 
 function cardIndex(number){
   const m=String(number||'').toUpperCase().match(CARD_RE);
@@ -21,72 +23,97 @@ function installStyle(){
   if(!s){s=document.createElement('style');s.id='snCardFixedV205Style';document.head.appendChild(s);}
   s.textContent=`
     #sc2List .sc2-row{grid-template-columns:72px 1fr!important;column-gap:12px!important}
-    #sc2List .sc2-thumb{width:72px!important;height:120px!important;position:relative!important;overflow:hidden!important;border-radius:11px!important;background:#17242e!important}
-    .sn-v213-art{position:absolute!important;inset:0!important;display:block!important;z-index:20!important;background-repeat:no-repeat!important;pointer-events:none!important}
-    #sc2List .sc2-thumb.sn-v213-ready>img{opacity:0!important;visibility:hidden!important}
-    #sc2Grid .sc2-media.sn-v213-ready>img,#sc2VaultGrid .sc2-media.sn-v213-ready>img{opacity:0!important;visibility:hidden!important}
+    #sc2List .sc2-thumb{width:72px!important;height:120px!important;overflow:hidden!important;position:relative!important;border-radius:11px!important;background:#17242e!important}
+    #sc2List .sc2-thumb>.sn-v213-art,#sc2Grid .sc2-media>.sn-v213-art,#sc2VaultGrid .sc2-media>.sn-v213-art{display:none!important}
+    #sc2List .sc2-thumb>img:not(.sn-card-atlas-v217),#sc2Grid .sc2-media>img:not(.sn-card-atlas-v217),#sc2VaultGrid .sc2-media>img:not(.sn-card-atlas-v217){opacity:0!important;visibility:hidden!important}
+    #sc2List .sc2-thumb>img.sn-card-atlas-v217{position:absolute!important;inset:0!important;z-index:30!important;width:100%!important;height:100%!important;object-fit:contain!important;opacity:1!important;visibility:visible!important;filter:none!important;transform:none!important;background:#17242e!important;display:block!important}
+    #sc2Grid .sc2-media>img.sn-card-atlas-v217,#sc2VaultGrid .sc2-media>img.sn-card-atlas-v217{position:absolute!important;inset:0!important;z-index:30!important;width:100%!important;height:100%!important;object-fit:contain!important;opacity:1!important;visibility:visible!important;filter:none!important;transform:none!important;background:#17242e!important;display:block!important}
+    #sc2Grid .sc2-media.sn-v217-ready .sc2-lock,#sc2VaultGrid .sc2-media.sn-v217-ready .sc2-lock{z-index:35!important}
+    #sc2Grid .sc2-media.sn-v217-ready .sc2-rarity,#sc2Grid .sc2-media.sn-v217-ready .sc2-num,#sc2VaultGrid .sc2-media.sn-v217-ready .sc2-rarity,#sc2VaultGrid .sc2-media.sn-v217-ready .sc2-num{z-index:36!important}
   `;
 }
-function paint(box,number,isCollection=false){
-  if(!ready||!box)return false;
-  const index=cardIndex(number); if(index<0)return false;
-  const col=index%6,row=Math.floor(index/6);
-  box.classList.remove('sn-atlas-ready-v210');
+
+function cleanOld(box){
+  if(!box)return;
+  box.classList.remove('sn-atlas-ready-v210','sn-v213-ready');
   box.style.removeProperty('background-image');
+  box.querySelectorAll(':scope > .sn-v213-art,:scope > .sn-fixed-card-v205,:scope > .sn-card-viewport-v208,:scope > img.sn-card-atlas-v209,:scope > img.sn-card-atlas-v210').forEach(el=>el.remove());
+}
+
+function setAtlasImage(box,number,isCollection=false){
+  if(!ready||!box)return false;
+  const index=cardIndex(number);if(index<0)return false;
+  const atlas=window.__snCardAtlasV217;if(!atlas?.naturalWidth||!atlas?.naturalHeight)return false;
+  const col=index%6,row=Math.floor(index/6);
+  cleanOld(box);
   if(isCollection)box.style.aspectRatio='3 / 5';
-  let art=box.querySelector(':scope > .sn-v213-art');
-  if(!art){art=document.createElement('span');art.className='sn-v213-art';box.appendChild(art);}
-  art.style.backgroundImage=`url("${ATLAS}")`;
-  art.style.backgroundSize='600% 400%';
-  art.style.backgroundPosition=`${(col/5)*100}% ${(row/3)*100}%`;
-  art.dataset.cardNumber=number;
-  box.dataset.snCardNumberV213=number;
-  box.classList.add('sn-v213-ready');
+  let img=box.querySelector(':scope > img.sn-card-atlas-v217');
+  if(!img){img=document.createElement('img');img.className='sn-card-atlas-v217';img.alt=number;box.appendChild(img);}
+  const w=Math.max(72,box.clientWidth||72),h=Math.max(120,box.clientHeight||120);
+  const canvas=document.createElement('canvas');
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  canvas.width=Math.max(1,Math.round(w*dpr));canvas.height=Math.max(1,Math.round(h*dpr));
+  const ctx=canvas.getContext('2d');if(!ctx)return false;
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.fillStyle='#17242e';ctx.fillRect(0,0,canvas.width,canvas.height);
+  const cellW=atlas.naturalWidth/6,cellH=atlas.naturalHeight/4;
+  ctx.drawImage(atlas,col*cellW,row*cellH,cellW,cellH,0,0,canvas.width,canvas.height);
+  img.src=canvas.toDataURL('image/jpeg',0.94);
+  img.dataset.cardNumber=number;
+  box.dataset.snCardNumberV217=number;
+  box.classList.add('sn-v217-ready');
   return true;
 }
+
 function repair(){
-  installStyle(); if(!ready)return 0; let count=0;
+  installStyle();if(!ready)return 0;let count=0;
   document.querySelectorAll('#sc2List .sc2-row').forEach(row=>{
-    const n=numberFromRow(row),box=row.querySelector('.sc2-thumb');
-    if(!n||!box)return;
-    const art=box.querySelector(':scope > .sn-v213-art');
-    if(art?.dataset.cardNumber===n)return;
-    if(paint(box,n,false))count++;
+    const n=numberFromRow(row),box=row.querySelector('.sc2-thumb');if(!n||!box)return;
+    const old=box.querySelector(':scope > img.sn-card-atlas-v217');
+    if(old?.dataset.cardNumber===n){cleanOldArtifactsOnly(box);return;}
+    if(setAtlasImage(box,n,false))count++;
   });
   document.querySelectorAll('#sc2Grid .sc2-card,#sc2VaultGrid .sc2-card').forEach(card=>{
-    const n=numberFromCard(card),box=card.querySelector('.sc2-media');
-    if(!n||!box)return;
-    const art=box.querySelector(':scope > .sn-v213-art');
-    if(art?.dataset.cardNumber===n)return;
-    if(paint(box,n,true))count++;
+    const n=numberFromCard(card),box=card.querySelector('.sc2-media');if(!n||!box)return;
+    const old=box.querySelector(':scope > img.sn-card-atlas-v217');
+    if(old?.dataset.cardNumber===n){cleanOldArtifactsOnly(box);return;}
+    if(setAtlasImage(box,n,true))count++;
   });
   return count;
 }
-function queueRepair(){
-  if(repairQueued)return; repairQueued=true;
-  requestAnimationFrame(()=>{repairQueued=false;try{repair();}catch(e){console.error('Snazzle Cards v213 repair',e);}});
+function cleanOldArtifactsOnly(box){
+  box?.querySelectorAll(':scope > .sn-v213-art,:scope > .sn-fixed-card-v205,:scope > .sn-card-viewport-v208,:scope > img.sn-card-atlas-v209,:scope > img.sn-card-atlas-v210').forEach(el=>el.remove());
+  box?.classList.remove('sn-atlas-ready-v210','sn-v213-ready');
 }
+function queueRepair(){if(repairQueued)return;repairQueued=true;requestAnimationFrame(()=>{repairQueued=false;try{repair();}catch(e){console.error('Snazzle Cards v217 repair',e);}});}
+
 function loadAtlas(){
-  const test=new Image();
-  test.decoding='async';
-  test.onload=()=>{
-    if(test.naturalWidth!==144||test.naturalHeight!==160){console.error('Snazzle Cards v213: onverwachte atlasmaat',test.naturalWidth,test.naturalHeight);return;}
-    ready=true; window.__snCardAtlasV213Loaded=true; queueRepair();
-    [80,250,600,1200,2500].forEach(ms=>setTimeout(queueRepair,ms));
+  const src=ATLASES[atlasIndex];
+  const atlas=new Image();atlas.decoding='async';
+  atlas.onload=()=>{
+    if(atlas.naturalWidth<6||atlas.naturalHeight<4){return tryNextAtlas('ongeldige atlasmaat');}
+    window.__snCardAtlasV217=atlas;ready=true;window.__snCardAtlasV217Loaded=src;queueRepair();
+    [60,180,400,800,1500,3000].forEach(ms=>setTimeout(queueRepair,ms));
   };
-  test.onerror=()=>{ready=false;window.__snCardAtlasV213Loaded=false;console.error('Snazzle Cards v213 atlas kon niet laden');};
-  test.src=ATLAS;
+  atlas.onerror=()=>tryNextAtlas('atlas kon niet laden');
+  atlas.src=src;
 }
+function tryNextAtlas(reason){
+  ready=false;atlasIndex++;
+  if(atlasIndex<ATLASES.length){console.warn(`Snazzle Cards v217: ${reason}, reserve-atlas proberen`);loadAtlas();}
+  else console.error('Snazzle Cards v217: geen kaartatlas kon worden geladen');
+}
+
 function start(){
   installStyle();loadAtlas();
-  if(!window.__snazzleCardV213Observer){
+  if(!window.__snazzleCardV217Observer){
     const o=new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'&&m.addedNodes.length))queueRepair();});
-    o.observe(document.body,{subtree:true,childList:true});window.__snazzleCardV213Observer=o;
+    o.observe(document.body,{subtree:true,childList:true});window.__snazzleCardV217Observer=o;
   }
-  if(!window.__snazzleCardV213Clicks){
-    window.__snazzleCardV213Clicks=true;
-    document.addEventListener('click',e=>{if(e.target.closest('#adminSheet,#collectionSheet,[data-tab],[data-collection-tab],[data-sc2edit]'))[0,80,250,600,1200].forEach(ms=>setTimeout(queueRepair,ms));},{passive:true});
+  if(!window.__snazzleCardV217Clicks){
+    window.__snazzleCardV217Clicks=true;
+    document.addEventListener('click',e=>{if(e.target.closest('#adminSheet,#collectionSheet,[data-tab],[data-collection-tab],[data-sc2edit]'))[0,60,180,400,900,1800].forEach(ms=>setTimeout(queueRepair,ms));},{passive:true});
   }
+  document.addEventListener('snazzle:cards-repaired',()=>[80,300,700,1400].forEach(ms=>setTimeout(queueRepair,ms)));
 }
 window.SnazzleCardFixedV205={version:VERSION,repair};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
