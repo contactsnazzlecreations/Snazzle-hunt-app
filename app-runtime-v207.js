@@ -1,6 +1,6 @@
-// Snazzle Hunt v207 — directe originele SPARK- en WILD-kaarten + robuuste adreszoeker en kaart-only plaatsing.
+// Snazzle Hunt v216 — snelle home-opstart, daarna de bestaande v207 runtime.
 
-const runtimeVersion='20260831-v207-direct-card-sheets';
+const runtimeVersion='20260910-v216-fast-home-boot';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -76,7 +76,7 @@ function suppressLateStartupOverlays(){
   document.querySelectorAll('#snV59Boot,.sn-pro-splash').forEach(el=>el.remove());
 }
 suppressLateStartupOverlays();
-window.__snazzleReleaseBoot=()=>{};
+window.__snazzleReleaseBoot=window.__snazzleReleaseBoot||(()=>{});
 
 await Promise.all([
   safeImport('./snazzle-runtime-stability-v71.js'),
@@ -86,6 +86,23 @@ await Promise.all([
 await import(fresh('./app-core.js'));
 suppressLateStartupOverlays();
 await nextPaint();
+
+// Bouw de uiteindelijke home nu meteen op. Voorheen gebeurde dit pas na de 3,2 s wachttijd.
+await safeImport('./snazzle-adventure-ui-v28.js');
+await safeImport('./snazzle-clean-home-v31.js');
+for(let i=0;i<50;i++){
+  const passport=document.getElementById('snazzlePassport');
+  const heroCopy=document.querySelector('.v31-hero-copy');
+  const adventureCss=document.getElementById('snazzleAdventureThemeV28');
+  const cleanCss=document.getElementById('snazzleCleanHomeV31');
+  if(passport&&heroCopy&&adventureCss?.sheet&&cleanCss?.sheet)break;
+  await sleep(30);
+}
+await nextPaint();
+await nextPaint();
+window.__snazzleHomeUiReady=true;
+document.dispatchEvent(new CustomEvent('snazzle:home-ui-ready'));
+window.__snazzleReleaseBoot?.();
 
 await safeImport('./snazzle-ar-v80.js');
 await Promise.all([
@@ -204,8 +221,6 @@ const backgroundBundles=[
     './snazzle-world.js',
     './village-access.js',
     './snazzle-characters.js',
-    './snazzle-adventure-ui-v28.js',
-    './snazzle-clean-home-v31.js',
     './snazzle-v32-guard.js',
     './snazzle-image-control-v32.js',
     './snazzle-village-admin-v33.js',
