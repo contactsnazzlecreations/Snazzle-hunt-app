@@ -1,0 +1,67 @@
+name: Enable Snazzle visitor stats v218
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/enable-visitor-stats-v218.yml'
+      - '.github/scripts/patch_visitor_stats_rules_v218.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch Firestore rules
+        run: python .github/scripts/patch_visitor_stats_rules_v218.py
+
+      - name: Commit rule change when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- firestore.rules; then
+            echo 'No Firestore rule change needed.'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add firestore.rules
+            git commit -m 'Enable anonymous visitor stats v218'
+            git push
+          fi
+
+      - name: Use Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Deploy Firestore rules
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          SA_JSON="${FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT:-${FIREBASE_SERVICE_ACCOUNT:-}}"
+          if [ -n "$SA_JSON" ]; then
+            CREDS="$RUNNER_TEMP/firebase-service-account.json"
+            printf '%s' "$SA_JSON" > "$CREDS"
+            chmod 600 "$CREDS"
+            export GOOGLE_APPLICATION_CREDENTIALS="$CREDS"
+            firebase deploy --project snazzle-hunt --only firestore:rules --non-interactive
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy --project snazzle-hunt --only firestore:rules --non-interactive --token "$FIREBASE_TOKEN"
+          else
+            echo 'Geen Firebase deployment credential gevonden.' >&2
+            exit 1
+          fi
