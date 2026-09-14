@@ -274,6 +274,26 @@ service cloud.firestore {
       allow create, update, delete: if isSuperAdmin();
     }
 
+    // Snazzle bezoekersstatistieken v218.
+    // Alleen anonieme UID + servertijd; geen naam, e-mail, GPS of IP in deze documenten.
+    match /snazzlePresenceV1/{uid} {
+      allow read: if isSuperAdmin();
+      allow create, update: if signedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(["userId", "lastSeenAt"]) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.lastSeenAt == request.time;
+      allow delete: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+
+    match /snazzleDailyPresenceV1/{day}/visitors/{uid} {
+      allow read: if isSuperAdmin();
+      allow create, update: if signedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(["userId", "seenAt"]) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.seenAt == request.time;
+      allow delete: if isSuperAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
