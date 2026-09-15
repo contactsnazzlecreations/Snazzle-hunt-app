@@ -1,6 +1,6 @@
-// Snazzle AR Card Unlock v127
-// AR toont alleen de transparante geplaatste Snazzle. De bijbehorende kaart blijft een aparte kaart-afbeelding
-// en wordt pas ontgrendeld nadat dezelfde Snazzle via AR is gevangen.
+// Snazzle AR Card Unlock v127 / v234 bridge
+// AR toont alleen de transparante geplaatste Snazzle. De bijbehorende kaart blijft een aparte kaart-afbeelding.
+// Zodra Cards v234 actief is, is het permanente serverrecord de bron van waarheid voor ontgrendeling.
 
 import { getApps,getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth,onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -29,8 +29,11 @@ function matchesAr(c,item){
 }
 function arUnlocked(c){return mergedAr().some(item=>matchesAr(c,item));}
 function wonHunts(){return user?hunts.filter(h=>h.found===true&&h.foundByUserId===user.uid):[];}
+function permanentEngine(){return window.SnazzleCardProgressV234||null;}
 function fullyUnlocked(c){
   if(!user)return false;
+  const permanent=permanentEngine();
+  if(permanent?.ready?.()&&permanent?.isBaseCard?.(c?.number))return !!permanent.isUnlocked(c.number);
   if(arRelevant(c))return arUnlocked(c);
   const w=wonHunts(),ids=new Set(w.map(h=>h.id)),type=c.unlockType||'hunt';
   if(type==='hunt'||type==='event')return !!c.huntId&&ids.has(c.huntId);
@@ -51,6 +54,11 @@ function patchCardEl(el){
   if(name&&arRelevant(c))name.textContent=u?(c.name||'Snazzle'):'Mysterie Snazzle';
 }
 function patchSummary(){
+  const permanent=permanentEngine();
+  if(permanent?.ready?.()){
+    permanent.render?.();
+    return;
+  }
   const active=cards.filter(c=>c.active!==false&&c.unlockType!=='special');
   if(!active.length)return;
   const n=active.filter(fullyUnlocked).length;
