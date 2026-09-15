@@ -5,6 +5,7 @@ module.exports = {
   ...require('./meetups'),
   ...require('./admin-mfa'),
   ...require('./org-hunts'),
+  ...require('./card-progress'),
   // Deze laatste export vervangt uitsluitend redeemOrgAccessCode door de strengere guard.
   ...require('./org-access-guard')
 };
