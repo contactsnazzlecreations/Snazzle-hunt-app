@@ -1,8 +1,7 @@
-// Snazzle MYSTIC v226 — artwork staat klaar vóór het kaartensysteem én wordt rechtstreeks in MYSTIC-kaarten gerenderd.
-// Hierdoor kan een lege centrale imageData de afbeelding niet meer terugzetten naar de eend-placeholder.
-const VERSION='226.0-direct-native-blur';
+// Snazzle MYSTIC v235 — artwork + definitieve rarity/event-structuur.
+const VERSION='235.0-final-48';
 const LOCAL_KEY='snazzleCardCatalogV2';
-const ATLAS='./assets/cards/snazzle-mystic-atlas-v219.jpg?v=226';
+const ATLAS='./assets/cards/snazzle-mystic-atlas-v219.jpg?v=235';
 const DEFS=[
   ['S01-M01','Moon Whisper','core'],
   ['S01-M02','Crystal Dream','core'],
@@ -10,10 +9,10 @@ const DEFS=[
   ['S01-M04','Shadow Spell','core'],
   ['S01-M05','Star Oracle','core'],
   ['S01-M06','Dream Keeper','core'],
-  ['S01-M07','Phantom Flash','core'],
-  ['S01-M08','Magic Mist','core'],
-  ['S01-M09','Lunar Legend','rare'],
-  ['S01-M10','Secret Spirit','rare'],
+  ['S01-M07','Phantom Flash','rare'],
+  ['S01-M08','Magic Mist','rare'],
+  ['S01-M09','Lunar Legend','silver'],
+  ['S01-M10','Secret Spirit','silver'],
   ['S01-M11','Mystic Guardian','gold'],
   ['S01-M12','Mystic Master','platinum']
 ];
@@ -54,7 +53,8 @@ function seedWithArtwork(){
     const old=byNo.get(number)||{};
     return {...old,id:old.id||`seed-mystic-${String(i+1).padStart(2,'0')}`,number,name,
       series:'MYSTIC Series 01',description:'Magie, maanlicht & mysterie',rarity,
-      unlockType:'milestone',huntId:'',threshold:i+1,active:true,secretName:false,
+      unlockType:'event',huntId:old.huntId||'',threshold:0,active:true,secretName:false,
+      baseCollection:true,seriesKey:'mystic',structureVersion:'1.0.0',
       imageData:art[i],createdAt:old.createdAt||now,updatedAt:now};
   });
   writeLocal([...keep,...made]);
@@ -65,7 +65,6 @@ function seedWithArtwork(){
 function paint(box,i,locked){
   if(!box||!art[i])return false;
   box.style.setProperty('position','relative','important');
-  // Verberg alleen de eend-placeholder, niet het vraagteken/badges.
   [...box.children].forEach(el=>{
     if(el.tagName==='DIV'&&!el.classList.contains('sn-mystic-v226-art')){
       const txt=(el.textContent||'').trim();
@@ -86,14 +85,8 @@ function paint(box,i,locked){
   img.style.setProperty('visibility','visible','important');
   img.style.setProperty('z-index','80','important');
   img.style.setProperty('background','#17242e','important');
-  if(locked){
-    // Zelfde behandeling als WILD/SPARK uit snazzle-card-system-v2.js.
-    img.style.setProperty('filter','brightness(.12) saturate(.15) blur(1px)','important');
-    img.style.setProperty('transform','scale(1.04)','important');
-  }else{
-    img.style.setProperty('filter','none','important');
-    img.style.setProperty('transform','none','important');
-  }
+  if(locked){img.style.setProperty('filter','brightness(.12) saturate(.15) blur(1px)','important');img.style.setProperty('transform','scale(1.04)','important');}
+  else{img.style.setProperty('filter','none','important');img.style.setProperty('transform','none','important');}
   return true;
 }
 
@@ -116,11 +109,9 @@ function renderArtwork(){
   return count;
 }
 function repair(){seedWithArtwork();return renderArtwork()}
-function queue(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;try{repair()}catch(e){console.error('MYSTIC v226 repair',e)}})}
+function queue(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;try{repair()}catch(e){console.error('MYSTIC v235 repair',e)}})}
 
-// Top-level await: afbeeldingen zijn al beschikbaar voordat het kaartensysteem zijn eerste render doet.
-try{await loadAtlas();seedWithArtwork();}catch(e){console.error('MYSTIC v226 artwork kon niet vooraf worden geladen',e)}
-
+try{await loadAtlas();seedWithArtwork();}catch(e){console.error('MYSTIC v235 artwork kon niet vooraf worden geladen',e)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',queue,{once:true});else queue();
 new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'&&m.addedNodes.length))queue()}).observe(document.documentElement,{subtree:true,childList:true});
 document.addEventListener('click',e=>{if(e.target.closest('#collectionSheet,#adminSheet,[data-seriespick],[data-sc2f],[data-tab],[data-collection-tab]'))[0,60,180,400,900].forEach(ms=>setTimeout(queue,ms))},{passive:true});
