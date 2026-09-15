@@ -1,10 +1,10 @@
-// Snazzle Cards v217 — stabiele kaartweergave vanuit het echte JPEG-atlasbestand in de repo.
-// Herstelt thumbnails in Beheer én kaarten in de collectie en verwijdert oude lege atlas-overlays.
-const VERSION='217.0-stable-repo-atlas';
+// Snazzle Cards v225 — WILD/SPARK atlas blijft stabiel, andere series houden hun eigen afbeelding.
+// Belangrijk: alleen vakken die werkelijk de WILD/SPARK-atlas gebruiken verbergen hun basisafbeelding.
+const VERSION='225.0-series-safe-atlas';
 const CARD_RE=/S01-([SW])(\d{2})/i;
 const ATLASES=[
-  './assets/cards/snazzle-cards-atlas-v209.jpg?v=217',
-  './assets/cards/snazzle-cards-atlas-v210.jpg?v=217'
+  './assets/cards/snazzle-cards-atlas-v209.jpg?v=225',
+  './assets/cards/snazzle-cards-atlas-v210.jpg?v=225'
 ];
 let ready=false,repairQueued=false,atlasIndex=0;
 
@@ -25,7 +25,7 @@ function installStyle(){
     #sc2List .sc2-row{grid-template-columns:72px 1fr!important;column-gap:12px!important}
     #sc2List .sc2-thumb{width:72px!important;height:120px!important;overflow:hidden!important;position:relative!important;border-radius:11px!important;background:#17242e!important}
     #sc2List .sc2-thumb>.sn-v213-art,#sc2Grid .sc2-media>.sn-v213-art,#sc2VaultGrid .sc2-media>.sn-v213-art{display:none!important}
-    #sc2List .sc2-thumb>img:not(.sn-card-atlas-v217),#sc2Grid .sc2-media>img:not(.sn-card-atlas-v217),#sc2VaultGrid .sc2-media>img:not(.sn-card-atlas-v217){opacity:0!important;visibility:hidden!important}
+    #sc2List .sc2-thumb.sn-v217-ready>img:not(.sn-card-atlas-v217),#sc2Grid .sc2-media.sn-v217-ready>img:not(.sn-card-atlas-v217),#sc2VaultGrid .sc2-media.sn-v217-ready>img:not(.sn-card-atlas-v217){opacity:0!important;visibility:hidden!important}
     #sc2List .sc2-thumb>img.sn-card-atlas-v217{position:absolute!important;inset:0!important;z-index:30!important;width:100%!important;height:100%!important;object-fit:contain!important;opacity:1!important;visibility:visible!important;filter:none!important;transform:none!important;background:#17242e!important;display:block!important}
     #sc2Grid .sc2-media>img.sn-card-atlas-v217,#sc2VaultGrid .sc2-media>img.sn-card-atlas-v217{position:absolute!important;inset:0!important;z-index:30!important;width:100%!important;height:100%!important;object-fit:contain!important;opacity:1!important;visibility:visible!important;filter:none!important;transform:none!important;background:#17242e!important;display:block!important}
     #sc2Grid .sc2-media.sn-v217-ready .sc2-lock,#sc2VaultGrid .sc2-media.sn-v217-ready .sc2-lock{z-index:35!important}
@@ -84,7 +84,7 @@ function cleanOldArtifactsOnly(box){
   box?.querySelectorAll(':scope > .sn-v213-art,:scope > .sn-fixed-card-v205,:scope > .sn-card-viewport-v208,:scope > img.sn-card-atlas-v209,:scope > img.sn-card-atlas-v210').forEach(el=>el.remove());
   box?.classList.remove('sn-atlas-ready-v210','sn-v213-ready');
 }
-function queueRepair(){if(repairQueued)return;repairQueued=true;requestAnimationFrame(()=>{repairQueued=false;try{repair();}catch(e){console.error('Snazzle Cards v217 repair',e);}});}
+function queueRepair(){if(repairQueued)return;repairQueued=true;requestAnimationFrame(()=>{repairQueued=false;try{repair();}catch(e){console.error('Snazzle Cards v225 repair',e);}});}
 
 function loadAtlas(){
   const src=ATLASES[atlasIndex];
@@ -99,8 +99,8 @@ function loadAtlas(){
 }
 function tryNextAtlas(reason){
   ready=false;atlasIndex++;
-  if(atlasIndex<ATLASES.length){console.warn(`Snazzle Cards v217: ${reason}, reserve-atlas proberen`);loadAtlas();}
-  else console.error('Snazzle Cards v217: geen kaartatlas kon worden geladen');
+  if(atlasIndex<ATLASES.length){console.warn(`Snazzle Cards v225: ${reason}, reserve-atlas proberen`);loadAtlas();}
+  else console.error('Snazzle Cards v225: geen kaartatlas kon worden geladen');
 }
 
 function start(){
