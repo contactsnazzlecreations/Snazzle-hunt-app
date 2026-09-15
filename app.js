@@ -73,6 +73,11 @@ try {
 } catch (err) {
   console.error('Snazzle Cards permanente voortgang v235 kon niet laden', err);
 }
+try {
+  await import('./snazzle-card-rewards-ui-v235.js?v=235');
+} catch (err) {
+  console.error('Snazzle Cards beloningen v235 konden niet laden', err);
+}
 
 [100,350,900,1800,3500,7000].forEach(ms=>setTimeout(()=>{
   window.SnazzleMysticV221?.repair?.();
@@ -81,4 +86,5 @@ try {
   window.SnazzleMysticUiV227?.repair?.();
   window.SnazzleBlazeUiV232?.repair?.();
   window.SnazzleCardProgressV234?.render?.();
+  window.SnazzleCardRewardsV235?.render?.();
 },ms));
