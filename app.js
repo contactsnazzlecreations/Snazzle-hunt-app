@@ -1,82 +1,87 @@
-// Snazzle Hunt v235 — volledige startup + permanente 48-kaarten voortgang.
+// Snazzle Hunt v236 — volledige startup + bewaakte 48-kaarten voortgang.
 try {
-  await import('./snazzle-card-structure-v233.js?v=235');
+  await import('./snazzle-card-structure-v233.js?v=236');
 } catch (err) {
-  console.error('Snazzle Cards structuur v235 kon niet laden', err);
+  console.error('Snazzle Cards structuur v236 kon niet laden', err);
 }
 try {
-  await import('./snazzle-mystic-v221.js?v=235');
+  await import('./snazzle-mystic-v221.js?v=236');
 } catch (err) {
   console.error('Snazzle MYSTIC seed kon niet laden', err);
 }
 try {
-  await import('./snazzle-blaze-v229.js?v=235');
+  await import('./snazzle-blaze-v229.js?v=236');
 } catch (err) {
   console.error('Snazzle BLAZE seed kon niet laden', err);
 }
 
-await import('./app-runtime-v207.js?v=235');
+await import('./app-runtime-v207.js?v=236');
 
 try {
-  await import('./snazzle-admin-analytics-v218.js?v=235');
+  await import('./snazzle-admin-analytics-v218.js?v=236');
 } catch (err) {
   console.error('Snazzle bezoekersstatistieken v218 konden niet laden', err);
 }
 try {
-  await import('./snazzle-ar-menu-fix-v215.js?v=235');
+  await import('./snazzle-ar-menu-fix-v215.js?v=236');
 } catch (err) {
   console.error('Snazzle AR menu fix v215 kon niet laden', err);
 }
 try {
-  await import('./snazzle-onboarding-stability-v208.js?v=235');
+  await import('./snazzle-onboarding-stability-v208.js?v=236');
 } catch (err) {
   console.error('Snazzle onboarding stability v208 kon niet laden', err);
 }
 try {
-  await import('./snazzle-card-catalog-repair-v217.js?v=235');
+  await import('./snazzle-card-catalog-repair-v217.js?v=236');
 } catch (err) {
   console.error('Snazzle Cards catalogus-herstel v217 kon niet laden', err);
 }
 try {
-  await import('./snazzle-card-fixed-v205.js?v=235');
+  await import('./snazzle-card-fixed-v205.js?v=236');
   [0,120,350,800,1600,3000].forEach(ms=>setTimeout(()=>window.SnazzleCardFixedV205?.repair?.(),ms));
 } catch (err) {
   console.error('Snazzle Cards renderer kon niet laden', err);
 }
 try {
-  await import('./snazzle-mystic-series-v219.js?v=235');
+  await import('./snazzle-mystic-series-v219.js?v=236');
 } catch (err) {
   console.error('Snazzle MYSTIC Series 01 kon niet laden', err);
 }
 try {
-  await import('./snazzle-mystic-verify-v220.js?v=235');
+  await import('./snazzle-mystic-verify-v220.js?v=236');
 } catch (err) {
   console.error('Snazzle MYSTIC controle kon niet laden', err);
 }
 try {
-  await import('./snazzle-mystic-ui-v227.js?v=235');
+  await import('./snazzle-mystic-ui-v227.js?v=236');
 } catch (err) {
   console.error('Snazzle MYSTIC/UI v227 kon niet laden', err);
 }
 try {
-  await import('./snazzle-blaze-ui-v231.js?v=235');
+  await import('./snazzle-blaze-ui-v231.js?v=236');
 } catch (err) {
   console.error('Snazzle BLAZE/UI v232 kon niet laden', err);
 }
 try {
-  await import('./snazzle-blaze-sync-v228.js?v=235');
+  await import('./snazzle-blaze-sync-v228.js?v=236');
 } catch (err) {
   console.error('Snazzle BLAZE sync kon niet laden', err);
 }
 try {
-  await import('./snazzle-card-progress-v234.js?v=235');
+  await import('./snazzle-card-progress-v234.js?v=236');
 } catch (err) {
-  console.error('Snazzle Cards permanente voortgang v235 kon niet laden', err);
+  console.error('Snazzle Cards permanente voortgang v236 kon niet laden', err);
 }
 try {
-  await import('./snazzle-card-rewards-ui-v235.js?v=235');
+  await import('./snazzle-card-rewards-ui-v235.js?v=236');
 } catch (err) {
-  console.error('Snazzle Cards beloningen v235 konden niet laden', err);
+  console.error('Snazzle Cards beloningen v236 konden niet laden', err);
+}
+try {
+  await import('./snazzle-card-counter-guard-v236.js?v=236');
+} catch (err) {
+  console.error('Snazzle Cards tellerbewaking v236 kon niet laden', err);
 }
 
 [100,350,900,1800,3500,7000].forEach(ms=>setTimeout(()=>{
@@ -87,4 +92,5 @@ try {
   window.SnazzleBlazeUiV232?.repair?.();
   window.SnazzleCardProgressV234?.render?.();
   window.SnazzleCardRewardsV235?.render?.();
+  window.SnazzleCardCounterGuardV236?.render?.();
 },ms));
