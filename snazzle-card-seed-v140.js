@@ -1,30 +1,33 @@
-// Snazzle Cards v140.2 — veilige vaste basiscollectie + betrouwbare beheer-thumbnails.
-// Zet 12 WILD + 12 SPARK kaarten als gewone catalogusrecords klaar.
+// Snazzle Cards v140.3 — vaste WILD/SPARK basiscollectie volgens definitieve 48-kaartenstructuur.
 // Collectie gebruikt de sprite; Beheer krijgt per kaart een echte uitgesneden thumbnail.
 import { assets } from './snazzle-card-assets-v133.js';
 
 const KEY='snazzleCardCatalogV2';
-const VERSION='140.2-admin-crops';
+const VERSION='140.3-final-48-structure';
 const PIXEL='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 const wild=['Trail Blazer','Jungle Jax','Mud Runner','Storm Scout','Boulder Buddy','Night Tracker','River Rush','Forest Flash','Thunder Trek','Shadow Scout','Wild Guardian','Alpha Snazzle'];
 const spark=['Star Sprinkle','Moon Glow','Dream Dancer','Crystal Pop','Bubble Bloom','Glitter Glide','Comet Dash','Rainbow Rush','Starlight Hug','Aurora Whirl','Sparkle Sprout','Nova Shine'];
+const rarity=i=>i<6?'core':i<8?'rare':i<10?'silver':i===10?'gold':'platinum';
 
 function read(){
   try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[];}catch{return [];}
 }
 function make(world,i,name){
-  const n=String(i+1).padStart(2,'0');
+  const n=String(i+1).padStart(2,'0'),isWild=world==='wild';
   return {
     id:`seed-${world}-${n}`,
-    number:`S01-${world==='wild'?'W':'S'}${n}`,
+    number:`S01-${isWild?'W':'S'}${n}`,
     name,
-    series:world==='wild'?'WILD Series 01':'SPARK Series 01',
-    description:world==='wild'?'Avontuur & actie':'Glans & fantasie',
-    rarity:i<8?'core':'rare',
-    unlockType:'milestone',
+    series:isWild?'WILD Series 01':'SPARK Series 01',
+    description:isWild?'Avontuur & actie':'Glans & fantasie',
+    rarity:rarity(i),
+    unlockType:isWild?'ar':'milestone',
     huntId:'',
-    threshold:i+1,
+    threshold:isWild?0:i+1,
     world,
+    baseCollection:true,
+    seriesKey:world,
+    structureVersion:'1.0.0',
     active:true,
     secretName:false,
     imageData:PIXEL,
@@ -37,7 +40,7 @@ try{
   const map=new Map(read().filter(Boolean).map(c=>[c.id,c]));
   for(const s of seeds){
     const old=map.get(s.id);
-    map.set(s.id,old?{...s,...old,imageData:old.imageData||PIXEL,active:old.active!==false}:s);
+    map.set(s.id,old?{...old,...s,imageData:old.imageData||PIXEL,arPointId:old.arPointId||'',active:old.active!==false}:s);
   }
   localStorage.setItem(KEY,JSON.stringify([...map.values()]));
   localStorage.setItem('snazzleCardSeedV140',JSON.stringify({at:new Date().toISOString(),count:seeds.length,version:VERSION}));
