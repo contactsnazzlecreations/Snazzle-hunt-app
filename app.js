@@ -1,4 +1,4 @@
-// Snazzle Hunt v242 — vaste 48-kaarten voortgang + Snazzle Spotboek AR + wereldwijde AR-zones + strikte schone dorpselectie.
+// Snazzle Hunt v243 — AR-dorpselectie aan de bron opgeschoond en cache geforceerd vernieuwd.
 try {
   await import('./snazzle-card-structure-v233.js?v=237');
 } catch (err) {
@@ -15,7 +15,7 @@ try {
   console.error('Snazzle BLAZE seed kon niet laden', err);
 }
 
-await import('./app-runtime-v207.js?v=237');
+await import('./app-runtime-v207.js?v=243');
 
 try {
   await import('./snazzle-admin-analytics-v218.js?v=237');
@@ -94,9 +94,9 @@ try {
   console.error('Snazzle wereldwijde AR-zones v240 konden niet laden', err);
 }
 try {
-  await import('./snazzle-ar-village-select-v242.js?v=242');
+  await import('./snazzle-ar-village-select-v242.js?v=243');
 } catch (err) {
-  console.error('Snazzle AR dorpselectie v242 kon niet laden', err);
+  console.error('Snazzle AR dorpselectie v243 kon niet laden', err);
 }
 
 [100,350,900,1800,3500,7000].forEach(ms=>setTimeout(()=>{
@@ -111,4 +111,5 @@ try {
   window.SnazzleSpotbookV237?.render?.();
   window.SnazzleArGlobalV240?.repair?.();
   window.SnazzleArVillageSelectV242?.repair?.();
+  window.SnazzleArAdminV85?.populateVillages?.();
 },ms));
