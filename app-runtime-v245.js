@@ -1,6 +1,6 @@
-// Snazzle Hunt v246 — AR plaatskaart beweegt en zoomt zelfstandig zonder paginazoom.
+// Snazzle Hunt v247 — snellere single-start runtime zonder geforceerde herstart.
 
-const runtimeVersion='20260916-v246-ar-interactive-map';
+const runtimeVersion='20260916-v247-fast-single-start';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -92,7 +92,8 @@ Promise.allSettled([
   hero.addEventListener('click',()=>{if(hasSnazzleHero())playQuack();});
 })();
 
-await sleep(3200);await waitIfArPriority();
+// Geen kunstmatige 3,2 seconden pauze meer: zodra de browser ruimte heeft, laden de overige functies.
+await idle();await waitIfArPriority();
 
 const fastBundles=[
   ['./snazzle-auto-update-v51.js','./snazzle-privacy-v52.js','./snazzle-parent-hub-v65.js','./snazzle-parent-close-fix-v76.js','./shop-compat.js'],
