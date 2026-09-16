@@ -1,0 +1,109 @@
+name: Fix AR village selector v243
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-ar-village-selector-v243.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch AR village selector at source
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          p = Path('snazzle-ar-admin-v85.js')
+          s = p.read_text(encoding='utf-8')
+          old = """async function populateVillages(){
+  const select=$('#snArAdminVillage85'); if(!select)return;
+  let names=[];
+  try{const snap=await getDocs(collection(db,'villages'));snap.forEach(d=>{const x=d.data();names.push(String(x.name||x.title||d.id));});}catch{}
+  names=[...new Set((names.length?names:FALLBACK_VILLAGES).filter(Boolean))];
+  const current=localStorage.getItem('snazzleVillage')||'Montfort';
+  select.innerHTML=names.map(v=>`<option ${v===current?'selected':''}>${esc(v)}</option>`).join('');
+}
+"""
+          new = """function populateVillages(){
+  const select=$('#snArAdminVillage85'); if(!select)return;
+  const options=[
+    {value:'Algemeen',label:'🌍 Algemeen / overal'},
+    {value:'Montfort',label:'Montfort'},
+    {value:'Posterholt',label:'Posterholt'},
+    {value:'Sint Odiliënberg',label:'Sint Odiliënberg'}
+  ];
+  const current=localStorage.getItem('snazzleVillage')||'Montfort';
+  select.replaceChildren(...options.map(item=>{
+    const option=document.createElement('option');
+    option.value=item.value;
+    option.textContent=item.label;
+    return option;
+  }));
+  select.value=options.some(item=>item.value===current)?current:'Montfort';
+}
+"""
+          if old not in s:
+              raise SystemExit('populateVillages bronblok niet gevonden; niets gewijzigd')
+          s = s.replace(old, new, 1)
+          s = s.replace("// Snazzle AR Admin v85.1", "// Snazzle AR Admin v85.2 — v243 vaste, schone dorpselectie", 1)
+          p.write_text(s, encoding='utf-8')
+
+          r = Path('app-runtime-v207.js')
+          t = r.read_text(encoding='utf-8')
+          import re
+          t, n = re.subn(r"const runtimeVersion='[^']+';", "const runtimeVersion='20260916-v243-ar-village-selector';", t, count=1)
+          if n != 1:
+              raise SystemExit('runtimeVersion niet gevonden')
+          r.write_text(t, encoding='utf-8')
+
+          a = Path('app.js')
+          u = a.read_text(encoding='utf-8')
+          u = u.replace("await import('./app-runtime-v207.js?v=237');", "await import('./app-runtime-v207.js?v=243');", 1)
+          if "app-runtime-v207.js?v=243" not in u:
+              raise SystemExit('app.js runtime cache-bust niet gezet')
+          a.write_text(u, encoding='utf-8')
+          PY
+
+      - name: Verify exact selector and syntax
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          s=Path('snazzle-ar-admin-v85.js').read_text(encoding='utf-8')
+          block=s[s.index('function populateVillages(){'):s.index('\nfunction previewImage', s.index('function populateVillages(){'))]
+          required=["{value:'Algemeen',label:'🌍 Algemeen / overal'}","{value:'Montfort',label:'Montfort'}","{value:'Posterholt',label:'Posterholt'}","{value:'Sint Odiliënberg',label:'Sint Odiliënberg'}"]
+          for x in required:
+              assert x in block, x
+          forbidden=['getDocs(',"collection(db,'villages')",'__snazzle_','Luisterverhaal']
+          for x in forbidden:
+              assert x not in block, x
+          assert "app-runtime-v207.js?v=243" in Path('app.js').read_text(encoding='utf-8')
+          assert "20260916-v243-ar-village-selector" in Path('app-runtime-v207.js').read_text(encoding='utf-8')
+          print('AR_VILLAGE_SELECTOR_VERIFIED=Algemeen|Montfort|Posterholt|Sint Odiliënberg')
+          PY
+          node --experimental-default-type=module --check snazzle-ar-admin-v85.js
+          node --experimental-default-type=module --check app-runtime-v207.js
+          node --experimental-default-type=module --check app.js
+
+      - name: Commit repair
+        shell: bash
+        run: |
+          git config user.name "contactsnazzlecreations"
+          git config user.email "contact.snazzlecreations@gmail.com"
+          git add snazzle-ar-admin-v85.js app-runtime-v207.js app.js
+          if git diff --cached --quiet; then
+            echo 'Geen wijzigingen om te committen.'
+            exit 0
+          fi
+          git commit -m "Fix AR village selector at source v243"
+          git push origin HEAD:main
