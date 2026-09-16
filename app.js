@@ -1,4 +1,4 @@
-// Snazzle Hunt v240 — vaste 48-kaarten voortgang + Snazzle Spotboek AR + wereldwijde AR-zones + maximale zoekstraal.
+// Snazzle Hunt v241 — vaste 48-kaarten voortgang + Snazzle Spotboek AR + wereldwijde AR-zones + schone dorpselectie.
 try {
   await import('./snazzle-card-structure-v233.js?v=237');
 } catch (err) {
@@ -93,6 +93,11 @@ try {
 } catch (err) {
   console.error('Snazzle wereldwijde AR-zones v240 konden niet laden', err);
 }
+try {
+  await import('./snazzle-ar-village-select-fix-v241.js?v=241');
+} catch (err) {
+  console.error('Snazzle AR dorpselectie v241 kon niet laden', err);
+}
 
 [100,350,900,1800,3500,7000].forEach(ms=>setTimeout(()=>{
   window.SnazzleMysticV221?.repair?.();
@@ -105,4 +110,5 @@ try {
   window.SnazzleCardCounterGuardV236?.render?.();
   window.SnazzleSpotbookV237?.render?.();
   window.SnazzleArGlobalV240?.repair?.();
+  window.SnazzleArVillageSelectFixV241?.repair?.();
 },ms));
