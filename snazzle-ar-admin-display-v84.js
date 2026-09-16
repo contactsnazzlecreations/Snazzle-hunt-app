@@ -1,5 +1,6 @@
-// Snazzle AR admin display v113 compatibility.
-// Houdt het oude v83-paneel verborgen en laadt centraal AR-beheer, player, plaatsstudio, kaartfix en anonieme statistieken.
+// Snazzle AR admin display v245 compatibility.
+// Houdt alleen de oude v83 beheer-UI weg en laadt de veilige beheer-guard + anonieme statistieken.
+// Camera, GPS, werelddata en plaatsing worden uitsluitend door de centrale AR-runtime geladen.
 if(!document.getElementById('snArAdminDisplayV85')){
   const s=document.createElement('style');
   s.id='snArAdminDisplayV85';
@@ -10,9 +11,7 @@ if(!document.getElementById('snArAdminDisplayV85')){
 const fresh=window.__snazzleFresh||((p)=>`${p}?v=${Date.now()}`);
 Promise.all([
   import(fresh('./snazzle-ar-admin-guard-v85.js')),
-  import(fresh('./snazzle-ar-admin-v85.js')),
-  import(fresh('./snazzle-ar-world-v85.js')),
-  import(fresh('./snazzle-ar-place-studio-v90.js')),
-  import(fresh('./snazzle-ar-zone-map-fix-v112.js')),
   import(fresh('./snazzle-ar-stats-v113.js'))
-]).catch(err=>console.warn('Snazzle AR v113 kon niet volledig laden',err));
+]).catch(err=>console.warn('Snazzle AR beheer-compatibiliteit kon niet volledig laden',err));
+
+window.SnazzleArAdminDisplayV245={ready:true};
