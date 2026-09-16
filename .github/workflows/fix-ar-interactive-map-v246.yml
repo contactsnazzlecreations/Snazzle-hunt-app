@@ -1,0 +1,159 @@
+name: Fix AR interactive placement map v246
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-ar-interactive-map-v246.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make AR placement map truly interactive
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('snazzle-ar-placement-v245.js')
+          s=p.read_text()
+
+          s=s.replace(
+            "// Snazzle AR Placement v245 — één beheerflow voor GPS, adres/kaart, camera en opslaan.\n// Stabiliteitspass: geen opslaan vanaf fallbackpunt, GPS-kwaliteitscontrole en camera-races veilig afbreken.",
+            "// Snazzle AR Placement v246 — interactieve Leaflet-kaart + stabiele GPS/camera/opslag.\n// Kaartgebaren blijven binnen de kaart: slepen verplaatst de plaatsing, knijpen zoomt de kaart en niet de pagina."
+          )
+
+          pattern=r"function mapUrl\(\)\{.*?\n\}\n\nfunction installStyle\(\)\{"
+          replacement=r'''let placementMap=null;
+          let leafletPromise=null;
+          let mapProgrammatic=false;
+          let mapGesture=false;
+
+          function ensureLeaflet(){
+            if(window.L?.map)return Promise.resolve(window.L);
+            if(leafletPromise)return leafletPromise;
+            if(!document.querySelector('link[data-sn245-leaflet]')){
+              const css=document.createElement('link');css.rel='stylesheet';css.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';css.dataset.sn245Leaflet='1';document.head.appendChild(css);
+            }
+            leafletPromise=new Promise((resolve,reject)=>{
+              const ready=()=>window.L?.map?resolve(window.L):reject(new Error('Kaartmodule kon niet starten.'));
+              let script=document.querySelector('script[data-sn245-leaflet]');
+              if(script){if(window.L?.map)return resolve(window.L);script.addEventListener('load',ready,{once:true});script.addEventListener('error',()=>reject(new Error('Kaartmodule kon niet laden.')),{once:true});return;}
+              script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';script.dataset.sn245Leaflet='1';script.onload=ready;script.onerror=()=>reject(new Error('Kaartmodule kon niet laden.'));document.head.appendChild(script);
+            });
+            return leafletPromise;
+          }
+          function updateMapStatus(note=''){
+            const source=state.source==='gps'?`GPS ±${Math.round(state.accuracy||0)} m`:state.source==='address'?'adres gekozen':state.source==='manual'?'kaart/pijltjes handmatig':'nog geen bevestigde plek';
+            const ok=state.source==='address'||state.source==='manual'||(state.source==='gps'&&state.accuracy<=MAX_GPS_SAVE_ACCURACY);
+            setStatus(`📍 ${state.lat.toFixed(6)}, ${state.lon.toFixed(6)} · ${source}${note?` · ${note}`:''}`,ok?'ok':'');
+            if(state.source!=='fallback')rememberPoint();
+          }
+          function syncMapToState(zoom=null){
+            if(!placementMap)return;
+            mapProgrammatic=true;
+            const z=Number.isFinite(Number(zoom))?Number(zoom):placementMap.getZoom();
+            placementMap.setView([state.lat,state.lon],z,{animate:false});
+            requestAnimationFrame(()=>{mapProgrammatic=false;});
+          }
+          async function ensureInteractiveMap(){
+            const canvas=$('#sn245MapCanvas');if(!canvas)return null;
+            const L=await ensureLeaflet();
+            if(!placementMap){
+              placementMap=L.map(canvas,{zoomControl:true,attributionControl:true,preferCanvas:true,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false}).setView([state.lat,state.lon],17);
+              L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(placementMap);
+              placementMap.on('movestart',()=>{if(!mapProgrammatic)mapGesture=true;});
+              placementMap.on('moveend',()=>{
+                if(mapProgrammatic){mapProgrammatic=false;return;}
+                if(!mapGesture)return;
+                mapGesture=false;
+                const c=placementMap.getCenter();
+                const moved=Math.abs(c.lat-state.lat)>0.000003||Math.abs(c.lng-state.lon)>0.000004;
+                if(moved){
+                  locateToken++;
+                  state.lat=Number(c.lat);state.lon=Number(c.lng);state.accuracy=0;state.source='manual';state.label='kaart';
+                  updateMapStatus('pin in het midden is nu de gekozen plek');
+                }else updateMapStatus('kaart ingezoomd; plek bleef gelijk');
+              });
+              canvas.addEventListener('contextmenu',e=>e.preventDefault());
+            }
+            setTimeout(()=>placementMap?.invalidateSize(false),20);
+            return placementMap;
+          }
+          function updateMap(note='',zoom=null){
+            updateMapStatus(note);
+            ensureInteractiveMap().then(()=>syncMapToState(zoom)).catch(err=>setStatus('⚠️ '+(err?.message||'Kaart kon niet laden.'),'err'));
+          }
+
+          function installStyle(){'''
+          s,n=re.subn(pattern,replacement,s,flags=re.S)
+          assert n==1, f'map function block replacement count={n}'
+
+          old_css=".sn245-map{height:300px;border:3px solid #6c5435;border-radius:16px;overflow:hidden;background:#dfe8db;position:relative}.sn245-map iframe{width:100%;height:100%;border:0;pointer-events:none}.sn245-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:40px;z-index:3;filter:drop-shadow(0 2px 2px #fff);pointer-events:none}"
+          new_css=".sn245-map{height:300px;border:3px solid #6c5435;border-radius:16px;overflow:hidden;background:#dfe8db;position:relative;touch-action:none;overscroll-behavior:contain}.sn245-map-canvas{position:absolute;inset:0;z-index:1;touch-action:none;overscroll-behavior:contain}.sn245-map .leaflet-container{width:100%;height:100%;touch-action:none;background:#dfe8db}.sn245-map .leaflet-control{font-family:inherit}.sn245-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:40px;z-index:500;filter:drop-shadow(0 2px 2px #fff);pointer-events:none}.sn245-map-help{position:absolute;left:8px;right:8px;bottom:8px;z-index:550;padding:6px 8px;border-radius:10px;background:#173c2ddd;color:#fff;text-align:center;font-size:10px;font-weight:900;pointer-events:none}"
+          assert old_css in s, 'old map css not found'
+          s=s.replace(old_css,new_css,1)
+
+          old_html='<div class="sn245-map"><iframe id="sn245MapFrame" title="Kaartcontrole"></iframe><div class="sn245-pin">📍</div></div>'
+          new_html='<div class="sn245-map"><div class="sn245-map-canvas" id="sn245MapCanvas" aria-label="Interactieve kaart voor Snazzle-plaatsing"></div><div class="sn245-pin">📍</div><div class="sn245-map-help">Sleep de kaart onder de pin · knijp om alleen de kaart te zoomen</div></div>'
+          assert old_html in s, 'old iframe map html not found'
+          s=s.replace(old_html,new_html,1)
+
+          s=s.replace("updateMap('adres gevonden');toast('✅ Adres gevonden. Controleer de pin.');","updateMap('adres gevonden',18);toast('✅ Adres gevonden. Sleep of zoom de kaart voor de exacte plek.');",1)
+
+          old_open="function open(){const modal=ensureModal();resetState();showStep('map');previousBodyOverflow=document.body.style.overflow||'';document.body.style.overflow='hidden';modal.classList.add('show');updateMap('nog bevestigen');const input=$('#sn245Address');if(input)input.value='';setTimeout(()=>locate().catch(()=>{}),30);}"
+          new_open="function open(){const modal=ensureModal();resetState();showStep('map');previousBodyOverflow=document.body.style.overflow||'';document.body.style.overflow='hidden';modal.classList.add('show');updateMap('nog bevestigen',17);const input=$('#sn245Address');if(input)input.value='';setTimeout(()=>{placementMap?.invalidateSize(false);locate().catch(()=>{});},80);}"
+          assert old_open in s, 'open function not found'
+          s=s.replace(old_open,new_open,1)
+
+          old_another="function placeAnother(){resetState();showStep('map');updateMap('nieuwe plaatsing — nog bevestigen');setTimeout(()=>locate().catch(()=>{}),30);}"
+          new_another="function placeAnother(){resetState();showStep('map');updateMap('nieuwe plaatsing — nog bevestigen',17);setTimeout(()=>{placementMap?.invalidateSize(false);locate().catch(()=>{});},80);}"
+          assert old_another in s, 'placeAnother function not found'
+          s=s.replace(old_another,new_another,1)
+
+          s=s.replace("console.info('Snazzle AR Placement v245 actief');","console.info('Snazzle AR Placement v246 interactieve kaart actief');",1)
+          p.write_text(s)
+
+          r=Path('app-runtime-v245.js')
+          rs=r.read_text()
+          rs=rs.replace("// Snazzle Hunt v245 — snelle home-opstart + systematisch opgeschoonde AR-runtime.","// Snazzle Hunt v246 — AR plaatskaart beweegt en zoomt zelfstandig zonder paginazoom.",1)
+          rs=rs.replace("const runtimeVersion='20260916-v245-ar-system-audit';","const runtimeVersion='20260916-v246-ar-interactive-map';",1)
+          r.write_text(rs)
+
+          a=Path('app.js')
+          av=a.read_text()
+          av=av.replace("// Snazzle Hunt v245 — systematisch gecontroleerde AR camera/GPS/plaatsing en geforceerde cachevernieuwing.","// Snazzle Hunt v246 — interactieve AR-plaatskaart + gecontroleerde camera/GPS/plaatsing.",1)
+          av=av.replace("await import('./app-runtime-v245.js?v=245');","await import('./app-runtime-v245.js?v=246');",1)
+          a.write_text(av)
+
+          v=Path('.github/workflows/validate-snazzle-world-v47.yml')
+          vs=v.read_text()
+          vs=vs.replace('grep -q "app-runtime-v245.js?v=245" app.js','grep -q "app-runtime-v245.js?v=246" app.js',1)
+          needle='          grep -q "mode:\'map-only\'" snazzle-ar-placement-v245.js\n'
+          extra='          grep -q "mode:\'map-only\'" snazzle-ar-placement-v245.js\n          grep -q "L.map" snazzle-ar-placement-v245.js\n          grep -q "touchZoom:true" snazzle-ar-placement-v245.js\n          grep -q "sn245MapCanvas" snazzle-ar-placement-v245.js\n          ! grep -q "sn245MapFrame" snazzle-ar-placement-v245.js\n'
+          assert needle in vs, 'validator insertion point not found'
+          vs=vs.replace(needle,extra,1)
+          v.write_text(vs)
+          PY
+
+      - name: Show diff
+        run: git diff --check && git diff --stat
+
+      - name: Commit map fix
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add snazzle-ar-placement-v245.js app-runtime-v245.js app.js .github/workflows/validate-snazzle-world-v47.yml
+          git commit -m "Make AR placement map interactive v246"
+          git push
