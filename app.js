@@ -1,95 +1,19 @@
-// Snazzle Hunt v246 — interactieve AR-plaatskaart + gecontroleerde camera/GPS/plaatsing.
-try {
-  await import('./snazzle-card-structure-v233.js?v=237');
-} catch (err) {
-  console.error('Snazzle Cards structuur v237 kon niet laden', err);
-}
-try {
-  await import('./snazzle-mystic-v221.js?v=237');
-} catch (err) {
-  console.error('Snazzle MYSTIC seed kon niet laden', err);
-}
-try {
-  await import('./snazzle-blaze-v229.js?v=237');
-} catch (err) {
-  console.error('Snazzle BLAZE seed kon niet laden', err);
+// Snazzle Hunt v247 — snelle single-start bootstrap.
+// Eerst de bruikbare app laden; kaartcatalogus en herstelmodules pas daarna op de achtergrond.
+
+window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
+
+async function optionalImport(path,label){
+  try{return await import(path);}
+  catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 
-await import('./app-runtime-v245.js?v=246');
+// Kritieke route: start de echte app direct. Geen kaart-seeds meer vóór het beginscherm.
+await import('./app-runtime-v245.js?v=247');
+window.__snazzleAppInteractive=true;
+document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
-try {
-  await import('./snazzle-admin-analytics-v218.js?v=237');
-} catch (err) {
-  console.error('Snazzle bezoekersstatistieken v218 konden niet laden', err);
-}
-try {
-  await import('./snazzle-ar-menu-fix-v215.js?v=245');
-} catch (err) {
-  console.error('Snazzle AR menu fix v215 kon niet laden', err);
-}
-try {
-  await import('./snazzle-onboarding-stability-v208.js?v=237');
-} catch (err) {
-  console.error('Snazzle onboarding stability v208 kon niet laden', err);
-}
-try {
-  await import('./snazzle-card-catalog-repair-v217.js?v=237');
-} catch (err) {
-  console.error('Snazzle Cards catalogus-herstel v217 kon niet laden', err);
-}
-try {
-  await import('./snazzle-card-fixed-v205.js?v=237');
-  [0,120,350,800,1600,3000].forEach(ms=>setTimeout(()=>window.SnazzleCardFixedV205?.repair?.(),ms));
-} catch (err) {
-  console.error('Snazzle Cards renderer kon niet laden', err);
-}
-try {
-  await import('./snazzle-mystic-series-v219.js?v=237');
-} catch (err) {
-  console.error('Snazzle MYSTIC Series 01 kon niet laden', err);
-}
-try {
-  await import('./snazzle-mystic-verify-v220.js?v=237');
-} catch (err) {
-  console.error('Snazzle MYSTIC controle kon niet laden', err);
-}
-try {
-  await import('./snazzle-mystic-ui-v227.js?v=237');
-} catch (err) {
-  console.error('Snazzle MYSTIC/UI v227 kon niet laden', err);
-}
-try {
-  await import('./snazzle-blaze-ui-v231.js?v=237');
-} catch (err) {
-  console.error('Snazzle BLAZE/UI v232 kon niet laden', err);
-}
-try {
-  await import('./snazzle-blaze-sync-v228.js?v=237');
-} catch (err) {
-  console.error('Snazzle BLAZE sync kon niet laden', err);
-}
-try {
-  await import('./snazzle-card-progress-v234.js?v=237');
-} catch (err) {
-  console.error('Snazzle Cards permanente voortgang v237 kon niet laden', err);
-}
-try {
-  await import('./snazzle-card-rewards-ui-v235.js?v=237');
-} catch (err) {
-  console.error('Snazzle Cards beloningen v237 konden niet laden', err);
-}
-try {
-  await import('./snazzle-card-counter-guard-v236.js?v=237');
-} catch (err) {
-  console.error('Snazzle Cards tellerbewaking v237 kon niet laden', err);
-}
-try {
-  await import('./snazzle-spotbook-v237.js?v=237');
-} catch (err) {
-  console.error('Snazzle Spotboek v237 kon niet laden', err);
-}
-
-[100,350,900,1800,3500,7000].forEach(ms=>setTimeout(()=>{
+function repairSupplementalUi(){
   window.SnazzleMysticV221?.repair?.();
   window.SnazzleBlazeV229?.repair?.();
   window.SnazzleCardFixedV205?.repair?.();
@@ -103,4 +27,36 @@ try {
   window.SnazzleArEngineV245?.refresh?.();
   window.SnazzleArPlacementV245?.refresh?.();
   window.SnazzleArAdminV245?.populateVillages?.();
-},ms));
+}
+
+// Niet-kritieke uitbreidingen laden pas nadat het beginscherm al werkt.
+(async()=>{
+  await optionalImport('./snazzle-card-structure-v233.js?v=247','Snazzle Cards structuur');
+
+  await Promise.allSettled([
+    optionalImport('./snazzle-mystic-v221.js?v=247','Snazzle MYSTIC seed'),
+    optionalImport('./snazzle-blaze-v229.js?v=247','Snazzle BLAZE seed'),
+    optionalImport('./snazzle-admin-analytics-v218.js?v=247','Snazzle bezoekersstatistieken'),
+    optionalImport('./snazzle-ar-menu-fix-v215.js?v=247','Snazzle AR menu fix'),
+    optionalImport('./snazzle-onboarding-stability-v208.js?v=247','Snazzle onboarding stability'),
+    optionalImport('./snazzle-card-catalog-repair-v217.js?v=247','Snazzle Cards catalogus-herstel')
+  ]);
+
+  await optionalImport('./snazzle-card-fixed-v205.js?v=247','Snazzle Cards renderer');
+
+  await Promise.allSettled([
+    optionalImport('./snazzle-mystic-series-v219.js?v=247','Snazzle MYSTIC Series 01'),
+    optionalImport('./snazzle-mystic-verify-v220.js?v=247','Snazzle MYSTIC controle'),
+    optionalImport('./snazzle-mystic-ui-v227.js?v=247','Snazzle MYSTIC UI'),
+    optionalImport('./snazzle-blaze-ui-v231.js?v=247','Snazzle BLAZE UI'),
+    optionalImport('./snazzle-blaze-sync-v228.js?v=247','Snazzle BLAZE sync'),
+    optionalImport('./snazzle-card-progress-v234.js?v=247','Snazzle Cards voortgang'),
+    optionalImport('./snazzle-card-rewards-ui-v235.js?v=247','Snazzle Cards beloningen'),
+    optionalImport('./snazzle-card-counter-guard-v236.js?v=247','Snazzle Cards tellerbewaking'),
+    optionalImport('./snazzle-spotbook-v237.js?v=247','Snazzle Spotboek')
+  ]);
+
+  // Eén gecontroleerde herstelronde, plus één korte nacontrole. Geen 7 seconden lang her-renderen meer.
+  repairSupplementalUi();
+  setTimeout(repairSupplementalUi,700);
+})().catch(err=>console.error('Snazzle achtergrondmodules',err));
