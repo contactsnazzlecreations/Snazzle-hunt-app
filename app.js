@@ -1,5 +1,5 @@
-// Snazzle Hunt v249 — vloeiende single-start bootstrap.
-// Eerst de bruikbare app; zware kaart- en beheeruitbreidingen daarna gedoseerd.
+// Snazzle Hunt v250 — vloeiende single-start bootstrap met luie kaartvoortgang.
+// Eerst de bruikbare app; zware kaart- en cloudvoortgang daarna alleen wanneer nodig.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
 const quiet=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -11,7 +11,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=249`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=250`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -43,6 +43,22 @@ function repairSupplementalUi(){
   window.SnazzleArAdminV245?.populateVillages?.();
 }
 
+let progressLoadPromise=null;
+function ensureCardProgressLoaded(){
+  if(progressLoadPromise)return progressLoadPromise;
+  progressLoadPromise=pacedImports([
+    ['./snazzle-card-progress-v234.js','Snazzle Cards voortgang'],
+    ['./snazzle-card-rewards-ui-v235.js','Snazzle Cards beloningen'],
+    ['./snazzle-card-counter-guard-v236.js','Snazzle Cards tellerbewaking'],
+    ['./snazzle-spotbook-v237.js','Snazzle Spotboek']
+  ]).then(()=>{repairSupplementalUi();return true;}).catch(err=>{progressLoadPromise=null;console.error('Snazzle kaartvoortgang',err);return false;});
+  return progressLoadPromise;
+}
+window.SnazzleEnsureCardProgress=ensureCardProgressLoaded;
+document.addEventListener('click',event=>{
+  if(event.target?.closest?.('#collectionSheet,[data-collection-tab],[data-seriespick],[data-sc2f],#snArCatchDuck,#snArCatchHint'))ensureCardProgressLoaded();
+},{capture:true,passive:true});
+
 (async()=>{
   // Geef tikken/navigatie en de belangrijkste runtime eerst ruimte.
   await Promise.race([
@@ -64,13 +80,12 @@ function repairSupplementalUi(){
     ['./snazzle-mystic-verify-v220.js','Snazzle MYSTIC controle'],
     ['./snazzle-mystic-ui-v227.js','Snazzle MYSTIC UI'],
     ['./snazzle-blaze-ui-v231.js','Snazzle BLAZE UI'],
-    ['./snazzle-blaze-sync-v228.js','Snazzle BLAZE sync'],
-    ['./snazzle-card-progress-v234.js','Snazzle Cards voortgang'],
-    ['./snazzle-card-rewards-ui-v235.js','Snazzle Cards beloningen'],
-    ['./snazzle-card-counter-guard-v236.js','Snazzle Cards tellerbewaking'],
-    ['./snazzle-spotbook-v237.js','Snazzle Spotboek']
+    ['./snazzle-blaze-sync-v228.js','Snazzle BLAZE sync']
   ]);
 
   repairSupplementalUi();
   setTimeout(repairSupplementalUi,650);
+
+  // Pas na een ruime rustige periode voorbereiden; een tik op Kaarten laadt dit direct.
+  setTimeout(()=>{if(document.visibilityState==='visible')idle().then(ensureCardProgressLoaded);},12000);
 })().catch(err=>console.error('Snazzle achtergrondmodules',err));
