@@ -28,7 +28,7 @@ jobs:
       - name: Check AR v245 direct architecture
         shell: bash
         run: |
-          grep -q "app-runtime-v245.js?v=245" app.js
+          grep -q "app-runtime-v245.js?v=246" app.js
           grep -q "snazzle-ar-engine-v245.js" app-runtime-v245.js
           grep -q "snazzle-ar-admin-v245.js" app-runtime-v245.js
           grep -q "snazzle-ar-placement-v245.js" app-runtime-v245.js
@@ -50,7 +50,7 @@ jobs:
           grep -q "snazzle-ar-admin-guard-v85.js" snazzle-ar-admin-display-v84.js
           grep -q "snazzle-ar-stats-v113.js" snazzle-ar-admin-display-v84.js
 
-      - name: Check AR v245 stability invariants
+      - name: Check AR v246 stability invariants
         shell: bash
         run: |
           grep -q "sessionToken" snazzle-ar-engine-v245.js
@@ -64,6 +64,11 @@ jobs:
           grep -q "MAX_QUICK_GPS_ACCURACY=50" snazzle-ar-admin-v245.js
           grep -q "mode:'camera-composed'" snazzle-ar-placement-v245.js
           grep -q "mode:'map-only'" snazzle-ar-placement-v245.js
+          grep -q "L.map" snazzle-ar-placement-v245.js
+          grep -q "touchZoom:true" snazzle-ar-placement-v245.js
+          grep -q "sn245MapCanvas" snazzle-ar-placement-v245.js
+          grep -q "touch-action:none" snazzle-ar-placement-v245.js
+          ! grep -q "sn245MapFrame" snazzle-ar-placement-v245.js
 
       - name: Check AR data and public shell invariants
         shell: bash
