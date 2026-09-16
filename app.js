@@ -1,4 +1,4 @@
-// Snazzle Hunt v250 — vloeiende single-start bootstrap met luie kaartvoortgang.
+// Snazzle Hunt v251 — vloeiende single-start bootstrap met AR-vondstenteller in beheer.
 // Eerst de bruikbare app; zware kaart- en cloudvoortgang daarna alleen wanneer nodig.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -11,7 +11,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=250`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=251`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -41,6 +41,7 @@ function repairSupplementalUi(){
   window.SnazzleArEngineV245?.refresh?.();
   window.SnazzleArPlacementV245?.refresh?.();
   window.SnazzleArAdminV245?.populateVillages?.();
+  window.SnazzleArAdminStatsV251?.refresh?.();
 }
 
 let progressLoadPromise=null;
@@ -72,6 +73,7 @@ document.addEventListener('click',event=>{
     ['./snazzle-mystic-v221.js','Snazzle MYSTIC seed'],
     ['./snazzle-blaze-v229.js','Snazzle BLAZE seed'],
     ['./snazzle-admin-analytics-v218.js','Snazzle bezoekersstatistieken'],
+    ['./snazzle-ar-admin-stats-v251.js','Snazzle AR vondstenteller'],
     ['./snazzle-ar-menu-fix-v215.js','Snazzle AR menu fix'],
     ['./snazzle-onboarding-stability-v208.js','Snazzle onboarding stability'],
     ['./snazzle-card-catalog-repair-v217.js','Snazzle Cards catalogus-herstel'],
