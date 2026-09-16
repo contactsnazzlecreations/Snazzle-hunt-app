@@ -1,6 +1,6 @@
-// Snazzle Hunt v245 — snelle home-opstart + systematisch opgeschoonde AR-runtime.
+// Snazzle Hunt v246 — AR plaatskaart beweegt en zoomt zelfstandig zonder paginazoom.
 
-const runtimeVersion='20260916-v245-ar-system-audit';
+const runtimeVersion='20260916-v246-ar-interactive-map';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;

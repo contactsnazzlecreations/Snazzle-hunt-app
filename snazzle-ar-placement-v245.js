@@ -1,5 +1,5 @@
-// Snazzle AR Placement v245 — één beheerflow voor GPS, adres/kaart, camera en opslaan.
-// Stabiliteitspass: geen opslaan vanaf fallbackpunt, GPS-kwaliteitscontrole en camera-races veilig afbreken.
+// Snazzle AR Placement v246 — interactieve Leaflet-kaart + stabiele GPS/camera/opslag.
+// Kaartgebaren blijven binnen de kaart: slepen verplaatst de plaatsing, knijpen zoomt de kaart en niet de pagina.
 
 import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, doc, runTransaction, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
@@ -49,16 +49,65 @@ function initialCenter(){
   return VILLAGE_CENTERS[formData().village]||VILLAGE_CENTERS.Montfort;
 }
 function rememberPoint(){try{localStorage.setItem('snazzleArLastPoint',JSON.stringify({lat:state.lat,lon:state.lon}));}catch{}}
-function mapUrl(){
-  const dLat=.0022,dLon=.0036,l=(state.lon-dLon).toFixed(6),r=(state.lon+dLon).toFixed(6),b=(state.lat-dLat).toFixed(6),t=(state.lat+dLat).toFixed(6);
-  return`https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(`${l},${b},${r},${t}`)}&layer=mapnik&marker=${encodeURIComponent(`${state.lat.toFixed(6)},${state.lon.toFixed(6)}`)}`;
+let placementMap=null;
+let leafletPromise=null;
+let mapProgrammatic=false;
+let mapGesture=false;
+
+function ensureLeaflet(){
+  if(window.L?.map)return Promise.resolve(window.L);
+  if(leafletPromise)return leafletPromise;
+  if(!document.querySelector('link[data-sn245-leaflet]')){
+    const css=document.createElement('link');css.rel='stylesheet';css.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';css.dataset.sn245Leaflet='1';document.head.appendChild(css);
+  }
+  leafletPromise=new Promise((resolve,reject)=>{
+    const ready=()=>window.L?.map?resolve(window.L):reject(new Error('Kaartmodule kon niet starten.'));
+    let script=document.querySelector('script[data-sn245-leaflet]');
+    if(script){if(window.L?.map)return resolve(window.L);script.addEventListener('load',ready,{once:true});script.addEventListener('error',()=>reject(new Error('Kaartmodule kon niet laden.')),{once:true});return;}
+    script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';script.dataset.sn245Leaflet='1';script.onload=ready;script.onerror=()=>reject(new Error('Kaartmodule kon niet laden.'));document.head.appendChild(script);
+  });
+  return leafletPromise;
 }
-function updateMap(note=''){
-  const frame=$('#sn245MapFrame');if(frame)frame.src=mapUrl();
-  const source=state.source==='gps'?`GPS ±${Math.round(state.accuracy||0)} m`:state.source==='address'?'adres gekozen':state.source==='manual'?'handmatig bijgestuurd':'nog geen bevestigde plek';
+function updateMapStatus(note=''){
+  const source=state.source==='gps'?`GPS ±${Math.round(state.accuracy||0)} m`:state.source==='address'?'adres gekozen':state.source==='manual'?'kaart/pijltjes handmatig':'nog geen bevestigde plek';
   const ok=state.source==='address'||state.source==='manual'||(state.source==='gps'&&state.accuracy<=MAX_GPS_SAVE_ACCURACY);
   setStatus(`📍 ${state.lat.toFixed(6)}, ${state.lon.toFixed(6)} · ${source}${note?` · ${note}`:''}`,ok?'ok':'');
   if(state.source!=='fallback')rememberPoint();
+}
+function syncMapToState(zoom=null){
+  if(!placementMap)return;
+  mapProgrammatic=true;
+  const z=Number.isFinite(Number(zoom))?Number(zoom):placementMap.getZoom();
+  placementMap.setView([state.lat,state.lon],z,{animate:false});
+  requestAnimationFrame(()=>{mapProgrammatic=false;});
+}
+async function ensureInteractiveMap(){
+  const canvas=$('#sn245MapCanvas');if(!canvas)return null;
+  const L=await ensureLeaflet();
+  if(!placementMap){
+    placementMap=L.map(canvas,{zoomControl:true,attributionControl:true,preferCanvas:true,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false}).setView([state.lat,state.lon],17);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(placementMap);
+    placementMap.on('movestart',()=>{if(!mapProgrammatic)mapGesture=true;});
+    placementMap.on('moveend',()=>{
+      if(mapProgrammatic){mapProgrammatic=false;return;}
+      if(!mapGesture)return;
+      mapGesture=false;
+      const c=placementMap.getCenter();
+      const moved=Math.abs(c.lat-state.lat)>0.000003||Math.abs(c.lng-state.lon)>0.000004;
+      if(moved){
+        locateToken++;
+        state.lat=Number(c.lat);state.lon=Number(c.lng);state.accuracy=0;state.source='manual';state.label='kaart';
+        updateMapStatus('pin in het midden is nu de gekozen plek');
+      }else updateMapStatus('kaart ingezoomd; plek bleef gelijk');
+    });
+    canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  }
+  setTimeout(()=>placementMap?.invalidateSize(false),20);
+  return placementMap;
+}
+function updateMap(note='',zoom=null){
+  updateMapStatus(note);
+  ensureInteractiveMap().then(()=>syncMapToState(zoom)).catch(err=>setStatus('⚠️ '+(err?.message||'Kaart kon niet laden.'),'err'));
 }
 
 function installStyle(){
@@ -70,7 +119,7 @@ function installStyle(){
 .sn245-head{position:sticky;top:0;z-index:12;display:flex;align-items:center;gap:9px;background:#f4dca2f5;padding:7px 0 10px}.sn245-head h2{flex:1;margin:0;font-size:21px}.sn245-close{width:48px;height:48px;border:0;border-radius:14px;background:#66402a;color:#fff;font-size:28px;font-weight:1000;touch-action:manipulation}
 .sn245-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:7px 0 13px}.sn245-steps span{padding:8px 4px;border-radius:11px;text-align:center;background:#d9bd78;font-size:11px;font-weight:950}.sn245-steps span.on{background:#315d39;color:#fff}
 .sn245-card{background:#fff8e7;border:2px solid #bc995f;border-radius:18px;padding:13px;margin-bottom:12px}.sn245-card h3{margin:0 0 7px;font-size:18px}.sn245-card p{margin:5px 0 10px;font-size:13px;font-weight:730;line-height:1.4}
-.sn245-map{height:300px;border:3px solid #6c5435;border-radius:16px;overflow:hidden;background:#dfe8db;position:relative}.sn245-map iframe{width:100%;height:100%;border:0;pointer-events:none}.sn245-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:40px;z-index:3;filter:drop-shadow(0 2px 2px #fff);pointer-events:none}
+.sn245-map{height:300px;border:3px solid #6c5435;border-radius:16px;overflow:hidden;background:#dfe8db;position:relative;touch-action:none;overscroll-behavior:contain}.sn245-map-canvas{position:absolute;inset:0;z-index:1;touch-action:none;overscroll-behavior:contain}.sn245-map .leaflet-container{width:100%;height:100%;touch-action:none;background:#dfe8db}.sn245-map .leaflet-control{font-family:inherit}.sn245-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:40px;z-index:500;filter:drop-shadow(0 2px 2px #fff);pointer-events:none}.sn245-map-help{position:absolute;left:8px;right:8px;bottom:8px;z-index:550;padding:6px 8px;border-radius:10px;background:#173c2ddd;color:#fff;text-align:center;font-size:10px;font-weight:900;pointer-events:none}
 .sn245-status{padding:10px 11px;border-radius:12px;background:#fff0c8;border:2px solid #d6a341;font-size:12px;font-weight:900;margin-top:9px;line-height:1.35}.sn245-status.ok{background:#e2f1c9;border-color:#83a94a;color:#315522}.sn245-status.err{background:#f5d0c7;border-color:#c06b5d;color:#762c24}
 .sn245-search{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.sn245-search input{min-width:0;border:2px solid #b9955e;border-radius:12px;padding:11px;background:#fffdf6;color:#2d2116;font-size:16px}.sn245-search button{border:0;border-radius:12px;padding:10px 13px;background:#3d6fc2;color:#fff;font-weight:950}
 .sn245-nudge{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}.sn245-nudge button{min-height:43px;border:0;border-radius:12px;background:#ead49c;color:#3a2b18;font-weight:950}.sn245-nudge .gps{background:#5d8f45;color:#fff}.sn245-nudge .blank{visibility:hidden}
@@ -89,7 +138,7 @@ function ensureModal(){
   installStyle();let modal=$('#'+MODAL_ID);if(modal)return modal;
   modal=document.createElement('div');modal.id=MODAL_ID;
   modal.innerHTML=`<div class="sn245-shell"><div class="sn245-head"><h2>Snazzle nauwkeurig plaatsen 🗺️📷</h2><button class="sn245-close" id="sn245Close" type="button" aria-label="Sluiten">×</button></div><div class="sn245-steps"><span id="sn245StepMap" class="on">1 · Plek</span><span id="sn245StepCamera">2 · Camera</span><span id="sn245StepDone">3 · Klaar</span></div>
-<section id="sn245MapSection"><div class="sn245-card"><h3>1. Kies de vaste plek</h3><p>Gebruik GPS als je op locatie bent, of zoek een volledig adres. Opslaan kan pas nadat GPS/adres/handmatige bijstelling een echte plek heeft bevestigd.</p><div class="sn245-map"><iframe id="sn245MapFrame" title="Kaartcontrole"></iframe><div class="sn245-pin">📍</div></div><div class="sn245-status" id="sn245Status">Kaart klaarzetten…</div><div class="sn245-search"><input id="sn245Address" type="search" placeholder="Bijv. Markt 1, Montfort" autocomplete="street-address"><button id="sn245Search" type="button">Zoek adres</button></div><div class="sn245-nudge"><span class="blank"></span><button type="button" data-sn245-nudge="n">↑ Noord</button><span class="blank"></span><button type="button" data-sn245-nudge="w">← West</button><button type="button" class="gps" id="sn245Gps">🎯 GPS</button><button type="button" data-sn245-nudge="e">Oost →</button><span class="blank"></span><button type="button" data-sn245-nudge="s">↓ Zuid</button><span class="blank"></span></div><div class="sn245-actions"><button class="sn245-secondary" id="sn245MapOnly" type="button">📍 Alleen kaart opslaan</button><button class="sn245-primary" id="sn245ToCamera" type="button">📷 Plek klopt — camera</button></div></div></section>
+<section id="sn245MapSection"><div class="sn245-card"><h3>1. Kies de vaste plek</h3><p>Gebruik GPS als je op locatie bent, of zoek een volledig adres. Opslaan kan pas nadat GPS/adres/handmatige bijstelling een echte plek heeft bevestigd.</p><div class="sn245-map"><div class="sn245-map-canvas" id="sn245MapCanvas" aria-label="Interactieve kaart voor Snazzle-plaatsing"></div><div class="sn245-pin">📍</div><div class="sn245-map-help">Sleep de kaart onder de pin · knijp om alleen de kaart te zoomen</div></div><div class="sn245-status" id="sn245Status">Kaart klaarzetten…</div><div class="sn245-search"><input id="sn245Address" type="search" placeholder="Bijv. Markt 1, Montfort" autocomplete="street-address"><button id="sn245Search" type="button">Zoek adres</button></div><div class="sn245-nudge"><span class="blank"></span><button type="button" data-sn245-nudge="n">↑ Noord</button><span class="blank"></span><button type="button" data-sn245-nudge="w">← West</button><button type="button" class="gps" id="sn245Gps">🎯 GPS</button><button type="button" data-sn245-nudge="e">Oost →</button><span class="blank"></span><button type="button" data-sn245-nudge="s">↓ Zuid</button><span class="blank"></span></div><div class="sn245-actions"><button class="sn245-secondary" id="sn245MapOnly" type="button">📍 Alleen kaart opslaan</button><button class="sn245-primary" id="sn245ToCamera" type="button">📷 Plek klopt — camera</button></div></div></section>
 <section id="sn245CameraSection" hidden><div class="sn245-card"><h3>2. Zet de Snazzle in beeld</h3><p>Sleep hem naar de gewenste schermpositie en stel grootte en draaiing af. De zoeker ziet deze 2D-plaatsing zodra de GPS-vangzone is bereikt.</p><div class="sn245-camera" id="sn245Camera"><video id="sn245Video" autoplay muted playsinline></video><div class="sn245-shade"></div><div class="sn245-help">Sleep de Snazzle naar de juiste plek</div><div class="sn245-object" id="sn245Object"><div class="sn245-ring"></div><div class="sn245-duck" id="sn245Duck">🦆</div><img id="sn245Image" alt="Snazzle" hidden></div></div><div class="sn245-controls"><label class="sn245-control">Grootte <input id="sn245Size" type="range" min="18" max="62" value="34"><output id="sn245SizeOut">34%</output></label><label class="sn245-control">Draaien <input id="sn245Rotate" type="range" min="-180" max="180" value="0"><output id="sn245RotateOut">0°</output></label></div><div class="sn245-status" id="sn245CameraStatus">Camera klaarzetten…</div><button class="sn245-retry" id="sn245RetryCamera" type="button">📷 Camera opnieuw openen</button><div class="sn245-actions"><button class="sn245-secondary" id="sn245Back" type="button">← Terug naar plek</button><button class="sn245-primary" id="sn245SaveCamera" type="button">🔒 Hier vastzetten</button></div></div></section>
 <section id="sn245DoneSection" hidden><div class="sn245-card sn245-done"><b>✅</b><h3>Snazzle geplaatst</h3><p id="sn245DoneText"></p><div class="sn245-actions"><button class="sn245-secondary" id="sn245PlaceAnother" type="button">Nog één plaatsen</button><button class="sn245-primary" id="sn245DoneClose" type="button">Klaar</button></div></div></section></div>`;
   document.body.appendChild(modal);wireModal();return modal;
@@ -125,7 +174,7 @@ async function geocode(query){
 async function searchAddress(){
   const input=$('#sn245Address'),btn=$('#sn245Search'),q=(input?.value||'').trim();if(q.length<4){setStatus('⚠️ Vul straat + huisnummer + plaats in.','err');return;}
   btn.disabled=true;setStatus('🔎 Adres zoeken…');
-  try{const hit=await geocode(q);if(!hit)throw new Error('Adres niet gevonden. Probeer straat + huisnummer + plaatsnaam.');locateToken++;state.lat=hit.lat;state.lon=hit.lon;state.accuracy=0;state.source='address';state.label=hit.label;updateMap('adres gevonden');toast('✅ Adres gevonden. Controleer de pin.');}
+  try{const hit=await geocode(q);if(!hit)throw new Error('Adres niet gevonden. Probeer straat + huisnummer + plaatsnaam.');locateToken++;state.lat=hit.lat;state.lon=hit.lon;state.accuracy=0;state.source='address';state.label=hit.label;updateMap('adres gevonden',18);toast('✅ Adres gevonden. Sleep of zoom de kaart voor de exacte plek.');}
   catch(err){setStatus('⚠️ '+(err?.message||'Adres zoeken mislukt.'),'err');}finally{btn.disabled=false;}
 }
 
@@ -195,9 +244,9 @@ async function save(mode){
 }
 
 function resetState(){const [lat,lon]=initialCenter();state={lat:Number(lat),lon:Number(lon),accuracy:0,source:'fallback',label:'',x:.5,y:.56,size:.34,rotation:0};if($('#sn245Size'))$('#sn245Size').value='34';if($('#sn245Rotate'))$('#sn245Rotate').value='0';applyPlacement();}
-function open(){const modal=ensureModal();resetState();showStep('map');previousBodyOverflow=document.body.style.overflow||'';document.body.style.overflow='hidden';modal.classList.add('show');updateMap('nog bevestigen');const input=$('#sn245Address');if(input)input.value='';setTimeout(()=>locate().catch(()=>{}),30);}
+function open(){const modal=ensureModal();resetState();showStep('map');previousBodyOverflow=document.body.style.overflow||'';document.body.style.overflow='hidden';modal.classList.add('show');updateMap('nog bevestigen',17);const input=$('#sn245Address');if(input)input.value='';setTimeout(()=>{placementMap?.invalidateSize(false);locate().catch(()=>{});},80);}
 function close(){locateToken++;stopCamera();dragging=false;pointerId=null;if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}$('#'+MODAL_ID)?.classList.remove('show');document.body.style.overflow=previousBodyOverflow;previousBodyOverflow='';}
-function placeAnother(){resetState();showStep('map');updateMap('nieuwe plaatsing — nog bevestigen');setTimeout(()=>locate().catch(()=>{}),30);}
+function placeAnother(){resetState();showStep('map');updateMap('nieuwe plaatsing — nog bevestigen',17);setTimeout(()=>{placementMap?.invalidateSize(false);locate().catch(()=>{});},80);}
 function wireModal(){
   $('#sn245Close').addEventListener('click',close);$('#sn245DoneClose').addEventListener('click',close);$('#sn245PlaceAnother').addEventListener('click',placeAnother);$('#sn245Gps').addEventListener('click',()=>locate({force:true}).catch(()=>{}));
   $('#sn245Search').addEventListener('click',searchAddress);$('#sn245Address').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchAddress();}});document.querySelectorAll('[data-sn245-nudge]').forEach(b=>b.addEventListener('click',()=>nudge(b.dataset.sn245Nudge)));
@@ -225,4 +274,4 @@ window.addEventListener('pagehide',()=>{stopCamera();locateToken++;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('#'+MODAL_ID)?.classList.contains('show')){stopCamera();if(!$('#sn245CameraSection')?.hidden){setCameraStatus('Camera gepauzeerd omdat de app naar de achtergrond ging. Tik op Camera opnieuw openen.','err');$('#sn245RetryCamera')?.classList.add('show');}}});
 
 window.SnazzleArPlacementV245={open,close,locate,refresh:installButton};
-console.info('Snazzle AR Placement v245 actief');
+console.info('Snazzle AR Placement v246 interactieve kaart actief');

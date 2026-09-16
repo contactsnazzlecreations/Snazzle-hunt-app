@@ -1,4 +1,4 @@
-// Snazzle Hunt v245 — systematisch gecontroleerde AR camera/GPS/plaatsing en geforceerde cachevernieuwing.
+// Snazzle Hunt v246 — interactieve AR-plaatskaart + gecontroleerde camera/GPS/plaatsing.
 try {
   await import('./snazzle-card-structure-v233.js?v=237');
 } catch (err) {
@@ -15,7 +15,7 @@ try {
   console.error('Snazzle BLAZE seed kon niet laden', err);
 }
 
-await import('./app-runtime-v245.js?v=245');
+await import('./app-runtime-v245.js?v=246');
 
 try {
   await import('./snazzle-admin-analytics-v218.js?v=237');
