@@ -68,7 +68,8 @@ function ensureUi(){
       if(queued)return;queued=true;
       requestAnimationFrame(()=>{queued=false;augmentCards();});
     });
-    listObserver.observe(list,{childList:true,subtree:true});
+    // Alleen directe lijstvervanging volgen; onze eigen badges binnen kaarten mogen geen nieuwe cyclus starten.
+    listObserver.observe(list,{childList:true,subtree:false});
   }
   augmentCards();
   return true;
@@ -76,13 +77,14 @@ function ensureUi(){
 
 function renderSummary(message=''){
   const line=$('#snArStatsLine251');if(!line)return;
-  if(message){line.textContent=message;return;}
+  if(message){if(line.textContent!==message)line.textContent=message;return;}
   const currentIds=new Set(worldPoints.filter(p=>p?.id).map(p=>String(p.id)));
   let total=0,foundPoints=0;
   for(const [id,s] of statsByPoint){if(!currentIds.has(id))continue;total+=s.count;if(s.count>0)foundPoints++;}
   const general=worldPoints.filter(p=>String(p?.village||'')==='Algemeen').length;
   const active=worldPoints.filter(p=>p?.active!==false).length;
-  line.textContent=`${worldPoints.length} geplaatst · ${active} actief · 🌍 ${general} algemeen · 🏆 ${total} unieke vondst${total===1?'':'en'} op ${foundPoints} Snazzle${foundPoints===1?'':'s'}`;
+  const text=`${worldPoints.length} geplaatst · ${active} actief · 🌍 ${general} algemeen · 🏆 ${total} unieke vondst${total===1?'':'en'} op ${foundPoints} Snazzle${foundPoints===1?'':'s'}`;
+  if(line.textContent!==text)line.textContent=text;
 }
 
 function augmentCards(){
@@ -95,7 +97,8 @@ function augmentCards(){
     let row=meta.querySelector('.sn-ar-find-stat251');
     if(!row){row=document.createElement('span');row.className='sn-ar-find-stat251';meta.appendChild(row);}
     row.classList.toggle('zero',stat.count===0);
-    row.textContent=stat.count===0?'🏆 Nog niet gevonden':`🏆 ${stat.count}× gevonden${stat.last?` · laatst ${fmtLast(stat.last)}`:''}`;
+    const text=stat.count===0?'🏆 Nog niet gevonden':`🏆 ${stat.count}× gevonden${stat.last?` · laatst ${fmtLast(stat.last)}`:''}`;
+    if(row.textContent!==text)row.textContent=text;
 
     const point=worldPoints.find(p=>String(p?.id||'')===String(id));
     const title=card.querySelector('h4');
