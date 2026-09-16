@@ -1,6 +1,6 @@
-// Snazzle Hunt v247 — snellere single-start runtime zonder geforceerde herstart.
+// Snazzle Hunt v248 — staged runtime voor vloeiende interactie op mobiel.
 
-const runtimeVersion='20260916-v247-fast-single-start';
+const runtimeVersion='20260916-v248-smooth-staged';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -9,17 +9,30 @@ let markAdminUiReady;
 window.__snazzleAdminUiReady=new Promise(resolve=>{markAdminUiReady=resolve;});
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+const idle=()=>new Promise(resolve=>{'requestIdleCallback'in window?requestIdleCallback(()=>resolve(),{timeout:650}):setTimeout(resolve,70);});
 async function safeImport(path){
   try{return await import(fresh(path));}
   catch(err){console.error(`Snazzle module kon niet laden: ${path}`,err);return null;}
 }
+window.__snazzleImport=safeImport;
 async function waitIfArPriority(){
   let guard=0;
   while(window.__snazzleArPriority&&guard<240){await sleep(250);guard++;}
 }
-async function loadSequence(paths){for(const path of paths){await waitIfArPriority();await safeImport(path);}}
-const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
-const idle=()=>new Promise(resolve=>{'requestIdleCallback'in window?requestIdleCallback(()=>resolve(),{timeout:650}):setTimeout(resolve,70);});
+async function loadSequence(paths){
+  for(const path of paths){
+    await waitIfArPriority();
+    await safeImport(path);
+    await nextPaint();
+  }
+}
+async function loadBundlesSequentially(bundles){
+  for(const bundle of bundles){
+    await loadSequence(bundle);
+    await idle();
+  }
+}
 
 function installMobilePerformanceMode(){
   if(document.getElementById('snFastMobileV177'))return;
@@ -45,14 +58,15 @@ await Promise.all([safeImport('./snazzle-runtime-stability-v71.js'),safeImport('
 await import(fresh('./app-core.js'));
 suppressLateStartupOverlays();await nextPaint();
 
-await safeImport('./snazzle-adventure-ui-v28.js');await safeImport('./snazzle-clean-home-v31.js');
+await safeImport('./snazzle-adventure-ui-v28.js');
+await safeImport('./snazzle-clean-home-v31.js');
 for(let i=0;i<50;i++){
   const passport=document.getElementById('snazzlePassport'),heroCopy=document.querySelector('.v31-hero-copy'),adventureCss=document.getElementById('snazzleAdventureThemeV28'),cleanCss=document.getElementById('snazzleCleanHomeV31');
   if(passport&&heroCopy&&adventureCss?.sheet&&cleanCss?.sheet)break;await sleep(30);
 }
 await nextPaint();await nextPaint();window.__snazzleHomeUiReady=true;document.dispatchEvent(new CustomEvent('snazzle:home-ui-ready'));window.__snazzleReleaseBoot?.();
 
-// AR v245: alleen de UI-shell + zoneknop + één centrale camera/GPS-engine.
+// AR: eerst de lichte shell en daarna één centrale camera/GPS-engine.
 await safeImport('./snazzle-ar-v80.js');
 await safeImport('./snazzle-zone-button-v176.js');
 await safeImport('./snazzle-ar-engine-v245.js');
@@ -67,23 +81,11 @@ await Promise.all([
   safeImport('./snazzle-main-menu-v129.js'),
   safeImport('./snazzle-central-assets-v48.js')
 ]);
-
-// AR-beheer v245: transactioneel beheer + één plaatsstudio.
 await safeImport('./snazzle-ar-admin-v245.js');
 await safeImport('./snazzle-ar-placement-v245.js');
 
-Promise.allSettled([
-  safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
-  safeImport('./snazzle-news-v46.js'),
-  safeImport('./snazzle-listen-stories-v63.js'),
-  safeImport('./snazzle-parent-hub-v65.js'),
-  safeImport('./snazzle-card-system-v2.js'),
-  safeImport('./snazzle-card-fixed-v205.js'),
-  safeImport('./snazzle-world-hub-v47.js')
-]).then(()=>{
-  [60,320,900,1800].forEach(ms=>setTimeout(()=>{window.SnazzleCardFixedV205?.repair?.();const adminSheet=document.getElementById('adminSheet');if(adminSheet)adminSheet.dispatchEvent(new MouseEvent('click',{bubbles:true}));},ms));
-  document.dispatchEvent(new CustomEvent('snazzle:admin-ui-ready'));markAdminUiReady(true);return true;
-});
+// Beheer is nu klaar; nieuws/kaarten/verhalen hoeven dit niet langer te blokkeren.
+document.dispatchEvent(new CustomEvent('snazzle:admin-ui-ready'));markAdminUiReady(true);
 
 (function installHeroQuack(){
   const hero=document.getElementById('hero');if(!hero||hero.dataset.snQuack177)return;hero.dataset.snQuack177='1';let audioContext=null;
@@ -92,17 +94,17 @@ Promise.allSettled([
   hero.addEventListener('click',()=>{if(hasSnazzleHero())playQuack();});
 })();
 
-// Geen kunstmatige 3,2 seconden pauze meer: zodra de browser ruimte heeft, laden de overige functies.
 await idle();await waitIfArPriority();
 
 const fastBundles=[
-  ['./snazzle-auto-update-v51.js','./snazzle-privacy-v52.js','./snazzle-parent-hub-v65.js','./snazzle-parent-close-fix-v76.js','./shop-compat.js'],
+  ['./snazzle-ar-legacy-cleanup-v187.js','./snazzle-news-v46.js','./snazzle-parent-hub-v65.js'],
+  ['./snazzle-card-system-v2.js','./snazzle-card-fixed-v205.js','./snazzle-world-hub-v47.js'],
+  ['./snazzle-auto-update-v51.js','./snazzle-privacy-v52.js','./snazzle-parent-close-fix-v76.js','./shop-compat.js'],
   ['./kids-fun.js','./snazzle-route.js','./snazzle-collection.js','./snazzle-rewards-direct-v154.js'],
-  ['./snazzle-listen-stories-v63.js','./snazzle-listen-list-fix-v150.js','./snazzle-listen-menu-fix-v142.js','./snazzle-listen-direct-menu-v144.js','./snazzle-listen-audio-fix-v143.js','./snazzle-bieb-v73.js','./snazzle-bieb-cloud-v74.js','./snazzle-bieb-locations-v77.js','./snazzle-play-menu-direct-v157.js'],
-  ['./snazzle-news-v46.js']
+  ['./snazzle-listen-stories-v63.js','./snazzle-listen-list-fix-v150.js','./snazzle-listen-menu-fix-v142.js','./snazzle-listen-direct-menu-v144.js','./snazzle-listen-audio-fix-v143.js','./snazzle-bieb-v73.js','./snazzle-bieb-cloud-v74.js','./snazzle-bieb-locations-v77.js','./snazzle-play-menu-direct-v157.js']
 ];
-Promise.allSettled(fastBundles.map(loadSequence)).then(refreshLocalStyles);
-await idle();await waitIfArPriority();
+const fastLoadPromise=loadBundlesSequentially(fastBundles).then(()=>{refreshLocalStyles();return true;});
+window.__snazzleFastFeaturesReady=fastLoadPromise;
 
 const backgroundBundles=[
   ['./snazzle-card-system-v2.js','./snazzle-card-worlds-v78.js','./snazzle-card-world-prompt-v79.js','./snazzle-hunt-code-v2.js','./snazzle-unlock.js','./snazzle-ar-collection-bridge-v125.js','./snazzle-ar-findings-bridge-v126.js','./snazzle-ar-card-unlock-v127.js'],
@@ -110,11 +112,13 @@ const backgroundBundles=[
   ['./image-fit.js','./snazzle-home-magic.js','./snazzle-home-magic-fix.js','./snazzle-central-visuals-v54.js','./snazzle-public-visual-publish-v64.js','./snazzle-image-recovery-v60.js','./snazzle-professional-v53.js','./snazzle-final-polish-v59.js','./snazzle-star-rewards-v67.js','./snazzle-quiet-psst-v68.js','./snazzle-input-visibility-v69.js','./snazzle-top-stability-v70.js'],
   ['./snazzle-admin-reset-v49.js','./snazzle-admin-backup-v50.js','./snazzle-admin-close-v61.js','./snazzle-admin-access-v55.js','./snazzle-admin-access-v56.js','./snazzle-safe-admin-v58.js']
 ];
-Promise.allSettled(backgroundBundles.map(loadSequence)).then(async()=>{
-  refreshLocalStyles();try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}await waitIfArPriority();
+fastLoadPromise.then(()=>idle()).then(()=>loadBundlesSequentially(backgroundBundles)).then(async()=>{
+  refreshLocalStyles();
+  try{await window.__snazzleRuntimeSettle71?.();}catch(err){console.warn('Snazzle settle v71',err);}
+  await waitIfArPriority();
   setTimeout(()=>{safeImport('./snazzle-ar-admin-display-v84.js');safeImport('./snazzle-leaflet-isolation-v190.js');},220);
-});
+}).catch(err=>console.warn('Snazzle achtergrondruntime',err));
 
-(function startShopLoader(){(async()=>{try{const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');const auth=getAuth();let shopLoaded=false;onAuthStateChanged(auth,async user=>{if(!user||shopLoaded)return;shopLoaded=true;await waitIfArPriority();await safeImport('./shop.js');await safeImport('./shop-email-settings.js');refreshLocalStyles();});}catch(err){console.warn('Snazzle shop loader',err);}})();})();
+(function startShopLoader(){(async()=>{try{const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');const auth=getAuth();let shopLoaded=false;onAuthStateChanged(auth,async user=>{if(!user||shopLoaded)return;shopLoaded=true;await Promise.race([fastLoadPromise,sleep(1600)]);await waitIfArPriority();await safeImport('./shop.js');await safeImport('./shop-email-settings.js');refreshLocalStyles();});}catch(err){console.warn('Snazzle shop loader',err);}})();})();
 
 setTimeout(refreshLocalStyles,2500);
