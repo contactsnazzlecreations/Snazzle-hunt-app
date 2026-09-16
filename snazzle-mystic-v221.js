@@ -1,5 +1,5 @@
-// Snazzle MYSTIC v235 — artwork + definitieve rarity/event-structuur.
-const VERSION='235.0-final-48';
+// Snazzle MYSTIC v236 — artwork + definitieve rarity/event-structuur zonder herhaalde zware localStorage-writes.
+const VERSION='236.0-smooth-seed';
 const LOCAL_KEY='snazzleCardCatalogV2';
 const ATLAS='./assets/cards/snazzle-mystic-atlas-v219.jpg?v=235';
 const DEFS=[
@@ -18,10 +18,13 @@ const DEFS=[
 ];
 let art=[];
 let queued=false;
+let seeded=false;
+let lastRenderAt=0;
 
 function readLocal(){try{const x=JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]');return Array.isArray(x)?x:[]}catch{return[]}}
 function writeLocal(items){try{localStorage.setItem(LOCAL_KEY,JSON.stringify(items));return true}catch(e){console.warn('MYSTIC localStorage',e);return false}}
 function numberIndex(text){const m=String(text||'').toUpperCase().match(/S01-M(\d{2})/);if(!m)return-1;const i=Number(m[1])-1;return i>=0&&i<12?i:-1;}
+function cardUiExists(){return !!document.querySelector('#collectionSheet,#sc2Grid,#sc2VaultGrid,#sc2List');}
 
 function loadAtlas(){
   return new Promise((resolve,reject)=>{
@@ -30,10 +33,10 @@ function loadAtlas(){
       try{
         const cw=im.naturalWidth/4,ch=im.naturalHeight/3;
         art=DEFS.map((_,i)=>{
-          const c=document.createElement('canvas');c.width=360;c.height=480;
+          const c=document.createElement('canvas');c.width=240;c.height=320;
           const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
-          x.drawImage(im,(i%4)*cw,Math.floor(i/4)*ch,cw,ch,0,0,360,480);
-          return c.toDataURL('image/jpeg',.88);
+          x.drawImage(im,(i%4)*cw,Math.floor(i/4)*ch,cw,ch,0,0,240,320);
+          return c.toDataURL('image/jpeg',.82);
         });
         resolve();
       }catch(e){reject(e)}
@@ -43,9 +46,17 @@ function loadAtlas(){
   });
 }
 
+function recordsCurrent(byNo){
+  return DEFS.every(([number,name,rarity])=>{
+    const old=byNo.get(number);
+    return !!old&&old.number===number&&old.name===name&&old.rarity===rarity&&old.seriesKey==='mystic'&&old.structureVersion==='1.0.0'&&old.baseCollection===true&&old.active!==false&&!!old.imageData;
+  });
+}
 function seedWithArtwork(){
-  if(art.length!==12)return false;
+  if(seeded)return true;
   const before=readLocal(),byNo=new Map(before.map(c=>[String(c.number||'').toUpperCase(),c]));
+  if(recordsCurrent(byNo)){seeded=true;window.__snazzleMysticPreseedV226={count:12,images:12,version:VERSION,at:new Date().toISOString(),changed:false};return true;}
+  if(art.length!==12)return false;
   const mysticNos=new Set(DEFS.map(x=>x[0]));
   const keep=before.filter(c=>!mysticNos.has(String(c.number||'').toUpperCase()));
   const now=new Date().toISOString();
@@ -57,8 +68,10 @@ function seedWithArtwork(){
       baseCollection:true,seriesKey:'mystic',structureVersion:'1.0.0',
       imageData:art[i],createdAt:old.createdAt||now,updatedAt:now};
   });
-  writeLocal([...keep,...made]);
-  window.__snazzleMysticPreseedV226={count:12,images:12,version:VERSION,at:now};
+  if(!writeLocal([...keep,...made]))return false;
+  seeded=true;
+  window.__snazzleMysticPreseedV226={count:12,images:12,version:VERSION,at:now,changed:true};
+  window.dispatchEvent(new CustomEvent('snazzle:mystic-ready',{detail:{version:VERSION,count:12}}));
   return true;
 }
 
@@ -75,23 +88,18 @@ function paint(box,i,locked){
   if(!img){img=document.createElement('img');img.className='sn-mystic-v226-art';box.appendChild(img)}
   if(img.src!==art[i])img.src=art[i];
   img.alt=DEFS[i][0];
-  img.style.setProperty('position','absolute','important');
-  img.style.setProperty('inset','0','important');
-  img.style.setProperty('width','100%','important');
-  img.style.setProperty('height','100%','important');
-  img.style.setProperty('object-fit','cover','important');
-  img.style.setProperty('display','block','important');
-  img.style.setProperty('opacity','1','important');
-  img.style.setProperty('visibility','visible','important');
-  img.style.setProperty('z-index','80','important');
-  img.style.setProperty('background','#17242e','important');
+  img.style.setProperty('position','absolute','important');img.style.setProperty('inset','0','important');
+  img.style.setProperty('width','100%','important');img.style.setProperty('height','100%','important');
+  img.style.setProperty('object-fit','cover','important');img.style.setProperty('display','block','important');
+  img.style.setProperty('opacity','1','important');img.style.setProperty('visibility','visible','important');
+  img.style.setProperty('z-index','80','important');img.style.setProperty('background','#17242e','important');
   if(locked){img.style.setProperty('filter','brightness(.12) saturate(.15) blur(1px)','important');img.style.setProperty('transform','scale(1.04)','important');}
   else{img.style.setProperty('filter','none','important');img.style.setProperty('transform','none','important');}
   return true;
 }
 
 function renderArtwork(){
-  if(art.length!==12)return 0;
+  if(art.length!==12||!cardUiExists())return 0;
   let count=0;
   document.querySelectorAll('#sc2Grid .sc2-card,#sc2VaultGrid .sc2-card').forEach(card=>{
     const i=numberIndex(card.querySelector('.sc2-num')?.textContent||card.textContent);if(i<0)return;
@@ -105,18 +113,33 @@ function renderArtwork(){
     const i=numberIndex(row.querySelector('strong')?.textContent||row.textContent);if(i<0)return;
     if(paint(row.querySelector('.sc2-thumb'),i,false))count++;
   });
+  lastRenderAt=performance.now();
   window.__snazzleMysticV226LastRender={count,at:new Date().toISOString()};
   return count;
 }
-function repair(){seedWithArtwork();return renderArtwork()}
-function queue(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;try{repair()}catch(e){console.error('MYSTIC v235 repair',e)}})}
+function repair(){if(!seeded)seedWithArtwork();return renderArtwork()}
+function queue(force=false){
+  if(queued||!cardUiExists())return;
+  const elapsed=performance.now()-lastRenderAt;
+  if(!force&&elapsed<100){setTimeout(()=>queue(true),Math.ceil(100-elapsed));return;}
+  queued=true;requestAnimationFrame(()=>{queued=false;try{repair()}catch(e){console.error('MYSTIC v236 repair',e)}});
+}
+function relevantMutation(m){
+  const target=m.target instanceof Element?m.target:null;
+  if(target?.closest?.('#collectionSheet,#sc2Grid,#sc2VaultGrid,#sc2List'))return true;
+  return [...m.addedNodes].some(n=>n instanceof Element&&(n.matches?.('#collectionSheet,#sc2Grid,#sc2VaultGrid,#sc2List,.sc2-card,.sc2-row')||n.querySelector?.('#collectionSheet,#sc2Grid,#sc2VaultGrid,#sc2List,.sc2-card,.sc2-row')));
+}
 
-try{await loadAtlas();seedWithArtwork();}catch(e){console.error('MYSTIC v235 artwork kon niet vooraf worden geladen',e)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',queue,{once:true});else queue();
-new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'&&m.addedNodes.length))queue()}).observe(document.documentElement,{subtree:true,childList:true});
-document.addEventListener('click',e=>{if(e.target.closest('#collectionSheet,#adminSheet,[data-seriespick],[data-sc2f],[data-tab],[data-collection-tab]'))[0,60,180,400,900].forEach(ms=>setTimeout(queue,ms))},{passive:true});
-document.addEventListener('snazzle:admin-ui-ready',queue);
-document.addEventListener('snazzle:mystic-ready',queue);
-[0,100,250,600,1200,2400,5000,9000].forEach(ms=>setTimeout(queue,ms));
+try{await loadAtlas();seedWithArtwork();}catch(e){console.error('MYSTIC v236 artwork kon niet vooraf worden geladen',e)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>queue(true),{once:true});else queue(true);
+new MutationObserver(ms=>{if(ms.some(relevantMutation))queue()}).observe(document.body,{subtree:true,childList:true});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#collectionSheet,[data-seriespick],[data-sc2f],[data-collection-tab]'))return;
+  queue();setTimeout(()=>queue(true),260);
+},{passive:true});
+document.addEventListener('snazzle:admin-ui-ready',()=>queue());
+document.addEventListener('snazzle:mystic-ready',()=>queue(true));
+setTimeout(()=>queue(true),600);
+setTimeout(()=>queue(true),1500);
 window.SnazzleMysticV221={version:VERSION,seed:seedWithArtwork,repair,defs:DEFS};
 console.info(`Snazzle MYSTIC ${VERSION} geladen`);
