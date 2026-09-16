@@ -15,28 +15,62 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+
       - name: Check active JavaScript syntax
         shell: bash
         run: |
           node --check snazzle-world-hub-v47.js
-          for f in app.js app-runtime-v207.js snazzle-ar-admin-v85.js snazzle-ar-engine-v244.js snazzle-ar-placement-v244.js; do
+          for f in app.js app-runtime-v245.js snazzle-ar-admin-display-v84.js snazzle-ar-admin-v245.js snazzle-ar-engine-v245.js snazzle-ar-placement-v245.js; do
             cp "$f" "/tmp/$(basename "$f" .js).mjs"
             node --check "/tmp/$(basename "$f" .js).mjs"
           done
-      - name: Check AR v244 architecture invariants
+
+      - name: Check AR v245 direct architecture
         shell: bash
         run: |
-          grep -q "snazzle-ar-engine-v244.js" app-runtime-v207.js
-          grep -q "snazzle-ar-placement-v244.js" app-runtime-v207.js
-          ! grep -q "safeImport('./snazzle-ar-world-v85.js')" app-runtime-v207.js
-          ! grep -q "safeImport('./snazzle-ar-place-rescue-v194.js')" app-runtime-v207.js
-          ! grep -q "safeImport('./snazzle-ar-map-gesture-fix-v196.js')" app-runtime-v207.js
-          ! grep -q "safeImport('./snazzle-ar-maponly-fix-v198.js')" app-runtime-v207.js
-          ! grep -q "safeImport('./snazzle-ar-safety-pass-v124.js')" app-runtime-v207.js
-          ! grep -q "snazzle-ar-global-v240.js" app.js
-          ! grep -q "snazzle-ar-village-select-v242.js" app.js
-          grep -q "camera-composed" snazzle-ar-engine-v244.js
-          grep -q "direct-map-camera" snazzle-ar-engine-v244.js
-          grep -q "mode:'camera-composed'" snazzle-ar-placement-v244.js
-          grep -q "mode:'map-only'" snazzle-ar-placement-v244.js
-          ! grep -q "getDocs(collection(db,'villages'))" snazzle-ar-admin-v85.js
+          grep -q "app-runtime-v245.js?v=245" app.js
+          grep -q "snazzle-ar-engine-v245.js" app-runtime-v245.js
+          grep -q "snazzle-ar-admin-v245.js" app-runtime-v245.js
+          grep -q "snazzle-ar-placement-v245.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-engine-v244.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-placement-v244.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-global-v240.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-world-v85.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-place-rescue-v194.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-map-gesture-fix-v196.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-maponly-fix-v198.js" app-runtime-v245.js
+          ! grep -q "snazzle-ar-zone-map-v169.js" app-runtime-v245.js
+
+      - name: Check AR compatibility loader has no legacy controllers
+        shell: bash
+        run: |
+          ! grep -q "snazzle-ar-world-v85.js" snazzle-ar-admin-display-v84.js
+          ! grep -q "snazzle-ar-place-studio-v90.js" snazzle-ar-admin-display-v84.js
+          ! grep -q "snazzle-ar-zone-map-fix-v112.js" snazzle-ar-admin-display-v84.js
+          grep -q "snazzle-ar-admin-guard-v85.js" snazzle-ar-admin-display-v84.js
+          grep -q "snazzle-ar-stats-v113.js" snazzle-ar-admin-display-v84.js
+
+      - name: Check AR v245 stability invariants
+        shell: bash
+        run: |
+          grep -q "sessionToken" snazzle-ar-engine-v245.js
+          grep -q "uncaughtPoints" snazzle-ar-engine-v245.js
+          grep -q "maximumAge:8000" snazzle-ar-engine-v245.js
+          grep -q "cameraToken" snazzle-ar-placement-v245.js
+          grep -q "validatePlacementSource" snazzle-ar-placement-v245.js
+          grep -q "MAX_GPS_SAVE_ACCURACY=50" snazzle-ar-placement-v245.js
+          grep -q "runTransaction" snazzle-ar-admin-v245.js
+          grep -q "mutateWorld" snazzle-ar-admin-v245.js
+          grep -q "MAX_QUICK_GPS_ACCURACY=50" snazzle-ar-admin-v245.js
+          grep -q "mode:'camera-composed'" snazzle-ar-placement-v245.js
+          grep -q "mode:'map-only'" snazzle-ar-placement-v245.js
+
+      - name: Check AR data and public shell invariants
+        shell: bash
+        run: |
+          grep -q "snazzle_ar_world_v1" snazzle-ar-engine-v245.js
+          grep -q "snazzle_ar_world_v1" snazzle-ar-admin-v245.js
+          grep -q "snazzle_ar_world_v1" snazzle-ar-placement-v245.js
+          grep -q "snazzle-zones.html?v=245" snazzle-ar-engine-v245.js
+          grep -q "playsinline" snazzle-ar-v80.js
+          grep -q "import(\`./app.js?v=\${Date.now()}\`)" index.html
