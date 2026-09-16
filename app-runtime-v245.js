@@ -1,6 +1,6 @@
-// Snazzle Hunt v248 — staged runtime voor vloeiende interactie op mobiel.
+// Snazzle Hunt v249 — staged runtime voor vloeiende interactie op mobiel.
 
-const runtimeVersion='20260916-v248-smooth-staged';
+const runtimeVersion='20260916-v249-smooth-core';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -56,6 +56,7 @@ suppressLateStartupOverlays();window.__snazzleReleaseBoot=window.__snazzleReleas
 
 await Promise.all([safeImport('./snazzle-runtime-stability-v71.js'),safeImport('./snazzle-image-stability-v72.js'),safeImport('./snazzle-leaflet-isolation-v190.js')]);
 await import(fresh('./app-core.js'));
+await safeImport('./snazzle-core-performance-v248.js');
 suppressLateStartupOverlays();await nextPaint();
 
 await safeImport('./snazzle-adventure-ui-v28.js');
@@ -119,6 +120,24 @@ fastLoadPromise.then(()=>idle()).then(()=>loadBundlesSequentially(backgroundBund
   setTimeout(()=>{safeImport('./snazzle-ar-admin-display-v84.js');safeImport('./snazzle-leaflet-isolation-v190.js');},220);
 }).catch(err=>console.warn('Snazzle achtergrondruntime',err));
 
-(function startShopLoader(){(async()=>{try{const {getAuth,onAuthStateChanged}=await import('https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js');const auth=getAuth();let shopLoaded=false;onAuthStateChanged(auth,async user=>{if(!user||shopLoaded)return;shopLoaded=true;await Promise.race([fastLoadPromise,sleep(1600)]);await waitIfArPriority();await safeImport('./shop.js');await safeImport('./shop-email-settings.js');refreshLocalStyles();});}catch(err){console.warn('Snazzle shop loader',err);}})();})();
+let shopLoadPromise=null;
+async function ensureShopLoaded(){
+  if(shopLoadPromise)return shopLoadPromise;
+  shopLoadPromise=(async()=>{
+    await Promise.race([fastLoadPromise,sleep(1600)]);
+    await waitIfArPriority();
+    await safeImport('./shop.js');
+    await safeImport('./shop-email-settings.js');
+    refreshLocalStyles();
+    return true;
+  })().catch(err=>{shopLoadPromise=null;console.warn('Snazzle shop loader',err);return false;});
+  return shopLoadPromise;
+}
+window.SnazzleEnsureShopLoaded=ensureShopLoaded;
+document.addEventListener('click',event=>{
+  if(event.target?.closest?.('#navShop,[data-quick-action="shop"],#shopSheet'))ensureShopLoaded();
+},{capture:true,passive:true});
+// Alleen als de telefoon al rustig is, wordt de shop voorbereid. Hij blokkeert de start nooit.
+setTimeout(()=>{if(document.visibilityState==='visible')idle().then(ensureShopLoaded);},8000);
 
 setTimeout(refreshLocalStyles,2500);
