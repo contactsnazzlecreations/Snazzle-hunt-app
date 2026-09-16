@@ -21,6 +21,7 @@ function repairSelect(){
   const select=document.getElementById(SELECT_ID);
   if(!select||repairing)return false;
   repairing=true;
+  if(selectObserver)selectObserver.disconnect();
   try{
     const oldValue=select.value;
     const seen=new Set();
@@ -68,10 +69,8 @@ function repairSelect(){
       field.appendChild(help);
     }
 
-    if(!selectObserver){
-      selectObserver=new MutationObserver(()=>queueMicrotask(repairSelect));
-      selectObserver.observe(select,{childList:true});
-    }
+    if(!selectObserver)selectObserver=new MutationObserver(()=>queueMicrotask(repairSelect));
+    selectObserver.observe(select,{childList:true});
     return true;
   }finally{
     repairing=false;
