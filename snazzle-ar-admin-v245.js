@@ -1,0 +1,98 @@
+// Snazzle AR Admin v245 — vaste dorpselectie en transactionele AR-puntmutaties.
+// Voorkomt dat gelijktijdige beheeracties elkaars punten overschrijven.
+
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { getFirestore, doc, getDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
+
+const auth=getAuth(),db=getFirestore(),storage=getStorage();
+const WORLD_ID='snazzle_ar_world_v1';
+const WORLD_DOC=doc(db,'hunts',WORLD_ID);
+const MAX_QUICK_GPS_ACCURACY=50;
+const AR_VILLAGES=[
+  {value:'Algemeen',label:'🌍 Algemeen / overal'},
+  {value:'Montfort',label:'Montfort'},
+  {value:'Posterholt',label:'Posterholt'},
+  {value:'Sint Odiliënberg',label:'Sint Odiliënberg'}
+];
+let points=[],superAdmin=false,adminUid='',installObserver=null,hideObserver=null,previewObjectUrl='';
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const makeId=()=>`ar_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+
+function friendlyError(err){
+  const code=String(err?.code||''),msg=String(err?.message||'');
+  if(code.includes('permission-denied')||/permission/i.test(msg))return'AR-opslag heeft geen toegang. Sluit Beheer, log opnieuw in en probeer nogmaals.';
+  if(code.includes('unavailable')||/network|offline/i.test(msg))return'Geen verbinding met de centrale Snazzle-opslag. Controleer internet en probeer opnieuw.';
+  return msg||'Opslaan of laden is mislukt.';
+}
+function installStyle(){
+  if($('#snArAdminV245Style'))return;
+  const s=document.createElement('style');s.id='snArAdminV245Style';s.textContent=`
+#snArAdminV85{display:none}#snArAdminV85.on{display:block!important}.sn-ar-admin-grid{display:grid;gap:12px}.sn-ar-admin-note{padding:12px 13px;border-radius:14px;background:#fff8e5;border:2px solid #c29b5d;font-size:12px;font-weight:750;line-height:1.45}.sn-ar-gps-status{padding:11px 12px;border-radius:13px;background:#f2e5bc;border:2px solid #c19a5c;font-size:12px;font-weight:900}.sn-ar-gps-status.ok{background:#e4f3c6;border-color:#8cae4b;color:#315421}.sn-ar-gps{background:linear-gradient(#6fbe3f,#438e2c)!important;color:#fff!important}.sn-ar-image-preview{height:120px;border-radius:16px;border:2px dashed #b48d55;background:#fff8e7;display:grid;place-items:center;overflow:hidden;margin-top:8px;padding:8px;text-align:center}.sn-ar-image-preview img{max-width:100%;max-height:100%;object-fit:contain}.sn-ar-empty{padding:14px;text-align:center;background:#fff8e6;border:2px dashed #c4a36c;border-radius:15px;font-weight:850;color:#6a5338}.sn-ar-admin-card{background:#fff8e6;border:2px solid #bc995f;border-radius:16px;padding:12px;display:grid;grid-template-columns:64px 1fr;gap:11px;align-items:center}.sn-ar-admin-thumb{width:64px;height:64px;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#dff4ff,#a8d9ef);font-size:35px;border:2px solid #9d7b47}.sn-ar-admin-thumb img{width:100%;height:100%;object-fit:contain}.sn-ar-admin-card h4{margin:0 0 4px;font-size:16px}.sn-ar-admin-meta{font-size:11px;font-weight:800;color:#6b5438;line-height:1.4}.sn-ar-admin-card .row{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.sn-ar-admin-card button{border:0;border-radius:12px;padding:10px;font-weight:950}.sn-ar-toggle{background:#dbe9b0;color:#314c22}.sn-ar-delete{background:#efc0af;color:#7a281e}@media(max-width:390px){.sn-ar-admin-card .row{grid-template-columns:1fr}}
+`;
+  document.head.appendChild(s);
+}
+function hideSystemHunt(){document.querySelectorAll('#adminHuntList .listitem').forEach(el=>{if(el.textContent?.includes('[SYSTEEM] AR-WERELD'))el.style.display='none';});}
+function startHideGuard(){if(hideObserver||!document.body)return;hideObserver=new MutationObserver(hideSystemHunt);hideObserver.observe(document.body,{childList:true,subtree:true});hideSystemHunt();}
+function applyVisibility(){const tab=$('#snArAdminTab85'),sec=$('#snArAdminV85');if(tab)tab.style.display=superAdmin?'':'none';if(!superAdmin&&sec)sec.classList.remove('on');}
+
+function install(){
+  installStyle();startHideGuard();const sheet=$('#adminSheet'),tabs=sheet?.querySelector('.super-only .tabs'),anchor=sheet?.querySelector('.super-only');if(!sheet||!tabs||!anchor)return false;
+  $('#snArAdminTab')?.remove();$('#snArAdminV83')?.remove();
+  if($('#snArAdminTab85')){populateVillages();applyVisibility();return true;}
+  const tab=document.createElement('button');tab.type='button';tab.id='snArAdminTab85';tab.textContent='AR Snazzles';tabs.appendChild(tab);
+  const section=document.createElement('section');section.className='admin-section';section.id='snArAdminV85';section.innerHTML=`
+<h3>AR Snazzles 📍</h3><div class="sn-ar-admin-note">Gebruik <b>Snel plaatsen</b> alleen als je daadwerkelijk op de plek staat en de GPS nauwkeurig is. Voor kaart + camera gebruik je de blauwe nauwkeurige plaatsknop.</div><div class="sn-ar-admin-grid"><div class="field"><label>Naam Snazzle</label><input id="snArAdminName85" maxlength="50" value="Scout Snazzle"></div><div class="row2"><div class="field"><label>Kaartnummer</label><input id="snArAdminNumber85" maxlength="12" value="001"></div><div class="field"><label>Zeldzaamheid</label><select id="snArAdminRarity85"><option>COMMON</option><option selected>RARE</option><option>GOLD</option><option>PLATINUM</option><option>BLACK</option><option>LEGENDARY</option></select></div></div><div class="row2"><div class="field"><label>Dorp</label><select id="snArAdminVillage85"></select></div><div class="field"><label>Vangzone</label><select id="snArAdminRadius85"><option value="5">5 meter</option><option value="7" selected>7 meter</option><option value="10">10 meter</option><option value="15">15 meter</option></select></div></div><div class="field"><label>Transparante Snazzle-afbeelding (PNG aanbevolen)</label><input id="snArAdminImage85" type="file" accept="image/png,image/webp,image/*"><div class="sn-ar-image-preview" id="snArAdminPreview85">🦆 Optioneel — zonder afbeelding gebruiken we de test-Snazzle.</div></div><div class="sn-ar-gps-status" id="snArAdminStatus85">⏳ AR-opslag controleren…</div><button class="save sn-ar-gps" id="snArAdminPlace85" type="button">📍 Snel plaatsen op huidige GPS</button></div><h3 style="margin-top:22px">Geplaatste Snazzles</h3><div class="list" id="snArAdminList85"><div class="sn-ar-empty">AR-punten laden…</div></div>`;
+  anchor.appendChild(section);
+  tab.addEventListener('click',()=>{tabs.querySelectorAll('button').forEach(b=>b.classList.remove('on'));sheet.querySelectorAll('.super-only .admin-section').forEach(s=>s.classList.remove('on'));tab.classList.add('on');section.classList.add('on');populateVillages();refreshWorld();});
+  tabs.querySelectorAll('button:not(#snArAdminTab85)').forEach(b=>b.addEventListener('click',()=>{tab.classList.remove('on');section.classList.remove('on');}));
+  $('#snArAdminImage85')?.addEventListener('change',previewImage);$('#snArAdminPlace85')?.addEventListener('click',placeHere);populateVillages();applyVisibility();return true;
+}
+function watchInstall(){if(install())return;if(installObserver||!document.body)return;installObserver=new MutationObserver(()=>{if(install()){installObserver.disconnect();installObserver=null;}});installObserver.observe(document.body,{childList:true,subtree:true});}
+function populateVillages(){
+  const select=$('#snArAdminVillage85');if(!select)return;const current=select.value||localStorage.getItem('snazzleVillage')||'Montfort';
+  select.replaceChildren(...AR_VILLAGES.map(item=>{const option=document.createElement('option');option.value=item.value;option.textContent=item.label;return option;}));select.value=AR_VILLAGES.some(item=>item.value===current)?current:'Montfort';select.dataset.snazzleArVillages='v245';
+}
+function previewImage(e){
+  const file=e.target.files?.[0],box=$('#snArAdminPreview85');if(!box)return;if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl='';}
+  if(!file){box.textContent='🦆 Optioneel — zonder afbeelding gebruiken we de test-Snazzle.';return;}previewObjectUrl=URL.createObjectURL(file);box.innerHTML=`<img src="${previewObjectUrl}" alt="Voorbeeld Snazzle">`;
+}
+function currentPosition(){return new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('GPS wordt niet ondersteund op dit toestel.'));navigator.geolocation.getCurrentPosition(resolve,err=>reject(new Error(err.code===1?'Locatietoestemming is geweigerd.':'Locatie kon niet worden bepaald.')),{enableHighAccuracy:true,timeout:16000,maximumAge:0});});}
+async function uploadImage(file,pointId){if(!file)return'';if(file.size>8*1024*1024)throw new Error('Afbeelding is groter dan 8 MB.');const safe=(file.name||'snazzle.png').replace(/[^a-zA-Z0-9._-]+/g,'-');const target=storageRef(storage,`listen-stories/images/${adminUid}/ar-${pointId}-${safe}`);await uploadBytes(target,file,{contentType:file.type||'image/png'});return getDownloadURL(target);}
+async function readWorld(){const snap=await getDoc(WORLD_DOC),data=snap.exists()?snap.data():{};return Array.isArray(data.points)?data.points:[];}
+async function mutateWorld(mutator){
+  let next=[];await runTransaction(db,async tx=>{const snap=await tx.get(WORLD_DOC),data=snap.exists()?snap.data():{},current=Array.isArray(data.points)?data.points:[];next=mutator(current);if(!Array.isArray(next))throw new Error('Ongeldige AR-mutatie.');const now=new Date().toISOString();tx.set(WORLD_DOC,{_snazzleInternalType:'arWorld',title:'[SYSTEEM] AR-WERELD',village:'snazzle-internal',description:'Interne opslag voor permanente Snazzle AR-punten',rule:'',hint:'',foundMessage:'',imageUrl:'',start:'',end:'',mode:'draft',version:9,points:next,updatedAt:now,updatedBy:adminUid},{merge:true});});points=next;renderList();hideSystemHunt();return next;
+}
+
+async function placeHere(){
+  const btn=$('#snArAdminPlace85'),status=$('#snArAdminStatus85');if(!status)return;if(!superAdmin){status.textContent='⚠️ Alleen de hoofdbeheerder kan AR-punten plaatsen.';return;}
+  const name=($('#snArAdminName85')?.value||'').trim(),number=($('#snArAdminNumber85')?.value||'').trim();if(name.length<2){status.textContent='⚠️ Vul een naam in.';return;}
+  btn.disabled=true;status.classList.remove('ok');status.textContent='📍 GPS nauwkeurig bepalen…';
+  try{
+    const pos=await currentPosition(),accuracy=Math.round(Number(pos.coords.accuracy||0));if(!Number.isFinite(accuracy)||accuracy>MAX_QUICK_GPS_ACCURACY)throw new Error(`GPS is nog te onnauwkeurig (±${accuracy||'?'} m). Probeer opnieuw of gebruik Nauwkeurig via kaart + camera.`);
+    status.textContent=`✅ GPS gevonden (±${accuracy} m). Opslaan…`;const pointId=makeId(),file=$('#snArAdminImage85')?.files?.[0]||null,imageUrl=await uploadImage(file,pointId),now=new Date().toISOString();
+    const selectedVillage=$('#snArAdminVillage85')?.value||'Algemeen',village=AR_VILLAGES.some(item=>item.value===selectedVillage)?selectedVillage:'Algemeen';
+    const point={id:pointId,name,number:number||'—',rarity:$('#snArAdminRarity85')?.value||'COMMON',village,radius:Number($('#snArAdminRadius85')?.value||7),lat:Number(pos.coords.latitude),lon:Number(pos.coords.longitude),accuracy,imageUrl,active:true,placement:{version:6,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now},createdAt:now,updatedAt:now,createdBy:adminUid};
+    await mutateWorld(current=>[...current,point]);status.classList.add('ok');status.textContent=`🎉 ${name} staat permanent op deze plek · GPS ±${accuracy} m`;try{navigator.vibrate?.([60,40,100]);}catch{}
+    const input=$('#snArAdminImage85');if(input)input.value='';if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl='';}const preview=$('#snArAdminPreview85');if(preview)preview.textContent='🦆 Optioneel — zonder afbeelding gebruiken we de test-Snazzle.';window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});
+  }catch(err){status.classList.remove('ok');status.textContent='⚠️ '+friendlyError(err);}finally{btn.disabled=false;}
+}
+async function refreshWorld(){
+  if(!superAdmin)return;const status=$('#snArAdminStatus85');
+  try{points=await readWorld();renderList();populateVillages();if(status){status.classList.add('ok');status.textContent=`✅ AR-beheer verbonden · ${points.length} geplaatste Snazzle${points.length===1?'':'s'}`;}}
+  catch(err){const msg=friendlyError(err),list=$('#snArAdminList85');if(list)list.innerHTML=`<div class="sn-ar-empty">⚠️ ${esc(msg)}</div>`;if(status){status.classList.remove('ok');status.textContent='⚠️ '+msg;}}
+}
+function renderList(){
+  const list=$('#snArAdminList85');if(!list)return;if(!points.length){list.innerHTML='<div class="sn-ar-empty">Nog geen permanente AR Snazzles geplaatst.</div>';return;}
+  list.innerHTML=points.slice().reverse().map(p=>`<article class="sn-ar-admin-card"><div class="sn-ar-admin-thumb">${p.imageUrl?`<img src="${esc(p.imageUrl)}" alt="${esc(p.name)}">`:'🦆'}</div><div><h4>${esc(p.name)}</h4><div class="sn-ar-admin-meta">#${esc(p.number)} · ${esc(p.rarity)} · 📍 ${esc(p.village)}<br>${p.active?'🟢 Actief':'⚪ Uitgeschakeld'} · vangzone ${Number(p.radius||7)} m · GPS ±${Math.round(Number(p.accuracy||0))} m</div></div><div class="row"><button type="button" class="sn-ar-toggle" data-ar-toggle="${esc(p.id)}">${p.active?'Tijdelijk uitzetten':'Weer activeren'}</button><button type="button" class="sn-ar-delete" data-ar-delete="${esc(p.id)}">Verwijderen</button></div></article>`).join('');
+  list.querySelectorAll('[data-ar-toggle]').forEach(b=>b.addEventListener('click',()=>togglePoint(b.dataset.arToggle)));list.querySelectorAll('[data-ar-delete]').forEach(b=>b.addEventListener('click',()=>deletePoint(b.dataset.arDelete)));
+}
+async function togglePoint(id){if(!superAdmin)return;try{await mutateWorld(current=>current.map(p=>p.id===id?{...p,active:!p.active,updatedAt:new Date().toISOString()}:p));window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});}catch(err){const s=$('#snArAdminStatus85');if(s)s.textContent='⚠️ '+friendlyError(err);}}
+async function deletePoint(id){if(!superAdmin||!confirm('Deze AR Snazzle definitief van deze plek verwijderen?'))return;try{await mutateWorld(current=>current.filter(p=>p.id!==id));window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});}catch(err){const s=$('#snArAdminStatus85');if(s)s.textContent='⚠️ '+friendlyError(err);}}
+
+onAuthStateChanged(auth,async user=>{adminUid=user?.uid||'';superAdmin=false;if(user){try{const snap=await getDoc(doc(db,'adminUsers',user.uid)),p=snap.exists()?snap.data():null;superAdmin=!!(p?.active===true&&p?.role==='superadmin');}catch{}}watchInstall();applyVisibility();if(superAdmin)refreshWorld();});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchInstall,{once:true});else watchInstall();
+window.SnazzleArAdminV245={refresh:refreshWorld,worldId:WORLD_ID,populateVillages};
+// Compatibiliteit voor modules die nog het historische object gebruiken, zonder de oude implementatie te laden.
+window.SnazzleArAdminV85=window.SnazzleArAdminV245;
