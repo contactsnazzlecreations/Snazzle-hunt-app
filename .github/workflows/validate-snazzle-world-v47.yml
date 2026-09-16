@@ -15,5 +15,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Check JavaScript syntax
-        run: node --check snazzle-world-hub-v47.js
+      - name: Check active JavaScript syntax
+        run: |
+          node --check snazzle-world-hub-v47.js
+          node --experimental-default-type=module --check app.js
+          node --experimental-default-type=module --check app-runtime-v207.js
+          node --experimental-default-type=module --check snazzle-ar-admin-v85.js
+          node --experimental-default-type=module --check snazzle-ar-engine-v244.js
+          node --experimental-default-type=module --check snazzle-ar-placement-v244.js
