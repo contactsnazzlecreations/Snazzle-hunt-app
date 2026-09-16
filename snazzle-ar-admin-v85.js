@@ -1,15 +1,19 @@
-// Snazzle AR Admin v85.1 — permanente AR-Snazzles via bestaande Hunts-opslag.
-// Belangrijk: Firestore document-IDs die met __ beginnen/eindigen zijn gereserveerd.
-// Daarom gebruikt AR een normale interne document-ID.
+// Snazzle AR Admin v85.2 — v243 vaste, schone dorpselectie.
+// Alleen de relevante AR-keuzes worden hier opgebouwd; interne Firestore-records komen nooit in deze lijst.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, getDocs, setDoc, collection } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
 
 const auth=getAuth(), db=getFirestore(), storage=getStorage();
 const WORLD_ID='snazzle_ar_world_v1';
 const WORLD_DOC=doc(db,'hunts',WORLD_ID);
-const FALLBACK_VILLAGES=['Montfort','Posterholt','Sint Odiliënberg'];
+const AR_VILLAGES=[
+  {value:'Algemeen',label:'🌍 Algemeen / overal'},
+  {value:'Montfort',label:'Montfort'},
+  {value:'Posterholt',label:'Posterholt'},
+  {value:'Sint Odiliënberg',label:'Sint Odiliënberg'}
+];
 let points=[], superAdmin=false, adminUid='', installObserver=null, hideObserver=null;
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,7 +24,7 @@ function friendlyError(err){
   const msg=String(err?.message||'');
   if(code.includes('permission-denied')||/permission/i.test(msg)) return 'AR-opslag heeft geen toegang. Sluit Beheer, log opnieuw in en probeer nogmaals.';
   if(code.includes('unavailable')||/network|offline/i.test(msg)) return 'Geen verbinding met de centrale Snazzle-opslag. Controleer internet en probeer opnieuw.';
-  if(/reserved|resource id/i.test(msg)) return 'De interne AR-opslagnaam was ongeldig. Vernieuw de app; dit is in v85.1 hersteld.';
+  if(/reserved|resource id/i.test(msg)) return 'De interne AR-opslagnaam was ongeldig. Vernieuw de app en probeer opnieuw.';
   return msg||'Opslaan of laden is mislukt.';
 }
 
@@ -68,7 +72,7 @@ function install(){
 
   $('#snArAdminTab')?.remove();
   $('#snArAdminV83')?.remove();
-  if($('#snArAdminTab85')){applyVisibility();return true;}
+  if($('#snArAdminTab85')){populateVillages();applyVisibility();return true;}
 
   const tab=document.createElement('button');
   tab.type='button'; tab.id='snArAdminTab85'; tab.textContent='AR Snazzles';
@@ -94,7 +98,7 @@ function install(){
   tab.addEventListener('click',()=>{
     tabs.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
     sheet.querySelectorAll('.super-only .admin-section').forEach(s=>s.classList.remove('on'));
-    tab.classList.add('on'); section.classList.add('on'); refreshWorld();
+    tab.classList.add('on'); section.classList.add('on'); populateVillages(); refreshWorld();
   });
   tabs.querySelectorAll('button:not(#snArAdminTab85)').forEach(b=>b.addEventListener('click',()=>{tab.classList.remove('on');section.classList.remove('on');}));
   $('#snArAdminImage85')?.addEventListener('change',previewImage);
@@ -110,13 +114,17 @@ function watchInstall(){
   installObserver.observe(document.body,{childList:true,subtree:true});
 }
 
-async function populateVillages(){
+function populateVillages(){
   const select=$('#snArAdminVillage85'); if(!select)return;
-  let names=[];
-  try{const snap=await getDocs(collection(db,'villages'));snap.forEach(d=>{const x=d.data();names.push(String(x.name||x.title||d.id));});}catch{}
-  names=[...new Set((names.length?names:FALLBACK_VILLAGES).filter(Boolean))];
-  const current=localStorage.getItem('snazzleVillage')||'Montfort';
-  select.innerHTML=names.map(v=>`<option ${v===current?'selected':''}>${esc(v)}</option>`).join('');
+  const current=select.value||localStorage.getItem('snazzleVillage')||'Montfort';
+  select.replaceChildren(...AR_VILLAGES.map(item=>{
+    const option=document.createElement('option');
+    option.value=item.value;
+    option.textContent=item.label;
+    return option;
+  }));
+  select.value=AR_VILLAGES.some(item=>item.value===current)?current:'Montfort';
+  select.dataset.snazzleArVillages='v243';
 }
 
 function previewImage(e){
@@ -164,7 +172,9 @@ async function placeHere(){
     const file=$('#snArAdminImage85')?.files?.[0]||null;
     const imageUrl=await uploadImage(file,pointId);
     const existing=await readWorld(),now=new Date().toISOString();
-    const point={id:pointId,name,number:number||'—',rarity:$('#snArAdminRarity85')?.value||'COMMON',village:$('#snArAdminVillage85')?.value||'Montfort',radius:Number($('#snArAdminRadius85')?.value||7),lat:Number(pos.coords.latitude),lon:Number(pos.coords.longitude),accuracy,imageUrl,active:true,createdAt:now,updatedAt:now,createdBy:adminUid};
+    const selectedVillage=$('#snArAdminVillage85')?.value||'Algemeen';
+    const village=AR_VILLAGES.some(item=>item.value===selectedVillage)?selectedVillage:'Algemeen';
+    const point={id:pointId,name,number:number||'—',rarity:$('#snArAdminRarity85')?.value||'COMMON',village,radius:Number($('#snArAdminRadius85')?.value||7),lat:Number(pos.coords.latitude),lon:Number(pos.coords.longitude),accuracy,imageUrl,active:true,createdAt:now,updatedAt:now,createdBy:adminUid};
     await writeWorld([...existing,point]);
     status.classList.add('ok'); status.textContent=`🎉 ${name} staat nu permanent op deze plek · GPS ±${accuracy} m`;
     try{navigator.vibrate?.([60,40,100]);}catch{}
@@ -177,7 +187,7 @@ async function refreshWorld(){
   if(!superAdmin)return;
   const status=$('#snArAdminStatus85');
   try{
-    points=await readWorld(); renderList();
+    points=await readWorld(); renderList(); populateVillages();
     if(status){status.classList.add('ok');status.textContent=`✅ AR-beheer verbonden · ${points.length} geplaatste Snazzle${points.length===1?'':'s'}`;}
   }catch(err){
     const msg=friendlyError(err),list=$('#snArAdminList85');
@@ -209,4 +219,4 @@ onAuthStateChanged(auth,async user=>{
   watchInstall(); applyVisibility(); if(superAdmin)refreshWorld();
 });
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchInstall,{once:true});else watchInstall();
-window.SnazzleArAdminV85={refresh:refreshWorld,worldId:WORLD_ID};
+window.SnazzleArAdminV85={refresh:refreshWorld,worldId:WORLD_ID,populateVillages};
