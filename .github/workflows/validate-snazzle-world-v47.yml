@@ -16,10 +16,10 @@ jobs:
         with:
           node-version: 24
       - name: Check active JavaScript syntax
+        shell: bash
         run: |
           node --check snazzle-world-hub-v47.js
-          node --experimental-default-type=module --check app.js
-          node --experimental-default-type=module --check app-runtime-v207.js
-          node --experimental-default-type=module --check snazzle-ar-admin-v85.js
-          node --experimental-default-type=module --check snazzle-ar-engine-v244.js
-          node --experimental-default-type=module --check snazzle-ar-placement-v244.js
+          for f in app.js app-runtime-v207.js snazzle-ar-admin-v85.js snazzle-ar-engine-v244.js snazzle-ar-placement-v244.js; do
+            cp "$f" "/tmp/$(basename "$f" .js).mjs"
+            node --check "/tmp/$(basename "$f" .js).mjs"
+          done
