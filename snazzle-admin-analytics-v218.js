@@ -1,10 +1,10 @@
-// Snazzle Beheer v218 — privacyvriendelijke bezoekersstatistieken.
+// Snazzle Beheer v218.1 — privacyvriendelijke bezoekersstatistieken met nette timer-cleanup.
 // Meet alleen anonieme app-activiteit: geen naam, e-mail, GPS of IP wordt door deze module opgeslagen.
 import { getApps,getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth,onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore,collection,doc,getDoc,getDocs,setDoc,serverTimestamp,query,where,Timestamp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-const VERSION='218.0';
+const VERSION='218.1';
 const PRESENCE='snazzlePresenceV1';
 const DAILY='snazzleDailyPresenceV1';
 const HEARTBEAT_MS=45_000;
@@ -41,6 +41,7 @@ function dayLabel(key){
   return new Intl.DateTimeFormat('nl-NL',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}).format(d).replace('.','');
 }
 function clearHeartbeat(){if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}}
+function clearStatsTimer(){if(statsTimer){clearInterval(statsTimer);statsTimer=null;}}
 
 async function detectAdmin(user){
   adminRole='';
@@ -147,7 +148,7 @@ async function refreshStats(force=false){
 }
 
 function startStatsTimer(){
-  if(statsTimer)clearInterval(statsTimer);
+  clearStatsTimer();
   statsTimer=setInterval(()=>refreshStats(false),60_000);
 }
 
@@ -155,6 +156,8 @@ if(auth&&db){
   onAuthStateChanged(auth,async user=>{
     currentUser=user||null;
     clearHeartbeat();
+    clearStatsTimer();
+    adminRole='';
     if(!user)return;
     await detectAdmin(user);
     if(adminRole==='superadmin'){
