@@ -1,4 +1,4 @@
-// Snazzle Hunt v244 — geconsolideerde AR camera/GPS/plaatsing en geforceerde cachevernieuwing.
+// Snazzle Hunt v245 — systematisch gecontroleerde AR camera/GPS/plaatsing en geforceerde cachevernieuwing.
 try {
   await import('./snazzle-card-structure-v233.js?v=237');
 } catch (err) {
@@ -15,7 +15,7 @@ try {
   console.error('Snazzle BLAZE seed kon niet laden', err);
 }
 
-await import('./app-runtime-v207.js?v=244');
+await import('./app-runtime-v245.js?v=245');
 
 try {
   await import('./snazzle-admin-analytics-v218.js?v=237');
@@ -23,7 +23,7 @@ try {
   console.error('Snazzle bezoekersstatistieken v218 konden niet laden', err);
 }
 try {
-  await import('./snazzle-ar-menu-fix-v215.js?v=244');
+  await import('./snazzle-ar-menu-fix-v215.js?v=245');
 } catch (err) {
   console.error('Snazzle AR menu fix v215 kon niet laden', err);
 }
@@ -99,7 +99,8 @@ try {
   window.SnazzleCardRewardsV235?.render?.();
   window.SnazzleCardCounterGuardV236?.render?.();
   window.SnazzleSpotbookV237?.render?.();
-  window.SnazzleArEngineV244?.refresh?.();
-  window.SnazzleArPlacementV244?.refresh?.();
-  window.SnazzleArAdminV85?.populateVillages?.();
+  window.SnazzleArEngineV245?.repair?.();
+  window.SnazzleArEngineV245?.refresh?.();
+  window.SnazzleArPlacementV245?.refresh?.();
+  window.SnazzleArAdminV245?.populateVillages?.();
 },ms));
