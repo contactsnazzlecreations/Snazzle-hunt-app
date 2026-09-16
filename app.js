@@ -1,4 +1,4 @@
-// Snazzle Hunt v237 — vaste 48-kaarten voortgang + Snazzle Spotboek AR.
+// Snazzle Hunt v238 — vaste 48-kaarten voortgang + Snazzle Spotboek AR + wereldwijde AR-zones.
 try {
   await import('./snazzle-card-structure-v233.js?v=237');
 } catch (err) {
@@ -88,6 +88,11 @@ try {
 } catch (err) {
   console.error('Snazzle Spotboek v237 kon niet laden', err);
 }
+try {
+  await import('./snazzle-ar-global-v238.js?v=238');
+} catch (err) {
+  console.error('Snazzle wereldwijde AR-zones v238 konden niet laden', err);
+}
 
 [100,350,900,1800,3500,7000].forEach(ms=>setTimeout(()=>{
   window.SnazzleMysticV221?.repair?.();
@@ -99,4 +104,5 @@ try {
   window.SnazzleCardRewardsV235?.render?.();
   window.SnazzleCardCounterGuardV236?.render?.();
   window.SnazzleSpotbookV237?.render?.();
+  window.SnazzleArGlobalV238?.repair?.();
 },ms));
