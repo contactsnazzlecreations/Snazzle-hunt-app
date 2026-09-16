@@ -23,3 +23,20 @@ jobs:
             cp "$f" "/tmp/$(basename "$f" .js).mjs"
             node --check "/tmp/$(basename "$f" .js).mjs"
           done
+      - name: Check AR v244 architecture invariants
+        shell: bash
+        run: |
+          grep -q "snazzle-ar-engine-v244.js" app-runtime-v207.js
+          grep -q "snazzle-ar-placement-v244.js" app-runtime-v207.js
+          ! grep -q "safeImport('./snazzle-ar-world-v85.js')" app-runtime-v207.js
+          ! grep -q "safeImport('./snazzle-ar-place-rescue-v194.js')" app-runtime-v207.js
+          ! grep -q "safeImport('./snazzle-ar-map-gesture-fix-v196.js')" app-runtime-v207.js
+          ! grep -q "safeImport('./snazzle-ar-maponly-fix-v198.js')" app-runtime-v207.js
+          ! grep -q "safeImport('./snazzle-ar-safety-pass-v124.js')" app-runtime-v207.js
+          ! grep -q "snazzle-ar-global-v240.js" app.js
+          ! grep -q "snazzle-ar-village-select-v242.js" app.js
+          grep -q "camera-composed" snazzle-ar-engine-v244.js
+          grep -q "direct-map-camera" snazzle-ar-engine-v244.js
+          grep -q "mode:'camera-composed'" snazzle-ar-placement-v244.js
+          grep -q "mode:'map-only'" snazzle-ar-placement-v244.js
+          ! grep -q "getDocs(collection(db,'villages'))" snazzle-ar-admin-v85.js
