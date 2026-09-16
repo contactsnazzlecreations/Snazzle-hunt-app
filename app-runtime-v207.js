@@ -1,6 +1,6 @@
 // Snazzle Hunt v216 — snelle home-opstart, daarna de bestaande v207 runtime.
 
-const runtimeVersion='20260910-v216-fast-home-boot';
+const runtimeVersion='20260916-v243-ar-village-selector';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
