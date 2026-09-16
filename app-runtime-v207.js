@@ -1,6 +1,6 @@
-// Snazzle Hunt v216 — snelle home-opstart, daarna de bestaande v207 runtime.
+// Snazzle Hunt v244 — snelle home-opstart + geconsolideerde AR-engine zonder overlappende camera/GPS-lagen.
 
-const runtimeVersion='20260916-v243-ar-village-selector';
+const runtimeVersion='20260916-v244-ar-stable';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -42,7 +42,7 @@ function installMobilePerformanceMode(){
         backdrop-filter:none!important;-webkit-backdrop-filter:none!important
       }
       .quick-menu-panel,.panel{will-change:transform}
-      #snArStart,#snArZoneOpen,#snArZoneNativeOpen,#snArIntroCloseV175{
+      #snArStart,#snArZoneOpen,#snArZoneNativeOpen,#snArIntroCloseV244{
         touch-action:manipulation!important;pointer-events:auto!important
       }
     }
@@ -104,14 +104,11 @@ window.__snazzleHomeUiReady=true;
 document.dispatchEvent(new CustomEvent('snazzle:home-ui-ready'));
 window.__snazzleReleaseBoot?.();
 
+// AR v244: één UI-shell, één kaartbrug en één eigenaar van camera/GPS/vanglogica.
 await safeImport('./snazzle-ar-v80.js');
-await Promise.all([
-  safeImport('./snazzle-ar-intro-close-v175.js'),
-  safeImport('./snazzle-zone-button-v176.js')
-]);
-await safeImport('./snazzle-ar-world-v85.js');
+await safeImport('./snazzle-zone-button-v176.js');
 await safeImport('./snazzle-zone-map-v169.js');
-await safeImport('./snazzle-ar-safety-pass-v124.js');
+await safeImport('./snazzle-ar-engine-v244.js');
 
 function syncArPriority(){
   window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show');
@@ -128,12 +125,9 @@ await Promise.all([
   safeImport('./snazzle-central-assets-v48.js')
 ]);
 
-// AR-beheer eerst; daarna plaatsing, kaartbediening en de v198 knop-/adresfix.
-// De oude Leaflet plaatsstudio wordt hier bewust niet meer geladen.
+// AR-beheer v244: vaste dorpselectie + één plaatsstudio voor kaart, adres, GPS en camera.
 await safeImport('./snazzle-ar-admin-v85.js');
-await safeImport('./snazzle-ar-place-rescue-v194.js');
-await safeImport('./snazzle-ar-map-gesture-fix-v196.js');
-await safeImport('./snazzle-ar-maponly-fix-v198.js');
+await safeImport('./snazzle-ar-placement-v244.js');
 
 Promise.allSettled([
   safeImport('./snazzle-ar-legacy-cleanup-v187.js'),
