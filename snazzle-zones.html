@@ -13,12 +13,12 @@
 </head>
 <body>
 <main class="shell">
-  <div class="head"><h1>Snazzle-zones 🗺️</h1><a class="back" href="./index.html" id="backBtn">← Terug</a></div>
-  <div class="copy"><b>Hier ergens zit een Snazzle.</b> De cirkels tonen expres alleen ongeveer waar. De exacte plek blijft geheim zodat je echt moet speuren.</div>
+  <div class="head"><h1>Alle Snazzle-zones 🗺️</h1><a class="back" href="./index.html" id="backBtn">← Terug</a></div>
+  <div class="copy"><b>Hier zie je alle actieve AR-zones.</b> Dus niet alleen het gekozen dorp, maar Snazzles in heel Nederland én daarbuiten. De cirkels tonen expres alleen ongeveer waar; de exacte plek blijft geheim.</div>
   <div class="status" id="status">Kaart laden…</div>
   <div class="map" id="map"></div>
   <div class="legend" id="legend"></div>
-  <div class="foot">🔒 Deze kaart gebruikt geen GPS van jouw toestel en slaat geen route op.</div>
+  <div class="foot">🔒 Deze kaart gebruikt geen GPS van jouw toestel en slaat geen route op. De exacte Snazzle-locaties worden niet op de kaart getoond.</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
@@ -29,13 +29,46 @@ import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/12.17.
 const firebaseConfig={apiKey:'AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4',authDomain:'snazzle-hunt.firebaseapp.com',projectId:'snazzle-hunt',storageBucket:'snazzle-hunt.firebasestorage.app',messagingSenderId:'647665502495',appId:'1:647665502495:web:686488b53db468e887482a',measurementId:'G-55G5DE19DL'};
 const rarityRank={COMMON:1,UNCOMMON:2,RARE:3,EPIC:4,GOLD:5,PLATINUM:6,BLACK:7,LEGENDARY:8,SECRET:9};
 const rarityInfo={COMMON:{emoji:'🟢',color:'#4f9b4f',radius:90},UNCOMMON:{emoji:'🔵',color:'#3b82c4',radius:100},RARE:{emoji:'💜',color:'#7b55c7',radius:120},EPIC:{emoji:'✨',color:'#b242c1',radius:135},GOLD:{emoji:'⭐',color:'#d6a51d',radius:145},PLATINUM:{emoji:'💎',color:'#6d93a7',radius:155},BLACK:{emoji:'🖤',color:'#34343d',radius:170},LEGENDARY:{emoji:'👑',color:'#d77820',radius:190},SECRET:{emoji:'❓',color:'#b42d64',radius:210}};
-const status=document.getElementById('status'),legend=document.getElementById('legend'),village=localStorage.getItem('snazzleVillage')||'Montfort';
+const status=document.getElementById('status'),legend=document.getElementById('legend');
 document.getElementById('backBtn').addEventListener('click',e=>{if(history.length>1){e.preventDefault();history.back();}});
 function setStatus(t,hide=false){status.textContent=t||'';status.hidden=hide;}
 function waitForAuth(auth){return new Promise(resolve=>{if(auth.currentUser)return resolve(auth.currentUser);const off=onAuthStateChanged(auth,u=>{if(u){off();resolve(u);}});setTimeout(async()=>{off();try{const c=auth.currentUser||await signInAnonymously(auth).then(x=>x.user);resolve(c);}catch{resolve(null)}},700);});}
-function zonesFrom(points){const groups=new Map();(Array.isArray(points)?points:[]).filter(p=>p&&p.active!==false&&String(p.village||'')===village).forEach(p=>{const plat=Number(p.lat),plon=Number(p.lon);if(!Number.isFinite(plat)||!Number.isFinite(plon))return;const lat=Math.round(plat*1000)/1000,lon=Math.round(plon*1000)/1000,key=`${lat.toFixed(3)}|${lon.toFixed(3)}`,raw=String(p.rarity||'COMMON').toUpperCase(),rarity=rarityInfo[raw]?raw:'COMMON';if(!groups.has(key))groups.set(key,{lat,lon,count:0,rarities:{},top:rarity});const z=groups.get(key);z.count++;z.rarities[rarity]=(z.rarities[rarity]||0)+1;if((rarityRank[rarity]||0)>(rarityRank[z.top]||0))z.top=rarity;});return [...groups.values()];}
+function areaLabel(v){return String(v||'Algemeen')==='Algemeen'?'Algemeen / overal':String(v||'Algemeen');}
+function zonesFrom(points){
+  const groups=new Map();
+  (Array.isArray(points)?points:[]).filter(p=>p&&p.active!==false).forEach(p=>{
+    const plat=Number(p.lat),plon=Number(p.lon);if(!Number.isFinite(plat)||!Number.isFinite(plon))return;
+    const lat=Math.round(plat*1000)/1000,lon=Math.round(plon*1000)/1000,key=`${lat.toFixed(3)}|${lon.toFixed(3)}`,raw=String(p.rarity||'COMMON').toUpperCase(),rarity=rarityInfo[raw]?raw:'COMMON';
+    if(!groups.has(key))groups.set(key,{lat,lon,count:0,rarities:{},top:rarity,areas:new Set()});
+    const z=groups.get(key);z.count++;z.rarities[rarity]=(z.rarities[rarity]||0)+1;z.areas.add(areaLabel(p.village));
+    if((rarityRank[rarity]||0)>(rarityRank[z.top]||0))z.top=rarity;
+  });
+  return [...groups.values()];
+}
 function summary(z){return Object.entries(z.rarities).sort((a,b)=>(rarityRank[b[0]]||0)-(rarityRank[a[0]]||0)).map(([r,n])=>`${n}× ${r}`).join(' · ')}
-async function boot(){try{if(!window.L)throw new Error('Kaartmodule kon niet laden.');const map=L.map('map',{zoomControl:true,attributionControl:true,preferCanvas:true}).setView([51.125,5.948],13);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);const app=initializeApp(firebaseConfig,'snazzle-zones-page');const auth=getAuth(app),db=getFirestore(app);setStatus('Snazzle-zones ophalen…');await waitForAuth(auth);const snap=await getDoc(doc(db,'hunts','snazzle_ar_world_v1')),data=snap.exists()?snap.data():{},zones=zonesFrom(data.points);const seen=[...new Set(zones.map(z=>z.top))].sort((a,b)=>(rarityRank[b]||0)-(rarityRank[a]||0));legend.innerHTML=seen.map(r=>`<span class="chip">${rarityInfo[r].emoji} ${r}</span>`).join('');if(!zones.length){setStatus(`Er zijn nu geen actieve Snazzle-zones in ${village}.`);map.setView([51.125,5.948],13);return;}const bounds=[];zones.forEach(z=>{const info=rarityInfo[z.top]||rarityInfo.COMMON;const c=L.circle([z.lat,z.lon],{radius:info.radius,color:info.color,fillColor:info.color,fillOpacity:.18,weight:3,opacity:.9}).addTo(map);c.bindPopup(`<strong>${info.emoji} ${z.top}-signaal</strong><br>${z.count===1?'Er zit een Snazzle in deze zoekzone.':`Er zitten ${z.count} Snazzle-signalen in deze zoekzone.`}<small>${summary(z)}<br>De exacte plek blijft geheim.</small>`);bounds.push([z.lat,z.lon]);});if(bounds.length===1)map.setView(bounds[0],15);else map.fitBounds(bounds,{padding:[28,28],maxZoom:15});setStatus('',true);setTimeout(()=>map.invalidateSize(),80);}catch(err){console.error(err);setStatus('⚠️ '+(err?.message||'De Snazzle-kaart kon niet laden.'));}}
+async function boot(){
+  try{
+    if(!window.L)throw new Error('Kaartmodule kon niet laden.');
+    const map=L.map('map',{zoomControl:true,attributionControl:true,preferCanvas:true}).setView([52.1,5.3],7);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+    const app=initializeApp(firebaseConfig,'snazzle-zones-page-v238'),auth=getAuth(app),db=getFirestore(app);
+    setStatus('Alle Snazzle-zones ophalen…');await waitForAuth(auth);
+    const snap=await getDoc(doc(db,'hunts','snazzle_ar_world_v1')),data=snap.exists()?snap.data():{},zones=zonesFrom(data.points);
+    const seen=[...new Set(zones.map(z=>z.top))].sort((a,b)=>(rarityRank[b]||0)-(rarityRank[a]||0));
+    legend.innerHTML=seen.map(r=>`<span class="chip">${rarityInfo[r].emoji} ${r}</span>`).join('');
+    if(!zones.length){setStatus('Er zijn nu geen actieve Snazzle-zones.');map.setView([52.1,5.3],7);return;}
+    const bounds=[];
+    zones.forEach(z=>{
+      const info=rarityInfo[z.top]||rarityInfo.COMMON;
+      const c=L.circle([z.lat,z.lon],{radius:info.radius,color:info.color,fillColor:info.color,fillOpacity:.18,weight:3,opacity:.9}).addTo(map);
+      const areas=[...z.areas].join(' · ');
+      c.bindPopup(`<strong>${info.emoji} ${z.top}-signaal</strong><br>${z.count===1?'Er zit een Snazzle in deze zoekzone.':`Er zitten ${z.count} Snazzle-signalen in deze zoekzone.`}<small>${summary(z)}${areas?`<br>Gebied: ${areas}`:''}<br>De exacte plek blijft geheim.</small>`);
+      bounds.push([z.lat,z.lon]);
+    });
+    if(bounds.length===1)map.setView(bounds[0],15);else map.fitBounds(bounds,{padding:[28,28],maxZoom:15});
+    setStatus('',true);setTimeout(()=>map.invalidateSize(),80);
+  }catch(err){console.error(err);setStatus('⚠️ '+(err?.message||'De Snazzle-kaart kon niet laden.'));}
+}
 boot();
 </script>
 </body>
