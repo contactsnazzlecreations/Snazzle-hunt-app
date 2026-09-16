@@ -1,12 +1,12 @@
-// Snazzle Cards v225 — WILD/SPARK atlas blijft stabiel, andere series houden hun eigen afbeelding.
-// Belangrijk: alleen vakken die werkelijk de WILD/SPARK-atlas gebruiken verbergen hun basisafbeelding.
-const VERSION='225.0-series-safe-atlas';
+// Snazzle Cards v226 — WILD/SPARK atlas stabiel zonder herstelstormen op mobiel.
+// Alleen kaartgerelateerde DOM-wijzigingen starten nog een compacte herstelronde.
+const VERSION='226.0-smooth-atlas';
 const CARD_RE=/S01-([SW])(\d{2})/i;
 const ATLASES=[
   './assets/cards/snazzle-cards-atlas-v209.jpg?v=225',
   './assets/cards/snazzle-cards-atlas-v210.jpg?v=225'
 ];
-let ready=false,repairQueued=false,atlasIndex=0;
+let ready=false,repairQueued=false,atlasIndex=0,lastRepairAt=0;
 
 function cardIndex(number){
   const m=String(number||'').toUpperCase().match(CARD_RE);
@@ -17,6 +17,7 @@ function cardIndex(number){
 }
 function numberFromRow(row){return String(row?.querySelector('strong')?.textContent||row?.textContent||'').toUpperCase().match(CARD_RE)?.[0]||'';}
 function numberFromCard(card){return String(card?.querySelector('.sc2-num')?.textContent||card?.textContent||'').toUpperCase().match(CARD_RE)?.[0]||'';}
+function cardUiExists(){return !!document.querySelector('#sc2List,#sc2Grid,#sc2VaultGrid');}
 
 function installStyle(){
   let s=document.getElementById('snCardFixedV205Style');
@@ -57,7 +58,7 @@ function setAtlasImage(box,number,isCollection=false){
   ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.fillStyle='#17242e';ctx.fillRect(0,0,canvas.width,canvas.height);
   const cellW=atlas.naturalWidth/6,cellH=atlas.naturalHeight/4;
   ctx.drawImage(atlas,col*cellW,row*cellH,cellW,cellH,0,0,canvas.width,canvas.height);
-  img.src=canvas.toDataURL('image/jpeg',0.94);
+  img.src=canvas.toDataURL('image/jpeg',0.9);
   img.dataset.cardNumber=number;
   box.dataset.snCardNumberV217=number;
   box.classList.add('sn-v217-ready');
@@ -65,7 +66,7 @@ function setAtlasImage(box,number,isCollection=false){
 }
 
 function repair(){
-  installStyle();if(!ready)return 0;let count=0;
+  installStyle();if(!ready||!cardUiExists())return 0;let count=0;
   document.querySelectorAll('#sc2List .sc2-row').forEach(row=>{
     const n=numberFromRow(row),box=row.querySelector('.sc2-thumb');if(!n||!box)return;
     const old=box.querySelector(':scope > img.sn-card-atlas-v217');
@@ -78,42 +79,60 @@ function repair(){
     if(old?.dataset.cardNumber===n){cleanOldArtifactsOnly(box);return;}
     if(setAtlasImage(box,n,true))count++;
   });
+  lastRepairAt=performance.now();
   return count;
 }
 function cleanOldArtifactsOnly(box){
   box?.querySelectorAll(':scope > .sn-v213-art,:scope > .sn-fixed-card-v205,:scope > .sn-card-viewport-v208,:scope > img.sn-card-atlas-v209,:scope > img.sn-card-atlas-v210').forEach(el=>el.remove());
   box?.classList.remove('sn-atlas-ready-v210','sn-v213-ready');
 }
-function queueRepair(){if(repairQueued)return;repairQueued=true;requestAnimationFrame(()=>{repairQueued=false;try{repair();}catch(e){console.error('Snazzle Cards v225 repair',e);}});}
+function queueRepair(force=false){
+  if(repairQueued||!cardUiExists())return;
+  const elapsed=performance.now()-lastRepairAt;
+  if(!force&&elapsed<90){setTimeout(()=>queueRepair(true),Math.ceil(90-elapsed));return;}
+  repairQueued=true;
+  requestAnimationFrame(()=>{repairQueued=false;try{repair();}catch(e){console.error('Snazzle Cards v226 repair',e);}});
+}
+function mutationTouchesCards(mutations){
+  return mutations.some(m=>{
+    const target=m.target instanceof Element?m.target:null;
+    if(target?.closest?.('#sc2List,#sc2Grid,#sc2VaultGrid'))return true;
+    return [...m.addedNodes].some(node=>node instanceof Element&&(node.matches?.('#sc2List,#sc2Grid,#sc2VaultGrid,.sc2-row,.sc2-card,.sc2-media,.sc2-thumb')||node.querySelector?.('#sc2List,#sc2Grid,#sc2VaultGrid,.sc2-row,.sc2-card')));
+  });
+}
 
 function loadAtlas(){
   const src=ATLASES[atlasIndex];
   const atlas=new Image();atlas.decoding='async';
   atlas.onload=()=>{
     if(atlas.naturalWidth<6||atlas.naturalHeight<4){return tryNextAtlas('ongeldige atlasmaat');}
-    window.__snCardAtlasV217=atlas;ready=true;window.__snCardAtlasV217Loaded=src;queueRepair();
-    [60,180,400,800,1500,3000].forEach(ms=>setTimeout(queueRepair,ms));
+    window.__snCardAtlasV217=atlas;ready=true;window.__snCardAtlasV217Loaded=src;
+    queueRepair(true);
+    setTimeout(()=>queueRepair(true),450);
   };
   atlas.onerror=()=>tryNextAtlas('atlas kon niet laden');
   atlas.src=src;
 }
 function tryNextAtlas(reason){
   ready=false;atlasIndex++;
-  if(atlasIndex<ATLASES.length){console.warn(`Snazzle Cards v225: ${reason}, reserve-atlas proberen`);loadAtlas();}
-  else console.error('Snazzle Cards v225: geen kaartatlas kon worden geladen');
+  if(atlasIndex<ATLASES.length){console.warn(`Snazzle Cards v226: ${reason}, reserve-atlas proberen`);loadAtlas();}
+  else console.error('Snazzle Cards v226: geen kaartatlas kon worden geladen');
 }
 
 function start(){
   installStyle();loadAtlas();
   if(!window.__snazzleCardV217Observer){
-    const o=new MutationObserver(ms=>{if(ms.some(m=>m.type==='childList'&&m.addedNodes.length))queueRepair();});
+    const o=new MutationObserver(ms=>{if(mutationTouchesCards(ms))queueRepair();});
     o.observe(document.body,{subtree:true,childList:true});window.__snazzleCardV217Observer=o;
   }
   if(!window.__snazzleCardV217Clicks){
     window.__snazzleCardV217Clicks=true;
-    document.addEventListener('click',e=>{if(e.target.closest('#adminSheet,#collectionSheet,[data-tab],[data-collection-tab],[data-sc2edit]'))[0,60,180,400,900,1800].forEach(ms=>setTimeout(queueRepair,ms));},{passive:true});
+    document.addEventListener('click',e=>{
+      if(!e.target.closest('#collectionSheet,[data-collection-tab],[data-sc2edit],#sc2List,#sc2Grid,#sc2VaultGrid'))return;
+      queueRepair();setTimeout(()=>queueRepair(true),260);
+    },{passive:true});
   }
-  document.addEventListener('snazzle:cards-repaired',()=>[80,300,700,1400].forEach(ms=>setTimeout(queueRepair,ms)));
+  document.addEventListener('snazzle:cards-repaired',()=>{queueRepair();setTimeout(()=>queueRepair(true),320);});
 }
 window.SnazzleCardFixedV205={version:VERSION,repair};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
