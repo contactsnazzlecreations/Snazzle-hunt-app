@@ -1,11 +1,11 @@
-// Snazzle Cards v236 — bewaakt overal de vaste x/48-hoofdteller en 4 × x/12 serietellers.
+// Snazzle Cards v237 — vaste 48-kaartenteller zonder globale renderstormen.
 import { BASE_COLLECTION_SIZE,SERIES,BASE_CARDS } from './snazzle-card-structure-v233.js?v=236';
 
-const VERSION='236.0-counter-guard';
+const VERSION='237.0-smooth-counter';
 const KEYS=['wild','spark','mystic','blaze'];
 const ICONS={wild:'🌿',spark:'✨',mystic:'🔮',blaze:'🔥'};
 const LABELS={wild:'WILD',spark:'SPARK',mystic:'MYSTIC',blaze:'BLAZE'};
-let queued=false,painting=false;
+let queued=false,painting=false,lastPaintAt=0,auditResult=null;
 
 function audit(){
   const perSeries=Object.fromEntries(KEYS.map(k=>[k,Array.isArray(SERIES[k]?.cards)?SERIES[k].cards.length:0]));
@@ -14,7 +14,8 @@ function audit(){
   const ok=BASE_COLLECTION_SIZE===48&&KEYS.length===4&&KEYS.every(k=>perSeries[k]===12)&&denominatorSum===48&&BASE_CARDS.length===48&&uniqueNumbers===48;
   const result={version:VERSION,ok,baseCollectionSize:BASE_COLLECTION_SIZE,seriesCount:KEYS.length,perSeries,denominatorSum,cardDefinitions:BASE_CARDS.length,uniqueNumbers,checkedAt:new Date().toISOString()};
   window.__snazzleCardCounterAuditV236=result;
-  if(!ok)console.error('Snazzle Cards v236 structuurcontrole mislukt',result);
+  if(!ok)console.error('Snazzle Cards v237 structuurcontrole mislukt',result);
+  auditResult=result;
   return result;
 }
 
@@ -29,6 +30,7 @@ function values(){
   }
   return out;
 }
+function collectionUiExists(){return !!document.querySelector('#sc2Block,#collectionSheet,#sc2SummaryCount,#collectionHomeStatus');}
 function setText(el,text){if(el&&el.textContent!==text)el.textContent=text;}
 function ensureStyle(){
   if(document.getElementById('snCardCounterGuard236Style'))return;
@@ -52,9 +54,10 @@ function renderBox(v){
   if(box.innerHTML!==html)box.innerHTML=html;
 }
 function patch(){
-  if(painting)return;painting=true;
+  if(painting||!collectionUiExists())return;
+  painting=true;
   try{
-    ensureStyle();const a=audit(),v=values();
+    ensureStyle();const a=auditResult||audit(),v=values();
     if(!a.ok)return;
     setText(document.getElementById('sc2SummaryCount'),`${v.ready?v.total:'…'}/48`);
     setText(document.getElementById('sc2SummaryText'),v.ready?`${Math.round(v.total/48*100)||0}% van je basiscollectie ontdekt`:'Kaartvoortgang laden…');
@@ -62,15 +65,31 @@ function patch(){
     renderBox(v);
     document.getElementById('sc2ArProgress127')?.remove();
     window.__snazzleCardCounterStateV236={...v,seriesDenominator:12,totalDenominator:48,sum:v.ready?KEYS.reduce((s,k)=>s+v[k],0):null,at:new Date().toISOString()};
+    lastPaintAt=performance.now();
   }finally{painting=false;}
 }
-function queue(){if(queued||painting)return;queued=true;requestAnimationFrame(()=>{queued=false;patch()});}
+function queue(force=false){
+  if(queued||painting||!collectionUiExists())return;
+  const elapsed=performance.now()-lastPaintAt;
+  if(!force&&elapsed<100){setTimeout(()=>queue(true),Math.ceil(100-elapsed));return;}
+  queued=true;requestAnimationFrame(()=>{queued=false;patch()});
+}
+function relevantMutation(m){
+  const target=m.target instanceof Element?m.target:null;
+  if(target?.closest?.('#sc2Block,#collectionSheet'))return true;
+  return [...m.addedNodes].some(n=>n instanceof Element&&(n.matches?.('#sc2Block,#collectionSheet,.sc2-summary,.sc2-card')||n.querySelector?.('#sc2Block,#collectionSheet,.sc2-summary')));
+}
 
 audit();
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',queue,{once:true});else queue();
-new MutationObserver(ms=>{if(!painting&&ms.some(m=>m.type==='childList'||m.type==='characterData'))queue()}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
-document.addEventListener('click',e=>{if(e.target.closest('#collectionSheet,[data-seriespick],[data-sc2f],[data-collection-tab]'))[0,40,120,300].forEach(ms=>setTimeout(queue,ms))},{passive:true});
-window.addEventListener('pageshow',queue);
-[0,100,300,700,1400,3000,6000,10000].forEach(ms=>setTimeout(queue,ms));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>queue(true),{once:true});else queue(true);
+const observer=new MutationObserver(ms=>{if(!painting&&ms.some(relevantMutation))queue();});
+observer.observe(document.body,{childList:true,subtree:true});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#collectionSheet,[data-seriespick],[data-sc2f],[data-collection-tab]'))return;
+  queue();setTimeout(()=>queue(true),220);
+},{passive:true});
+window.addEventListener('pageshow',()=>queue(true),{passive:true});
+setTimeout(()=>queue(true),500);
+setTimeout(()=>queue(true),1400);
 window.SnazzleCardCounterGuardV236={version:VERSION,audit,render:patch,state:()=>window.__snazzleCardCounterStateV236};
-console.info('Snazzle Cards v236 tellerbewaking actief: 4 × 12 = 48');
+console.info('Snazzle Cards v237 tellerbewaking actief: 4 × 12 = 48');
