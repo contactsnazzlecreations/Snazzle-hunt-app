@@ -1,0 +1,56 @@
+name: Set AR radius to 1 km
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/set-ar-radius-1km.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  set-radius:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase Admin dependency
+        run: npm install --prefix functions --omit=dev
+
+      - name: Set and verify AR radius
+        shell: bash
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT }}
+        run: |
+          set -euo pipefail
+          SA_JSON="${FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT:-${FIREBASE_SERVICE_ACCOUNT:-}}"
+          if [ -z "$SA_JSON" ]; then
+            echo 'Geen Firebase service-account secret gevonden.' >&2
+            exit 1
+          fi
+          export SA_JSON
+          node <<'NODE'
+          const admin = require('./functions/node_modules/firebase-admin');
+          const serviceAccount = JSON.parse(process.env.SA_JSON);
+          admin.initializeApp({credential: admin.credential.cert(serviceAccount), projectId: 'snazzle-hunt'});
+          const db = admin.firestore();
+          const ref = db.collection('hunts').doc('snazzle_ar_world_v1');
+          (async () => {
+            await ref.set({arMaxSearchRadiusKm: 1, updatedAt: new Date().toISOString()}, {merge: true});
+            const snap = await ref.get();
+            const value = snap.data()?.arMaxSearchRadiusKm;
+            if (value !== 1) throw new Error(`Controle mislukt: arMaxSearchRadiusKm=${value}`);
+            console.log('AR_RADIUS_VERIFIED=1 km');
+            console.log('EXPECTED_NO_RESULT_MESSAGE=Geen actieve Snazzle binnen 1 km. Bekijk de kaart voor andere Snazzle-zones.');
+          })().then(()=>process.exit(0)).catch(err=>{console.error(err);process.exit(1);});
+          NODE
