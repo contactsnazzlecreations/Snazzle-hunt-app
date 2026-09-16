@@ -1,8 +1,8 @@
-// Snazzle Core Performance v248 — voorkomt dubbele sessie-listeners en onnodige UI-activiteit.
+// Snazzle Core Performance v248.1 — voorkomt dubbele sessie-listeners en onnodige UI-activiteit.
 import { getApps,getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
-import { getAuth,signOut,signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { getAuth,signOut } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
-const VERSION='248.0';
+const VERSION='248.1';
 const app=getApps().length?getApp():null;
 const auth=app?getAuth(app):null;
 let logoutBusy=false;
@@ -16,10 +16,9 @@ function showToast(message){
   window.__snPerfToast=setTimeout(()=>toast.classList.remove('show'),2600);
 }
 
-// app-core had a logout path that reset its listener flag while old Firestore
-// subscriptions were still alive. That could create duplicate snapshots/renders
-// after several beheer-login/logout cycles. Keep the existing subscriptions alive
-// and only switch the Firebase session.
+// app-core zet zelf na signOut de anonieme sessie terug aan. We resetten hier bewust
+// niet zijn listener-vlag en starten ook geen tweede anonieme login: zo blijft er één
+// Firestore-luisterlaag actief, ook na meerdere beheer-login/logout-cycli.
 function installSafeAdminLogout(){
   const button=document.getElementById('adminLogoutBtn');
   if(!button||button.dataset.snPerf248==='1'||!auth)return false;
@@ -31,7 +30,6 @@ function installSafeAdminLogout(){
     button.disabled=true;
     try{
       await signOut(auth);
-      await signInAnonymously(auth);
       document.getElementById('adminSheet')?.classList.remove('show');
       showToast('Beheer uitgelogd');
     }catch(err){
