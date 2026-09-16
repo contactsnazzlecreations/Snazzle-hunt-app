@@ -3,8 +3,8 @@
   "short_name": "Snazzle",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#13a8e8",
+  "background_color": "#083a24",
+  "theme_color": "#146b3a",
   "icons": [
     {
       "src": "snazzle-icon-192.png",
