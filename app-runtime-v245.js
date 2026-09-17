@@ -1,6 +1,6 @@
-// Snazzle Hunt v252 — staged runtime zonder interne shop; Shop verwijst extern naar snazzle.nl.
+// Snazzle Hunt v253 — staged runtime met visueel Snazzle Nieuws en externe shop.
 
-const runtimeVersion='20260917-v252-external-shop';
+const runtimeVersion='20260917-v253-news-feed';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -98,7 +98,7 @@ document.dispatchEvent(new CustomEvent('snazzle:admin-ui-ready'));markAdminUiRea
 await idle();await waitIfArPriority();
 
 const fastBundles=[
-  ['./snazzle-ar-legacy-cleanup-v187.js','./snazzle-news-v46.js','./snazzle-parent-hub-v65.js'],
+  ['./snazzle-ar-legacy-cleanup-v187.js','./snazzle-news-v47.js','./snazzle-parent-hub-v65.js'],
   ['./snazzle-card-system-v2.js','./snazzle-card-fixed-v205.js','./snazzle-world-hub-v47.js'],
   ['./snazzle-auto-update-v51.js','./snazzle-privacy-v52.js','./snazzle-parent-close-fix-v76.js'],
   ['./kids-fun.js','./snazzle-route.js','./snazzle-collection.js','./snazzle-rewards-direct-v154.js'],
