@@ -1,4 +1,4 @@
-name: Snazzle performance stability v248
+name: Snazzle release v260 home backgrounds
 
 on:
   push:
@@ -17,141 +17,59 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Apply smooth-start and listener stability fixes
+      - name: Activate v260 and authoritative home backgrounds
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
+          import re, json
 
-          # 1. HTML shell: stop defeating the browser cache on every start.
-          p = Path('index.html')
-          html = p.read_text(encoding='utf-8')
-          html = re.sub(r'\n?<meta http-equiv="Cache-Control"[^>]*>', '', html, flags=re.I)
-          html = re.sub(r'\n?<meta http-equiv="Pragma"[^>]*>', '', html, flags=re.I)
-          html = re.sub(r'\n?<meta http-equiv="Expires"[^>]*>', '', html, flags=re.I)
-          if 'rel="preconnect" href="https://www.gstatic.com"' not in html:
-              html = html.replace(
-                  '<link rel="manifest" href="manifest.json">',
-                  '<link rel="preconnect" href="https://www.gstatic.com" crossorigin>\n  <link rel="manifest" href="manifest.json">'
-              )
-          fixed_loader = '<script type="module" src="./app.js?v=248"></script>'
-          html = re.sub(
-              r'<script\s+type=["\']module["\']>\s*import\(`\.\/app\.js\?v=\$\{Date\.now\(\)\}`\);\s*</script>',
-              fixed_loader,
-              html,
-              flags=re.I
-          )
-          html = re.sub(
-              r'<script\s+type=["\']module["\']\s+src=["\']\.\/app\.js(?:\?v=[^"\']*)?["\']\s*></script>',
-              fixed_loader,
-              html,
-              flags=re.I
-          )
-          p.write_text(html, encoding='utf-8')
+          VERSION='260'
+          RUNTIME='20260917-v260-home-backgrounds'
 
-          # 2. Core: prevent duplicate Firestore listeners after admin login/logout
-          # and batch rapid snapshot renders into one paint.
-          p = Path('app-core.js')
-          core = p.read_text(encoding='utf-8')
-          old_state = "let listenersStarted = false;\nlet editingHuntId = null;"
-          new_state = "let listenersStarted = false;\nlet centralUnsubscribers = [];\nlet listenerUserId = '';\nlet renderTimer = null;\nlet editingHuntId = null;"
-          if old_state in core:
-              core = core.replace(old_state, new_state, 1)
+          # index.html: force a genuinely new entrypoint URL so Android/PWA cannot keep v257.
+          p=Path('index.html')
+          html=p.read_text(encoding='utf-8')
+          html=re.sub(r'(href="\.\/app\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
+          html=re.sub(r'(href="\.\/app-runtime-v245\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
+          html=re.sub(r'(href="\.\/snazzle-clean-home-v31\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
+          html=re.sub(r'(src="\.\/snazzle-clean-home-v31\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
+          html=re.sub(r'(src="\.\/app\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
+          if 'snazzle-home-card-backgrounds-v75.js' not in html:
+              needle=f'<link rel="modulepreload" href="./snazzle-clean-home-v31.js?v={VERSION}">'
+              html=html.replace(needle, needle+f'\n<link rel="modulepreload" href="./snazzle-home-card-backgrounds-v75.js?v={VERSION}">',1)
+          p.write_text(html,encoding='utf-8')
 
-          old_render = "function renderAll(){ renderHome(); }"
-          new_render = """function renderAll(){ renderHome(); }
-function scheduleRenderAll(){
-  clearTimeout(renderTimer);
-  renderTimer=setTimeout(()=>{
-    renderTimer=null;
-    requestAnimationFrame(()=>renderAll());
-  },35);
-}"""
-          if old_render in core:
-              core = core.replace(old_render, new_render, 1)
+          # app.js: bump every fixed v258 URL and old runtime cache key.
+          p=Path('app.js')
+          app=p.read_text(encoding='utf-8')
+          app=app.replace('Snazzle Hunt v258','Snazzle Hunt v260')
+          app=app.replace('v=258',f'v={VERSION}')
+          app=app.replace('20260917-v254-news-background',RUNTIME)
+          if "'./snazzle-home-card-backgrounds-v75.js?v=260'" not in app:
+              app=app.replace("    './snazzle-clean-home-v31.js?v=260'\n  ];", "    './snazzle-clean-home-v31.js?v=260',\n    './snazzle-home-card-backgrounds-v75.js?v=260'\n  ];",1)
+          p.write_text(app,encoding='utf-8')
 
-          start = core.find('function startCentralListeners(){')
-          end = core.find('async function ensureAuth(){', start)
-          if start == -1 or end == -1:
-              raise SystemExit('startCentralListeners block not found')
-          listeners = """function stopCentralListeners(){
-  centralUnsubscribers.splice(0).forEach(off=>{try{off?.();}catch{}});
-  listenersStarted=false;
-  listenerUserId='';
-}
-function startCentralListeners(){
-  if(!currentUser) return;
-  if(listenersStarted && listenerUserId===currentUser.uid) return;
-  stopCentralListeners();
-  listenersStarted=true;
-  listenerUserId=currentUser.uid;
-  centralUnsubscribers.push(onSnapshot(collection(db,'villages'),snap=>{
-    const arr=snap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.active!==false).map(x=>x.name).filter(Boolean).sort((a,b)=>a.localeCompare(b,'nl'));
-    if(arr.length) villages=arr; else villages=(localSettings.villages?.length?localSettings.villages:fallbackVillages);
-    centralReady=true; scheduleRenderAll();
-  },e=>console.warn('villages listener',e)));
-  centralUnsubscribers.push(onSnapshot(collection(db,'hunts'),async snap=>{
-    const arr=snap.docs.map(d=>({id:d.id,...d.data()}));
-    let nextHunts;
-    if(arr.length) nextHunts=arr; else {
-      const legacy=loadLegacyHunts();
-      nextHunts=legacy.map(h=>({...h,id:h.id||('hunt-'+Date.now()),imageUrl:h.imageUrl||h.image||''}));
-    }
-    await checkFoundHunts(nextHunts);
-    hunts=nextHunts;
-    centralReady=true; scheduleRenderAll();
-  },e=>console.warn('hunts listener',e)));
-  centralUnsubscribers.push(onSnapshot(collection(db,'publicProfiles'),snap=>{
-    publicProfiles=snap.docs.map(d=>({id:d.id,...d.data()}));
-    renderFriends();
-  },e=>{
-    console.warn('friends listener',e);
-    ensureFriendsUI();
-    const summary=$('#friendsSummary'), list=$('#friendsList');
-    if(summary) summary.innerHTML='<span>👥 Vriendenlijst nog niet gekoppeld</span>';
-    if(list) list.innerHTML='<div class=\"friend-empty\">De app is klaar, maar Firebase moet de vriendenlijst nog toestemming geven.</div>';
-  }));
-}
-"""
-          core = core[:start] + listeners + core[end:]
+          # Runtime: load the new background manager immediately after the clean home shell.
+          p=Path('app-runtime-v245.js')
+          rt=p.read_text(encoding='utf-8')
+          rt=rt.replace('Snazzle Hunt v258','Snazzle Hunt v260')
+          rt=re.sub(r"const runtimeVersion='[^']+';",f"const runtimeVersion='{RUNTIME}';",rt,count=1)
+          rt=rt.replace('./snazzle-clean-home-v31.js?v=258','./snazzle-clean-home-v31.js?v=260')
+          rt=rt.replace('./snazzle-central-visuals-v54.js?v=258','./snazzle-central-visuals-v54.js?v=260')
+          marker="await safeImport('./snazzle-clean-home-v31.js?v=260');"
+          addition=marker+"\nawait safeImport('./snazzle-home-card-backgrounds-v75.js');"
+          if "await safeImport('./snazzle-home-card-backgrounds-v75.js');" not in rt:
+              rt=rt.replace(marker,addition,1)
+          p.write_text(rt,encoding='utf-8')
 
-          core = core.replace(
-              "currentUser=user;\n    if(!user){ try{ await signInAnonymously(auth); }catch(e){ toast('Verbinding met Firebase lukt niet'); console.error(e); } return; }",
-              "currentUser=user;\n    if(!user){ stopCentralListeners(); try{ await signInAnonymously(auth); }catch(e){ toast('Verbinding met Firebase lukt niet'); console.error(e); } return; }",
-              1
-          )
-          core = core.replace(
-              "checkOnboarding();\n    renderAll();",
-              "checkOnboarding();\n    scheduleRenderAll();",
-              1
-          )
-          core = core.replace(
-              "try { await signOut(auth); adminProfile=null; listenersStarted=false; await signInAnonymously(auth); closeSheet('adminSheet'); toast('Beheer uitgelogd'); }",
-              "try { stopCentralListeners(); await signOut(auth); adminProfile=null; await signInAnonymously(auth); closeSheet('adminSheet'); toast('Beheer uitgelogd'); }",
-              1
-          )
-          core = core.replace(
-              "setInterval(()=>{ renderActive(); renderFriends(); },30000);",
-              "setInterval(()=>{ if(document.visibilityState==='visible'){ renderActive(); renderFriends(); } },30000);",
-              1
-          )
-          p.write_text(core, encoding='utf-8')
-
-          # 3. Analytics: do not leave an idle stats timer behind after account changes.
-          p = Path('snazzle-admin-analytics-v218.js')
-          stats = p.read_text(encoding='utf-8')
-          marker = "function clearHeartbeat(){if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}}"
-          if 'function clearStatsTimer()' not in stats:
-              stats = stats.replace(marker, marker + "\nfunction clearStatsTimer(){if(statsTimer){clearInterval(statsTimer);statsTimer=null;}}", 1)
-          stats = stats.replace(
-              "currentUser=user||null;\n    clearHeartbeat();",
-              "currentUser=user||null;\n    clearHeartbeat();\n    clearStatsTimer();",
-              1
-          )
-          p.write_text(stats, encoding='utf-8')
+          # Installed PWA launches through a versioned start URL after manifest refresh.
+          p=Path('manifest.json')
+          manifest=json.loads(p.read_text(encoding='utf-8'))
+          manifest['start_url']=f'./?v={VERSION}'
+          p.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
 
-      - name: Commit performance fixes
+      - name: Commit v260 activation
         run: |
           if git diff --quiet; then
             echo "No changes needed"
@@ -159,6 +77,6 @@ function startCentralListeners(){
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html app-core.js snazzle-admin-analytics-v218.js
-          git commit -m "Stabilize Snazzle startup, cache and Firebase listeners"
+          git add index.html app.js app-runtime-v245.js manifest.json
+          git commit -m "Activate v260 home background manager"
           git push
