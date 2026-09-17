@@ -52,7 +52,7 @@ async function cloudSafe(dataUrl){
   }
   throw new Error('Een afbeelding is te groot om centraal te bewaren');
 }
-function queueReload(){clearTimeout(reloadTimer);reloadTimer=setTimeout(()=>{const active=document.activeElement;if(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName))return queueReload();toast('Jouw Snazzle-afbeeldingen zijn bijgewerkt ✨');setTimeout(()=>location.reload(),650);},500);}
+function queueReload(){clearTimeout(reloadTimer);reloadTimer=setTimeout(()=>{document.dispatchEvent(new CustomEvent('snazzle:visual-assets-updated'));try{window.SnazzleHomeCardBackgroundsV75?.refresh?.(true);}catch{}},120);}
 async function readRemoteOnce(){
   const snap=await getDocs(query(collection(db,COLLECTION),where('purpose','==',PURPOSE)));const map=new Map();
   snap.docs.forEach(d=>{const x=d.data()||{},key=String(x.key||'');if(key)map.set(key,{dataUrl:String(x.dataUrl||''),cleared:x.cleared===true});});return map;
@@ -140,4 +140,4 @@ onAuthStateChanged(auth,async user=>{
   window.dispatchEvent(new CustomEvent('snazzle:visual-sync-ready',{detail:{superAdmin}}));
 });
 watchAdminImageEdits();
-window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,clear:clearRemote,local:allLocal};
+window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,saveKey:saveOne,clear:clearRemote,local:allLocal};
