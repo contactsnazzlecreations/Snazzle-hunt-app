@@ -1,201 +1,73 @@
-name: Snazzle release v262 image manager repair
+name: Snazzle v262 cache activation
 
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/permanent-cache-bust.yml'
+      - 'snazzle-clean-home-v31.js'
+      - 'snazzle-home-card-backgrounds-v75.js'
+      - 'snazzle-central-visuals-v54.js'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  patch:
+  activate:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Repair image uploads and activate v262
+      - name: Activate fresh v262 assets
         run: |
           python - <<'PY'
           from pathlib import Path
           import re, json
 
-          VERSION='262'
-          RUNTIME='20260917-v262-image-manager'
+          version='262'
+          runtime='20260917-v262-image-manager'
 
-          # 1) Force fresh entrypoints on Android/PWA.
           p=Path('index.html')
-          html=p.read_text(encoding='utf-8')
-          for name in ['app.js','app-runtime-v245.js','snazzle-clean-home-v31.js','snazzle-home-card-backgrounds-v75.js']:
-              html=re.sub(rf'(href="\.\/{re.escape(name)}\?v=)[^"]+', rf'\g<1>{VERSION}', html)
-          html=re.sub(r'(src="\.\/snazzle-clean-home-v31\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
-          html=re.sub(r'(src="\.\/app\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
-          p.write_text(html,encoding='utf-8')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'(href="\.\/app\.js\?v=)[^"]+', r'\g<1>'+version, s)
+          s=re.sub(r'(href="\.\/app-runtime-v245\.js\?v=)[^"]+', r'\g<1>'+version, s)
+          s=re.sub(r'(href="\.\/snazzle-clean-home-v31\.js\?v=)[^"]+', r'\g<1>'+version, s)
+          s=re.sub(r'(href="\.\/snazzle-home-card-backgrounds-v75\.js\?v=)[^"]+', r'\g<1>'+version, s)
+          s=re.sub(r'(src="\.\/snazzle-clean-home-v31\.js\?v=)[^"]+', r'\g<1>'+version, s)
+          s=re.sub(r'(src="\.\/app\.js\?v=)[^"]+', r'\g<1>'+version, s)
+          p.write_text(s,encoding='utf-8')
 
           p=Path('app.js')
-          app=p.read_text(encoding='utf-8')
-          app=re.sub(r'Snazzle Hunt v\d+',f'Snazzle Hunt v{VERSION}',app,count=1)
-          app=re.sub(r'v=\d+',f'v={VERSION}',app)
-          app=re.sub(r'20260917-v\d+-[a-z0-9-]+',RUNTIME,app)
-          p.write_text(app,encoding='utf-8')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'Snazzle Hunt v\d+', 'Snazzle Hunt v'+version, s, count=1)
+          s=re.sub(r'v=\d+', 'v='+version, s)
+          s=re.sub(r'20260917-v\d+-[a-z0-9-]+', runtime, s)
+          p.write_text(s,encoding='utf-8')
 
           p=Path('app-runtime-v245.js')
-          rt=p.read_text(encoding='utf-8')
-          rt=re.sub(r'Snazzle Hunt v\d+',f'Snazzle Hunt v{VERSION}',rt,count=1)
-          rt=re.sub(r"const runtimeVersion='[^']+';",f"const runtimeVersion='{RUNTIME}';",rt,count=1)
-          rt=re.sub(r'\.\/snazzle-clean-home-v31\.js\?v=\d+',f'./snazzle-clean-home-v31.js?v={VERSION}',rt)
-          rt=re.sub(r'\.\/snazzle-central-visuals-v54\.js\?v=\d+',f'./snazzle-central-visuals-v54.js?v={VERSION}',rt)
-          p.write_text(rt,encoding='utf-8')
-
-          # 2) v75 only applies backgrounds. It must no longer steal the file-input change event
-          # from the proven v31 image manager.
-          p=Path('snazzle-home-card-backgrounds-v75.js')
-          v75=p.read_text(encoding='utf-8')
-          v75=v75.replace("const VERSION75='75.0.0';","const VERSION75='75.1.0';")
-          pattern=r"function installAdminInterceptors75\(\)\{.*?\n\}\n\nfunction installObserver75\(\)\{"
-          replacement="""function installAdminInterceptors75(){
-  if(window.__snazzleV75AdminInterceptors)return;
-  window.__snazzleV75AdminInterceptors=true;
-  // Uploaden/verwijderen gebeurt uitsluitend in snazzle-clean-home-v31.
-  // v75 is alleen verantwoordelijk voor het opnieuw toepassen op laat gebouwde homekaarten.
-}
-
-function installObserver75(){"""
-          v75,n=re.subn(pattern,replacement,v75,count=1,flags=re.S)
-          if n!=1:
-              raise SystemExit('v75 interceptor block not found')
-          p.write_text(v75,encoding='utf-8')
-
-          # 3) v31 becomes the single writer for all image-manager cards.
-          p=Path('snazzle-clean-home-v31.js')
-          v31=p.read_text(encoding='utf-8')
-          v31=v31.replace("const V31='31.3.0';","const V31='31.4.0';")
-
-          old_push="""function queueCentralPush31(){
-  let tries=0;
-  const run=()=>{
-    const api=window.SnazzleVisualSyncV54;
-    if(api?.push){Promise.resolve(api.push()).catch(()=>{});return;}
-    if(++tries<120)setTimeout(run,500);
-  };
-  setTimeout(run,100);
-}"""
-          new_push="""function saveCentralKey31(key,data){
-  let tries=0;
-  const run=()=>{
-    const api=window.SnazzleVisualSyncV54;
-    api?.markDirty?.(key);
-    if(api?.saveKey){Promise.resolve(api.saveKey(key,data)).catch(()=>{});return;}
-    if(api?.save){Promise.resolve(api.save(key,data)).catch(()=>{});return;}
-    if(api?.push){Promise.resolve(api.push()).catch(()=>{});return;}
-    if(++tries<120)setTimeout(run,500);
-  };
-  setTimeout(run,60);
-}"""
-          if old_push not in v31:
-              raise SystemExit('v31 central push block not found')
-          v31=v31.replace(old_push,new_push,1)
-
-          old_apply="""  bg31(q31('#snBiebHome73'),await get31('biebCard'));
-  bg31(q31('#collectionHomeCard'),await get31('collectionCard'));
-  bg31(q31('#snNewsLaunch'),await get31('newsCard'));"""
-          new_apply="""  bg31(q31('#snBiebHome73')||q31('.sn-bieb-home'),await get31('biebCard'));
-  const collectionBg31=await get31('collectionCard');
-  bg31(q31('#collectionHomeCard')||q31('.collection-home-card'),collectionBg31);
-  const newsBg31=await get31('newsCard');
-  bg31(q31('#snNewsLaunch')||q31('.sn-news-launch'),newsBg31);
-  bg31(q31('.home-card.sn-news-launch-card'),newsBg31);"""
-          if old_apply not in v31:
-              raise SystemExit('v31 late-card apply block not found')
-          v31=v31.replace(old_apply,new_apply,1)
-
-          old_add="""async function addDbCard31(grid,key,label){
-  const src=await get31(key),item=card31(label,src),input=item.querySelector('input'),remove=item.querySelector('button');
-  input.onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const icon=/Icon$|TileIcon$|^nav/.test(key),data=await compress31(file,icon?720:key.includes('Character')?950:1200,icon?.90:.86);await set31(key,data);input.value='';item.querySelector('.v31-image-preview').innerHTML=previewHtml31(data);await applyExtraImages31();queueCentralPush31();toast31('Afbeelding aangepast ✓');}catch(err){toast31(err.message||'Opslaan mislukt');}};
-  remove.onclick=async()=>{await del31(key);item.querySelector('.v31-image-preview').innerHTML=previewHtml31('');await applyExtraImages31();const cleared=await clearCentral31(key);toast31(cleared?'Afbeelding overal verwijderd':'Afbeelding verwijderd; centrale sync volgt');};grid.appendChild(item);
-}"""
-          new_add="""async function addDbCard31(grid,key,label){
-  const src=await get31(key),item=card31(label,src),input=item.querySelector('input'),remove=item.querySelector('button');
-  item.dataset.assetKey=key;
-  input.dataset.assetKey=key;
-  input.onchange=async e=>{
-    const file=e.target.files?.[0];if(!file)return;
-    const preview=item.querySelector('.v31-image-preview');
-    const previous=preview?.innerHTML||'';
-    if(preview)preview.textContent='Afbeelding verwerken…';
-    try{
-      window.SnazzleVisualSyncV54?.markDirty?.(key);
-      const icon=/Icon$|TileIcon$|^nav/.test(key);
-      const data=await compress31(file,icon?720:key.includes('Character')?950:1500,icon?.90:.87);
-      await set31(key,data);
-      input.value='';
-      if(preview)preview.innerHTML=previewHtml31(data);
-      await applyExtraImages31();
-      document.dispatchEvent(new CustomEvent('snazzle:visual-asset-changed',{detail:{key,source:'v31'}}));
-      saveCentralKey31(key,data);
-      toast31('Afbeelding aangepast ✓');
-    }catch(err){
-      if(preview)preview.innerHTML=previous;
-      console.error('Snazzle afbeelding upload',key,err);
-      toast31(err?.message||'Opslaan mislukt');
-    }
-  };
-  remove.onclick=async()=>{
-    window.SnazzleVisualSyncV54?.markDirty?.(key);
-    await del31(key);
-    item.querySelector('.v31-image-preview').innerHTML=previewHtml31('');
-    await applyExtraImages31();
-    document.dispatchEvent(new CustomEvent('snazzle:visual-asset-changed',{detail:{key,source:'v31',deleted:true}}));
-    const cleared=await clearCentral31(key);
-    toast31(cleared?'Afbeelding overal verwijderd':'Afbeelding verwijderd; centrale sync volgt');
-  };
-  grid.appendChild(item);
-}"""
-          if old_add not in v31:
-              raise SystemExit('v31 addDbCard block not found')
-          v31=v31.replace(old_add,new_add,1)
-
-          marker="if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init31,{once:true});else init31();"
-          hook="""document.addEventListener('snazzle:visual-assets-updated',()=>{cache31.clear();queue31();});
-document.addEventListener('snazzle:visual-asset-changed',event=>{const key=String(event.detail?.key||'');if(key)cache31.delete(key);setTimeout(queue31,20);});
-"""+marker
-          if marker not in v31:
-              raise SystemExit('v31 init marker not found')
-          v31=v31.replace(marker,hook,1)
-          p.write_text(v31,encoding='utf-8')
-
-          # 4) Protect freshly edited local images from an older remote snapshot.
-          p=Path('snazzle-central-visuals-v54.js')
-          cv=p.read_text(encoding='utf-8')
-          cv=cv.replace("let remoteMap=new Map();","let remoteMap=new Map();\nconst dirtyKeys=new Set();",1)
-          cv=cv.replace("async function saveOne(key,raw){\n  if(!superAdmin) return false;","async function saveOne(key,raw){\n  if(!superAdmin) return false;\n  dirtyKeys.add(String(key));",1)
-          cv=cv.replace("    toast('Afbeelding centraal opgeslagen ✓');\n    return true;","    dirtyKeys.delete(String(key));\n    toast('Afbeelding centraal opgeslagen ✓');\n    return true;",1)
-          cv=cv.replace("async function clearRemote(key){\n  if(!superAdmin)return false;","async function clearRemote(key){\n  if(!superAdmin)return false;\n  dirtyKeys.add(String(key));",1)
-          cv=cv.replace("  remoteMap.set(String(key),{dataUrl:'',cleared:true});\n  return true;","  remoteMap.set(String(key),{dataUrl:'',cleared:true});\n  dirtyKeys.delete(String(key));\n  return true;",1)
-          cv=cv.replace("    for(const [key,remote] of next){\n      if(remote.cleared)","    for(const [key,remote] of next){\n      if(dirtyKeys.has(String(key)))continue;\n      if(remote.cleared)",1)
-          cv=cv.replace(
-              "window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,saveKey:saveOne,clear:clearRemote,local:allLocal};",
-              "window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,saveKey:saveOne,markDirty:key=>dirtyKeys.add(String(key)),clear:clearRemote,local:allLocal};"
-          )
-          p.write_text(cv,encoding='utf-8')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'Snazzle Hunt v\d+', 'Snazzle Hunt v'+version, s, count=1)
+          s=re.sub(r"const runtimeVersion='[^']+';", "const runtimeVersion='"+runtime+"';", s, count=1)
+          s=re.sub(r'\.\/snazzle-clean-home-v31\.js\?v=\d+', './snazzle-clean-home-v31.js?v='+version, s)
+          s=re.sub(r'\.\/snazzle-central-visuals-v54\.js\?v=\d+', './snazzle-central-visuals-v54.js?v='+version, s)
+          p.write_text(s,encoding='utf-8')
 
           p=Path('manifest.json')
-          manifest=json.loads(p.read_text(encoding='utf-8'))
-          manifest['start_url']=f'./?v={VERSION}'
-          p.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          data['start_url']='./?v='+version
+          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
 
-      - name: Commit v262 repair
+      - name: Commit activation
         run: |
           if git diff --quiet; then
-            echo "No changes needed"
+            echo "Already active"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html app.js app-runtime-v245.js snazzle-clean-home-v31.js snazzle-home-card-backgrounds-v75.js snazzle-central-visuals-v54.js manifest.json
-          git commit -m "Fix image manager uploads and home background persistence v262"
+          git add index.html app.js app-runtime-v245.js manifest.json
+          git commit -m "Activate Snazzle image manager v262"
           git push
