@@ -1,4 +1,4 @@
-// Snazzle Hunt v255 — stabiele eenmalige opstart zonder zichtbaar herladen.
+// Snazzle Hunt v256 — stabiele eenmalige opstart met speels Snazzle-laadscherm.
 // Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -6,14 +6,14 @@ const quiet=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>resolve()));
 const idle=()=>new Promise(resolve=>{'requestIdleCallback'in window?requestIdleCallback(()=>resolve(),{timeout:500}):setTimeout(resolve,60);});
 
-const BOOT_ID='snazzleStableBootV255';
-const BOOT_STYLE_ID='snazzleStableBootStyleV255';
+const BOOT_ID='snazzleStableBootV256';
+const BOOT_STYLE_ID='snazzleStableBootStyleV256';
 let bootReleased=false;
 function installStableBoot(){
   if(!document.getElementById(BOOT_STYLE_ID)){
     const style=document.createElement('style');
     style.id=BOOT_STYLE_ID;
-    style.textContent=`#${BOOT_ID}{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:radial-gradient(circle at 50% 32%,rgba(172,237,80,.22),transparent 26%),linear-gradient(180deg,#176c3b 0%,#0c4f2e 58%,#073820 100%);color:#fff;text-align:center;padding:24px;opacity:1;transition:opacity .24s ease}#${BOOT_ID}.sn-boot-away{opacity:0;pointer-events:none}.sn-boot-card{width:min(360px,88vw);padding:28px 24px 25px;border-radius:28px;background:rgba(8,54,32,.68);border:2px solid rgba(255,223,111,.5);box-shadow:0 18px 48px rgba(0,0,0,.28)}.sn-boot-duck{font-size:58px;line-height:1;filter:drop-shadow(0 6px 8px rgba(0,0,0,.22));animation:snBootBob 1.15s ease-in-out infinite alternate}.sn-boot-title{margin:13px 0 4px;font-size:27px;font-weight:1000;letter-spacing:.2px;color:#ffd65a;text-shadow:0 2px 6px rgba(0,0,0,.28)}.sn-boot-copy{font-size:15px;font-weight:780;color:#f7f4dc}.sn-boot-track{height:8px;margin-top:19px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.14)}.sn-boot-bar{height:100%;width:44%;border-radius:99px;background:linear-gradient(90deg,#ffe36a,#a9ed50);animation:snBootSlide 1s ease-in-out infinite}@keyframes snBootBob{to{transform:translateY(-7px) rotate(2deg)}}@keyframes snBootSlide{0%{transform:translateX(-115%)}100%{transform:translateX(265%)}}@media(prefers-reduced-motion:reduce){.sn-boot-duck,.sn-boot-bar{animation:none}.sn-boot-bar{width:68%}}`;
+    style.textContent=`#${BOOT_ID}{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:radial-gradient(circle at 50% 32%,rgba(172,237,80,.22),transparent 26%),linear-gradient(180deg,#176c3b 0%,#0c4f2e 58%,#073820 100%);color:#fff;text-align:center;padding:24px;opacity:1;transition:opacity .24s ease}#${BOOT_ID}.sn-boot-away{opacity:0;pointer-events:none}.sn-boot-card{width:min(360px,88vw);padding:32px 24px 26px;border-radius:28px;background:rgba(8,54,32,.68);border:2px solid rgba(255,223,111,.5);box-shadow:0 18px 48px rgba(0,0,0,.28)}.sn-boot-title{margin:0 0 9px;font-family:"Comic Sans MS","Trebuchet MS",cursive,sans-serif;font-size:clamp(30px,9vw,42px);line-height:1.03;font-weight:1000;letter-spacing:.3px;color:#ffd65a;text-shadow:0 3px 0 #7b4a13,0 7px 18px rgba(0,0,0,.3);transform:rotate(-2deg);animation:snBootWiggle 1.8s ease-in-out infinite alternate}.sn-boot-copy{font-size:15px;font-weight:800;color:#fff7df}.sn-boot-track{height:8px;margin-top:20px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.14)}.sn-boot-bar{height:100%;width:44%;border-radius:99px;background:linear-gradient(90deg,#ffe36a,#a9ed50);animation:snBootSlide 1s ease-in-out infinite}@keyframes snBootWiggle{from{transform:rotate(-2deg) translateY(0)}to{transform:rotate(1deg) translateY(-2px)}}@keyframes snBootSlide{0%{transform:translateX(-115%)}100%{transform:translateX(265%)}}@media(prefers-reduced-motion:reduce){.sn-boot-title,.sn-boot-bar{animation:none}.sn-boot-title{transform:none}.sn-boot-bar{width:68%}}`;
     document.head.appendChild(style);
   }
   if(document.getElementById(BOOT_ID))return;
@@ -21,7 +21,7 @@ function installStableBoot(){
   boot.id=BOOT_ID;
   boot.setAttribute('role','status');
   boot.setAttribute('aria-live','polite');
-  boot.innerHTML='<div class="sn-boot-card"><div class="sn-boot-duck">🦆✨</div><div class="sn-boot-title">Snazzle Hunt</div><div class="sn-boot-copy">Even de Snazzle-magie laden…</div><div class="sn-boot-track" aria-hidden="true"><div class="sn-boot-bar"></div></div></div>';
+  boot.innerHTML='<div class="sn-boot-card"><div class="sn-boot-title">Snazzle komt eraan</div><div class="sn-boot-copy">Even geduld…</div><div class="sn-boot-track" aria-hidden="true"><div class="sn-boot-bar"></div></div></div>';
   document.body.appendChild(boot);
 }
 function releaseStableBoot(){
@@ -34,7 +34,7 @@ function releaseStableBoot(){
 }
 function preloadCriticalAssets(){
   const moduleHrefs=[
-    './app-runtime-v245.js?v=255',
+    './app-runtime-v245.js?v=256',
     './snazzle-runtime-stability-v71.js?fresh=20260917-v254-news-background',
     './snazzle-image-stability-v72.js?fresh=20260917-v254-news-background',
     './snazzle-leaflet-isolation-v190.js?fresh=20260917-v254-news-background',
@@ -65,7 +65,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=255`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=256`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -78,7 +78,7 @@ async function pacedImports(entries){
 
 // Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
 // kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
-await import('./app-runtime-v245.js?v=255');
+await import('./app-runtime-v245.js?v=256');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
