@@ -190,6 +190,27 @@ function quickIconHolder31(button,fallback){
   else button.prepend(holder);
   return holder;
 }
+function ensureFastBiebShell31(){
+  let button=q31('#snBiebHome73');
+  if(button)return button;
+  const quick=q31('.quick');if(!quick)return null;
+  button=document.createElement('button');
+  button.id='snBiebHome73';button.className='sn-bieb-home sn-bieb-home-shell';button.type='button';
+  button.innerHTML='<span class="icon">📚</span><span><strong>De Bieb</strong><small>Vul je eigen boekenkast en bouw met lezen je Snazzle-leeshoek.</small></span><span class="arrow">›</span>';
+  button.addEventListener('click',async()=>{
+    if(window.SnazzleBiebV73?.open){window.SnazzleBiebV73.open();return;}
+    button.setAttribute('aria-busy','true');
+    try{
+      if(typeof window.__snazzleImport==='function')await window.__snazzleImport('./snazzle-bieb-v73.js');
+      else await import('./snazzle-bieb-v73.js?v=264');
+      window.SnazzleBiebV73?.open?.();
+    }catch(err){console.warn('Snazzle Bieb snel openen',err);toast31('De Bieb wordt nog geladen…');}
+    finally{button.removeAttribute('aria-busy');}
+  });
+  quick.insertAdjacentElement('afterend',button);
+  return button;
+}
+
 function saveCentralKey31(key,data){
   let tries=0;
   const run=()=>{
@@ -292,7 +313,7 @@ function hideOldExtraManager31(){
   const old=q31('#referenceAssets');if(old)old.style.display='none';
 }
 async function sync31(){
-  cleanWelcome31();structureHero31();wrapVillages31();applyLegacyImages31();hideOldExtraManager31();await applyExtraImages31();await ensureManager31();
+  cleanWelcome31();structureHero31();wrapVillages31();applyLegacyImages31();hideOldExtraManager31();ensureFastBiebShell31();await applyExtraImages31();await ensureManager31();
 }
 function queue31(){if(queued31)return;queued31=true;setTimeout(async()=>{queued31=false;try{await sync31();}catch(e){console.warn('Snazzle v31',e);}},140);}
 function observe31(){

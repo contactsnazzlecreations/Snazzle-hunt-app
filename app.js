@@ -1,4 +1,4 @@
-// Snazzle Hunt v263 — stabiele opstart + compleet vervangbare app-afbeeldingen.
+// Snazzle Hunt v264 — stabiele opstart + compleet vervangbare app-afbeeldingen.
 // Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -34,21 +34,24 @@ function releaseStableBoot(){
 }
 function preloadCriticalAssets(){
   const moduleHrefs=[
-    './app-runtime-v245.js?v=263',
-    './snazzle-runtime-stability-v71.js?fresh=20260917-v263-news-card',
-    './snazzle-image-stability-v72.js?fresh=20260917-v263-news-card',
-    './snazzle-leaflet-isolation-v190.js?fresh=20260917-v263-news-card',
-    './app-core.js?fresh=20260917-v263-news-card',
-    './snazzle-core-performance-v248.js?fresh=20260917-v263-news-card',
-    './snazzle-adventure-ui-v28.js?fresh=20260917-v263-news-card',
-    './snazzle-clean-home-v31.js?v=263',
-    './snazzle-home-card-backgrounds-v75.js?v=263'
+    './app-runtime-v245.js?v=264',
+    './snazzle-runtime-stability-v71.js?fresh=20260917-v264-home-visuals',
+    './snazzle-image-stability-v72.js?fresh=20260917-v264-home-visuals',
+    './snazzle-leaflet-isolation-v190.js?fresh=20260917-v264-home-visuals',
+    './app-core.js?fresh=20260917-v264-home-visuals',
+    './snazzle-core-performance-v248.js?fresh=20260917-v264-home-visuals',
+    './snazzle-adventure-ui-v28.js?fresh=20260917-v264-home-visuals',
+    './snazzle-clean-home-v31.js?v=264',
+    './snazzle-home-card-backgrounds-v75.js?v=264'
+    ,'./snazzle-central-visuals-v54.js?fresh=20260917-v264-home-visuals'
+    ,'./snazzle-bieb-v73.js?fresh=20260917-v264-home-visuals'
+    ,'./snazzle-news-card-bg-v49.js?fresh=20260917-v264-home-visuals'
   ];
   moduleHrefs.forEach(href=>{
     if(document.head.querySelector(`link[rel="modulepreload"][href="${href}"]`))return;
     const link=document.createElement('link');link.rel='modulepreload';link.href=href;document.head.appendChild(link);
   });
-  ['./snazzle-reference-layout.css?v=263','./snazzle-clean-home-v31.css?v=263'].forEach(href=>{
+  ['./snazzle-reference-layout.css?v=264','./snazzle-clean-home-v31.css?v=264'].forEach(href=>{
     if(document.head.querySelector(`link[rel="preload"][href="${href}"]`))return;
     const link=document.createElement('link');link.rel='preload';link.as='style';link.href=href;document.head.appendChild(link);
   });
@@ -79,7 +82,7 @@ async function pacedImports(entries){
 
 // Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
 // kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
-await import('./app-runtime-v245.js?v=263');
+await import('./app-runtime-v245.js?v=264');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 

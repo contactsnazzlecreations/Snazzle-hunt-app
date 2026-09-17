@@ -130,7 +130,7 @@
     setTimeout(()=>queue(0),500);
   },true);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')queue(50);});
-  window.addEventListener('snazzle:visual-sync-ready',()=>queue(20));
+  window.addEventListener('snazzle:visual-sync-ready',()=>{queue(20);setTimeout(()=>queue(0),220);setTimeout(()=>queue(0),700);});
 
   let checks=0;
   const boot=setInterval(()=>{apply();if(++checks>=24)clearInterval(boot);},500);
