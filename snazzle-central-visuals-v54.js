@@ -1,4 +1,4 @@
-// Snazzle v54 — centrale synchronisatie voor alle vervangbare visuele assets.
+// Snazzle v54.1 — centrale synchronisatie voor alle vervangbare visuele assets.
 // Gebruikt verborgen documenten in de bestaande villages-collectie zodat geen nieuwe Firebase-regels nodig zijn.
 
 import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
@@ -62,6 +62,14 @@ async function saveRemote(key,raw,user,extra={}){
   await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl,cleared:false,updatedAt:new Date().toISOString(),updatedBy:user.uid,...extra},{merge:true});
   return dataUrl;
 }
+async function clearRemote(key){
+  if(!superAdmin)return false;
+  const user=auth.currentUser;if(!user)return false;
+  await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl:'',cleared:true,updatedAt:new Date().toISOString(),updatedBy:user.uid},{merge:true});
+  try{await deleteLocal(key);}catch{}
+  remoteMap.set(String(key),{dataUrl:'',cleared:true});
+  return true;
+}
 async function pushLocalSnapshot(){
   if(!superAdmin||pushing) return 0;pushing=true;let count=0;
   try{
@@ -78,7 +86,7 @@ function startRemoteListener(){
     const next=new Map();snap.docs.forEach(d=>{const x=d.data()||{},key=String(x.key||'');if(key)next.set(key,{dataUrl:String(x.dataUrl||''),cleared:x.cleared===true});});remoteMap=next;
     const local=await allLocal();let changed=false;
     for(const [key,remote] of next){
-      if(remote.cleared){if(local.has(key)&&!superAdmin){await deleteLocal(key);changed=true;}continue;}
+      if(remote.cleared){if(local.has(key)){await deleteLocal(key);changed=true;}continue;}
       if(remote.dataUrl&&local.get(key)!==remote.dataUrl){await putLocal(key,remote.dataUrl);changed=true;}
     }
     if(changed) queueReload();
@@ -91,4 +99,4 @@ function watchAdminImageEdits(){
 }
 onAuthStateChanged(auth,async user=>{if(!user)return;superAdmin=await isCurrentUserSuperAdmin(user);startRemoteListener();if(superAdmin)setTimeout(()=>pushLocalSnapshot(),700);});
 watchAdminImageEdits();
-window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,local:allLocal};
+window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,clear:clearRemote,local:allLocal};
