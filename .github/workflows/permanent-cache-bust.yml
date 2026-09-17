@@ -1,4 +1,4 @@
-name: Snazzle release v260 home backgrounds
+name: Snazzle release v261 final image sync
 
 on:
   push:
@@ -17,59 +17,63 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Activate v260 and authoritative home backgrounds
+      - name: Activate v261 and final image sync
         run: |
           python - <<'PY'
           from pathlib import Path
           import re, json
 
-          VERSION='260'
-          RUNTIME='20260917-v260-home-backgrounds'
+          VERSION='261'
+          RUNTIME='20260917-v261-home-backgrounds-final'
 
-          # index.html: force a genuinely new entrypoint URL so Android/PWA cannot keep v257.
           p=Path('index.html')
           html=p.read_text(encoding='utf-8')
           html=re.sub(r'(href="\.\/app\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
           html=re.sub(r'(href="\.\/app-runtime-v245\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
           html=re.sub(r'(href="\.\/snazzle-clean-home-v31\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
+          html=re.sub(r'(href="\.\/snazzle-home-card-backgrounds-v75\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
           html=re.sub(r'(src="\.\/snazzle-clean-home-v31\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
           html=re.sub(r'(src="\.\/app\.js\?v=)[^"]+', rf'\g<1>{VERSION}', html)
-          if 'snazzle-home-card-backgrounds-v75.js' not in html:
-              needle=f'<link rel="modulepreload" href="./snazzle-clean-home-v31.js?v={VERSION}">'
-              html=html.replace(needle, needle+f'\n<link rel="modulepreload" href="./snazzle-home-card-backgrounds-v75.js?v={VERSION}">',1)
           p.write_text(html,encoding='utf-8')
 
-          # app.js: bump every fixed v258 URL and old runtime cache key.
           p=Path('app.js')
           app=p.read_text(encoding='utf-8')
-          app=app.replace('Snazzle Hunt v258','Snazzle Hunt v260')
-          app=app.replace('v=258',f'v={VERSION}')
+          app=re.sub(r'Snazzle Hunt v\d+',f'Snazzle Hunt v{VERSION}',app,count=1)
+          app=re.sub(r'v=\d+',f'v={VERSION}',app)
+          app=app.replace('20260917-v260-home-backgrounds',RUNTIME)
           app=app.replace('20260917-v254-news-background',RUNTIME)
-          if "'./snazzle-home-card-backgrounds-v75.js?v=260'" not in app:
-              app=app.replace("    './snazzle-clean-home-v31.js?v=260'\n  ];", "    './snazzle-clean-home-v31.js?v=260',\n    './snazzle-home-card-backgrounds-v75.js?v=260'\n  ];",1)
           p.write_text(app,encoding='utf-8')
 
-          # Runtime: load the new background manager immediately after the clean home shell.
           p=Path('app-runtime-v245.js')
           rt=p.read_text(encoding='utf-8')
-          rt=rt.replace('Snazzle Hunt v258','Snazzle Hunt v260')
+          rt=re.sub(r'Snazzle Hunt v\d+',f'Snazzle Hunt v{VERSION}',rt,count=1)
           rt=re.sub(r"const runtimeVersion='[^']+';",f"const runtimeVersion='{RUNTIME}';",rt,count=1)
-          rt=rt.replace('./snazzle-clean-home-v31.js?v=258','./snazzle-clean-home-v31.js?v=260')
-          rt=rt.replace('./snazzle-central-visuals-v54.js?v=258','./snazzle-central-visuals-v54.js?v=260')
-          marker="await safeImport('./snazzle-clean-home-v31.js?v=260');"
-          addition=marker+"\nawait safeImport('./snazzle-home-card-backgrounds-v75.js');"
+          rt=re.sub(r'\.\/snazzle-clean-home-v31\.js\?v=\d+',f'./snazzle-clean-home-v31.js?v={VERSION}',rt)
+          rt=re.sub(r'\.\/snazzle-central-visuals-v54\.js\?v=\d+',f'./snazzle-central-visuals-v54.js?v={VERSION}',rt)
           if "await safeImport('./snazzle-home-card-backgrounds-v75.js');" not in rt:
-              rt=rt.replace(marker,addition,1)
+              marker=f"await safeImport('./snazzle-clean-home-v31.js?v={VERSION}');"
+              rt=rt.replace(marker,marker+"\nawait safeImport('./snazzle-home-card-backgrounds-v75.js');",1)
           p.write_text(rt,encoding='utf-8')
 
-          # Installed PWA launches through a versioned start URL after manifest refresh.
+          # Nooit meer de hele app herladen wanneer alleen een beheerafbeelding verandert.
+          p=Path('snazzle-central-visuals-v54.js')
+          cv=p.read_text(encoding='utf-8')
+          old="function queueReload(){clearTimeout(reloadTimer);reloadTimer=setTimeout(()=>{const active=document.activeElement;if(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName))return queueReload();toast('Jouw Snazzle-afbeeldingen zijn bijgewerkt ✨');setTimeout(()=>location.reload(),650);},500);}"
+          new="function queueReload(){clearTimeout(reloadTimer);reloadTimer=setTimeout(()=>{document.dispatchEvent(new CustomEvent('snazzle:visual-assets-updated'));try{window.SnazzleHomeCardBackgroundsV75?.refresh?.(true);}catch{}},120);}"
+          cv=cv.replace(old,new)
+          cv=cv.replace(
+              "window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,clear:clearRemote,local:allLocal};",
+              "window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,saveKey:saveOne,clear:clearRemote,local:allLocal};"
+          )
+          p.write_text(cv,encoding='utf-8')
+
           p=Path('manifest.json')
           manifest=json.loads(p.read_text(encoding='utf-8'))
           manifest['start_url']=f'./?v={VERSION}'
           p.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
 
-      - name: Commit v260 activation
+      - name: Commit v261 activation
         run: |
           if git diff --quiet; then
             echo "No changes needed"
@@ -77,6 +81,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html app.js app-runtime-v245.js manifest.json
-          git commit -m "Activate v260 home background manager"
+          git add index.html app.js app-runtime-v245.js snazzle-central-visuals-v54.js manifest.json
+          git commit -m "Activate v261 final image sync"
           git push
