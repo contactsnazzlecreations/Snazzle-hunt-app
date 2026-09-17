@@ -1,6 +1,6 @@
-// Snazzle Nieuws achtergrond v48.2 — speels nieuws + betrouwbare homekaart-achtergronden.
+// Snazzle Nieuws achtergrond v48.3 — speels nieuws + betrouwbare homekaart-achtergronden.
 (function installSnazzleNewsBackgroundV48(){
-  const STYLE_ID='snazzleNewsBackgroundV48';
+  const STYLE_ID='snazzleNewsBackgroundV483';
 
   if(!document.getElementById(STYLE_ID)){
     const style=document.createElement('style');
@@ -73,9 +73,6 @@
     document.head.appendChild(style);
   }
 
-  // De twee kaarten hieronder worden door losse modules later aan de home toegevoegd.
-  // Daarom lezen we hun opgeslagen achtergrond rechtstreeks uit dezelfde IndexedDB
-  // als Beheer → Afbeeldingen en passen hem opnieuw toe zodra de kaart bestaat.
   const DB_NAME='snazzleVisualAssetsV28';
   const STORE='assets';
   let dbPromise=null;
@@ -110,7 +107,6 @@
   function setCardBackground(el,src,overlay){
     if(!el||!src||!src.startsWith('data:image/'))return;
     const bg=`${overlay},url("${src}")`;
-    if(el.dataset.snStoredBg===src&&el.style.getPropertyValue('background-image'))return;
     el.style.setProperty('background-image',bg,'important');
     el.style.setProperty('background-size','cover','important');
     el.style.setProperty('background-position','center','important');
@@ -119,21 +115,27 @@
   }
 
   async function applyStoredCardBackgrounds(){
-    const [newsSrc,collectionSrc]=await Promise.all([
-      readAsset('newsCard'),
-      readAsset('collectionCard')
+    const [biebSrc,collectionSrc,newsSrc]=await Promise.all([
+      readAsset('biebCard'),
+      readAsset('collectionCard'),
+      readAsset('newsCard')
     ]);
 
-    const news=document.getElementById('snNewsLaunch');
-    if(newsSrc&&news){
-      setCardBackground(news,newsSrc,'linear-gradient(180deg,rgba(17,27,47,.10),rgba(20,23,52,.46))');
-      const shell=news.closest('.home-card');
-      if(shell)setCardBackground(shell,newsSrc,'linear-gradient(180deg,rgba(17,27,47,.03),rgba(20,23,52,.20))');
+    const bieb=document.getElementById('snBiebHome73')||document.querySelector('.sn-bieb-home');
+    if(biebSrc&&bieb){
+      setCardBackground(bieb,biebSrc,'linear-gradient(180deg,rgba(24,20,10,.06),rgba(20,34,20,.38))');
     }
 
     const collection=document.getElementById('collectionHomeCard')||document.querySelector('.collection-home-card');
     if(collectionSrc&&collection){
-      setCardBackground(collection,collectionSrc,'linear-gradient(180deg,rgba(20,35,52,.08),rgba(11,31,44,.48))');
+      setCardBackground(collection,collectionSrc,'linear-gradient(180deg,rgba(20,35,52,.06),rgba(11,31,44,.36))');
+    }
+
+    const news=document.getElementById('snNewsLaunch');
+    if(newsSrc&&news){
+      setCardBackground(news,newsSrc,'linear-gradient(180deg,rgba(17,27,47,.06),rgba(20,23,52,.34))');
+      const shell=news.closest('.home-card');
+      if(shell)setCardBackground(shell,newsSrc,'linear-gradient(180deg,rgba(17,27,47,.02),rgba(20,23,52,.16))');
     }
   }
 
@@ -142,37 +144,39 @@
     refreshTimer=setTimeout(()=>applyStoredCardBackgrounds(),delay);
   }
 
-  // Eerst meteen proberen, daarna op laat gebouwde homekaarten reageren.
   queueRefresh(0);
   const observer=new MutationObserver(records=>{
     for(const record of records){
       if(record.type==='childList'&&record.addedNodes.length){queueRefresh(90);break;}
     }
   });
-  const startObserver=()=>{
-    if(document.body)observer.observe(document.body,{childList:true,subtree:true});
-  };
+  const startObserver=()=>{if(document.body)observer.observe(document.body,{childList:true,subtree:true});};
   if(document.body)startObserver();
   else document.addEventListener('DOMContentLoaded',startObserver,{once:true});
 
-  // Bij uploaden in Beheer wordt IndexedDB iets later bijgewerkt; pak dat zonder herladen mee.
   document.addEventListener('change',event=>{
     const input=event.target;
     if(!(input instanceof HTMLInputElement)||input.type!=='file'||!input.closest('#imagesAdmin'))return;
-    setTimeout(()=>applyStoredCardBackgrounds(),250);
-    setTimeout(()=>applyStoredCardBackgrounds(),750);
-    setTimeout(()=>applyStoredCardBackgrounds(),1500);
+    setTimeout(()=>applyStoredCardBackgrounds(),180);
+    setTimeout(()=>applyStoredCardBackgrounds(),500);
+    setTimeout(()=>applyStoredCardBackgrounds(),1200);
+    setTimeout(()=>applyStoredCardBackgrounds(),2400);
   },true);
 
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='visible')queueRefresh(120);
   });
   document.addEventListener('snazzle:home-ui-ready',()=>queueRefresh(80));
+  window.addEventListener('snazzle:visual-sync-ready',()=>{
+    queueRefresh(60);
+    setTimeout(()=>applyStoredCardBackgrounds(),600);
+  });
 
-  // Korte opstartcontrole voor centrale beeldsync en modules die later binnenkomen.
   let checks=0;
   const startupCheck=setInterval(()=>{
     applyStoredCardBackgrounds();
-    if(++checks>=20)clearInterval(startupCheck);
-  },750);
+    if(++checks>=30)clearInterval(startupCheck);
+  },700);
+
+  window.SnazzleHomeBackgroundRefreshV483={refresh:applyStoredCardBackgrounds};
 })();
