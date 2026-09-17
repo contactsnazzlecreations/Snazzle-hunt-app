@@ -1,5 +1,6 @@
-// Snazzle v54.2 — centrale synchronisatie voor alle vervangbare visuele assets.
-// Belangrijk: lokale beheerwijzigingen worden eerst naar de cloud gezet voordat remote data lokaal mag overschrijven.
+// Snazzle v54.3 — centrale synchronisatie voor alle vervangbare visuele assets.
+// Lokale beheerwijzigingen worden gemarkeerd als 'dirty' zodat een oudere remote snapshot
+// ze nooit kan terug overschrijven terwijl de nieuwe afbeelding nog naar de cloud wordt gezet.
 
 import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -15,6 +16,7 @@ const COLLECTION='villages';
 const MAX_CLOUD_CHARS=680000;
 let dbPromise=null,superAdmin=false,pushing=false,reloadTimer=0,listenerStarted=false;
 let remoteMap=new Map();
+const dirtyKeys=new Set();
 
 function toast(text){const el=document.getElementById('toast');if(!el)return;el.textContent=text;el.classList.add('show');clearTimeout(window.__v54Toast);window.__v54Toast=setTimeout(()=>el.classList.remove('show'),3300);}
 function openVisualDb(){
@@ -65,25 +67,36 @@ async function saveRemote(key,raw,user,extra={}){
 }
 async function saveOne(key,raw){
   if(!superAdmin) return false;
-  const user=auth.currentUser;if(!user||!key||!raw)return false;
+  const normalized=String(key||'');
+  const user=auth.currentUser;if(!user||!normalized||!raw)return false;
+  dirtyKeys.add(normalized);
   try{
-    const dataUrl=await saveRemote(String(key),raw,user);
-    await putLocal(String(key),dataUrl);
+    const dataUrl=await saveRemote(normalized,raw,user);
+    await putLocal(normalized,dataUrl);
+    dirtyKeys.delete(normalized);
     toast('Afbeelding centraal opgeslagen ✓');
     return true;
   }catch(err){
-    console.warn('Snazzle v54 losse afbeelding opslaan',key,err);
+    console.warn('Snazzle v54 losse afbeelding opslaan',normalized,err);
     toast('Afbeelding staat lokaal; centrale opslag wordt opnieuw geprobeerd');
     return false;
   }
 }
 async function clearRemote(key){
   if(!superAdmin)return false;
-  const user=auth.currentUser;if(!user)return false;
-  await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl:'',cleared:true,updatedAt:new Date().toISOString(),updatedBy:user.uid},{merge:true});
-  try{await deleteLocal(key);}catch{}
-  remoteMap.set(String(key),{dataUrl:'',cleared:true});
-  return true;
+  const normalized=String(key||'');
+  const user=auth.currentUser;if(!user||!normalized)return false;
+  dirtyKeys.add(normalized);
+  try{
+    await setDoc(visualRef(normalized),{active:false,system:true,purpose:PURPOSE,key:normalized,dataUrl:'',cleared:true,updatedAt:new Date().toISOString(),updatedBy:user.uid},{merge:true});
+    try{await deleteLocal(normalized);}catch{}
+    remoteMap.set(normalized,{dataUrl:'',cleared:true});
+    dirtyKeys.delete(normalized);
+    return true;
+  }catch(err){
+    console.warn('Snazzle v54 centraal verwijderen',normalized,err);
+    return false;
+  }
 }
 async function pushLocalSnapshot(){
   if(!superAdmin||pushing) return 0;pushing=true;let count=0;
@@ -91,9 +104,10 @@ async function pushLocalSnapshot(){
     const user=auth.currentUser;if(!user)return 0;const local=await allLocal();const remote=await readRemoteOnce();
     for(const [key,raw] of local){
       const current=remote.get(key);const dataUrl=await cloudSafe(raw);
-      if(current?.dataUrl===dataUrl&&!current?.cleared)continue;
+      if(current?.dataUrl===dataUrl&&!current?.cleared){dirtyKeys.delete(String(key));continue;}
+      dirtyKeys.add(String(key));
       await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl,cleared:false,updatedAt:new Date().toISOString(),updatedBy:user.uid},{merge:true});
-      remoteMap.set(String(key),{dataUrl,cleared:false});count++;
+      remoteMap.set(String(key),{dataUrl,cleared:false});dirtyKeys.delete(String(key));count++;
     }
     if(count) toast(`${count} Snazzle-afbeelding${count===1?'':'en'} centraal opgeslagen ✓`);
   }catch(err){console.warn('Snazzle v54 centraal opslaan',err);toast('Een afbeelding kon nog niet centraal worden opgeslagen');}
@@ -107,6 +121,7 @@ function startRemoteListener(){
     const next=new Map();snap.docs.forEach(d=>{const x=d.data()||{},key=String(x.key||'');if(key)next.set(key,{dataUrl:String(x.dataUrl||''),cleared:x.cleared===true});});remoteMap=next;
     const local=await allLocal();let changed=false;
     for(const [key,remote] of next){
+      if(dirtyKeys.has(String(key)))continue;
       if(remote.cleared){if(local.has(key)){await deleteLocal(key);changed=true;}continue;}
       if(remote.dataUrl&&local.get(key)!==remote.dataUrl){await putLocal(key,remote.dataUrl);changed=true;}
     }
@@ -130,14 +145,9 @@ function watchAdminImageEdits(){
 onAuthStateChanged(auth,async user=>{
   if(!user)return;
   superAdmin=await isCurrentUserSuperAdmin(user);
-
-  // Dit was de fout: vroeger begon de remote listener eerst en kon een oude cloudwaarde
-  // een net gekozen beheerafbeelding lokaal terug overschrijven. Beheer wint nu eerst.
-  if(superAdmin){
-    await pushLocalSnapshot();
-  }
+  if(superAdmin)await pushLocalSnapshot();
   startRemoteListener();
   window.dispatchEvent(new CustomEvent('snazzle:visual-sync-ready',{detail:{superAdmin}}));
 });
 watchAdminImageEdits();
-window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,saveKey:saveOne,clear:clearRemote,local:allLocal};
+window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,saveKey:saveOne,markDirty:key=>dirtyKeys.add(String(key)),clear:clearRemote,local:allLocal};
