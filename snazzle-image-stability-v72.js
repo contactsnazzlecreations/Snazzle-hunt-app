@@ -1,6 +1,6 @@
-// Snazzle v72.1 — stabielere afbeeldingen, met extra bescherming voor het ronde logo linksboven.
-// Voorkomt vooral dat dezelfde afbeelding opnieuw wordt gezet en daardoor op Android kort knippert.
-const V72='72.1.0';
+// Snazzle v72.2 — stabielere afbeeldingen + robuuste Snazzle AR-achtergrondupload.
+// Voorkomt vooral dat dezelfde afbeelding opnieuw wordt gezet en vangt Android-bestandsuploads betrouwbaar af.
+const V72='72.2.0';
 
 function sameImageSource72(img,next){
   const value=String(next??'');
@@ -128,8 +128,151 @@ function prepareExisting72(root=document){
   stabilizeProfileLogo72();
 }
 
+/*
+ * Snazzle AR upload rescue.
+ * Op sommige Android-bestandsproviders komt een PNG/JPG binnen met een lege of generieke MIME-type.
+ * De gewone beeldbeheerder kon zo stoppen vóór de preview en IndexedDB-save. Deze handler pakt alleen
+ * de kaart “Achtergrond Snazzle AR”, accepteert ook geldige beeldextensies en bewaart direct in dezelfde
+ * IndexedDB-sleutel (arCard) die de home gebruikt.
+ */
+const AR_VISUAL_DB72='snazzleVisualAssetsV28';
+const AR_VISUAL_STORE72='assets';
+const AR_VISUAL_KEY72='arCard';
+
+function toastArUpload72(text){
+  const toast=document.getElementById('toast');
+  if(!toast){console.info(text);return;}
+  toast.textContent=text;
+  toast.classList.add('show');
+  clearTimeout(window.__snArUploadToast72);
+  window.__snArUploadToast72=setTimeout(()=>toast.classList.remove('show'),3600);
+}
+
+function isImageFile72(file){
+  if(!file) return false;
+  if(String(file.type||'').toLowerCase().startsWith('image/')) return true;
+  return /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(String(file.name||''));
+}
+
+function isArBackgroundInput72(input){
+  if(!(input instanceof HTMLInputElement)||input.type!=='file') return false;
+  const card=input.closest('.v31-image-item,.v32-image-item');
+  const label=card?.querySelector('strong')?.textContent?.trim()||'';
+  return label==='Achtergrond Snazzle AR';
+}
+
+function compressArBackground72(file,max=1600,quality=.86){
+  return new Promise((resolve,reject)=>{
+    if(!isImageFile72(file)) return reject(new Error('Kies een PNG, JPG of WebP-afbeelding'));
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('Het bestand kon niet worden gelezen'));
+    reader.onload=()=>{
+      const image=new Image();
+      image.onerror=()=>reject(new Error('De afbeelding kon niet worden geopend'));
+      image.onload=()=>{
+        try{
+          const width=image.naturalWidth||image.width;
+          const height=image.naturalHeight||image.height;
+          if(!width||!height) throw new Error('De afbeelding heeft geen geldige afmetingen');
+          const scale=Math.min(1,max/Math.max(width,height));
+          const canvas=document.createElement('canvas');
+          canvas.width=Math.max(1,Math.round(width*scale));
+          canvas.height=Math.max(1,Math.round(height*scale));
+          const context=canvas.getContext('2d');
+          if(!context) throw new Error('Afbeelding verwerken lukt niet op dit toestel');
+          context.drawImage(image,0,0,canvas.width,canvas.height);
+          let data=canvas.toDataURL('image/webp',quality);
+          if(!data.startsWith('data:image/webp')) data=canvas.toDataURL('image/jpeg',quality);
+          if(!data.startsWith('data:image/')) throw new Error('Afbeelding kon niet worden omgezet');
+          resolve(data);
+        }catch(err){reject(err instanceof Error?err:new Error('Afbeelding verwerken mislukt'));}
+      };
+      image.src=String(reader.result||'');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveArBackground72(data){
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(AR_VISUAL_DB72);
+    request.onupgradeneeded=()=>{
+      if(!request.result.objectStoreNames.contains(AR_VISUAL_STORE72)) request.result.createObjectStore(AR_VISUAL_STORE72);
+    };
+    request.onerror=()=>reject(request.error||new Error('Beeldopslag kon niet worden geopend'));
+    request.onsuccess=()=>{
+      const db=request.result;
+      let tx;
+      try{tx=db.transaction(AR_VISUAL_STORE72,'readwrite');}
+      catch(err){db.close();reject(err);return;}
+      tx.objectStore(AR_VISUAL_STORE72).put(data,AR_VISUAL_KEY72);
+      tx.oncomplete=()=>{db.close();resolve(true);};
+      tx.onerror=()=>{const err=tx.error||new Error('Afbeelding opslaan mislukt');db.close();reject(err);};
+      tx.onabort=()=>{const err=tx.error||new Error('Afbeelding opslaan afgebroken');db.close();reject(err);};
+    };
+  });
+}
+
+function applyArBackground72(data){
+  const launcher=document.getElementById('snArLaunch');
+  if(!launcher||!data) return;
+  launcher.style.setProperty('background-image',`linear-gradient(180deg,rgba(5,45,35,.10),rgba(3,36,29,.56)),url("${data}")`,'important');
+  launcher.style.setProperty('background-size','cover','important');
+  launcher.style.setProperty('background-position','center','important');
+  launcher.dataset.v31Bg='1';
+  launcher.dataset.v31BgSrc=data;
+}
+
+function queueArCloudSync72(){
+  let tries=0;
+  const run=()=>{
+    const api=window.SnazzleVisualSyncV54;
+    if(api?.push){
+      Promise.resolve(api.push()).catch(err=>console.warn('Snazzle AR centrale beeldsync',err));
+      return;
+    }
+    if(++tries<40) setTimeout(run,500);
+  };
+  setTimeout(run,180);
+}
+
+async function handleArBackgroundUpload72(input){
+  const file=input.files?.[0];
+  if(!file) return;
+  const card=input.closest('.v31-image-item,.v32-image-item');
+  const preview=card?.querySelector('.v31-image-preview,.v32-image-preview');
+  const previous=preview?.innerHTML||'';
+  if(preview) preview.textContent='Afbeelding verwerken…';
+  try{
+    const data=await compressArBackground72(file);
+    await saveArBackground72(data);
+    if(preview) preview.innerHTML=`<img src="${data}" alt="Voorbeeld">`;
+    input.value='';
+    applyArBackground72(data);
+    queueArCloudSync72();
+    toastArUpload72('Snazzle AR-achtergrond aangepast ✓');
+  }catch(err){
+    console.error('Snazzle AR-achtergrondupload',err);
+    if(preview) preview.innerHTML=previous;
+    toastArUpload72(`Opslaan mislukt: ${err?.message||'probeer de afbeelding opnieuw'}`);
+  }
+}
+
+function installArUploadRescue72(){
+  if(window.__snazzleArUploadRescue72) return;
+  window.__snazzleArUploadRescue72=true;
+  document.addEventListener('change',event=>{
+    const input=event.target;
+    if(!isArBackgroundInput72(input)) return;
+    // Voorkom dat de oudere handler dezelfde upload nogmaals verwerkt of op Android afwijst.
+    event.stopImmediatePropagation();
+    handleArBackgroundUpload72(input);
+  },true);
+}
+
 installSourceGuard72();
 installStyles72();
+installArUploadRescue72();
 if(document.body) prepareExisting72();
 else document.addEventListener('DOMContentLoaded',()=>prepareExisting72(),{once:true});
 
