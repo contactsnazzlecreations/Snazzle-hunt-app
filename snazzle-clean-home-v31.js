@@ -1,7 +1,7 @@
-// Snazzle Hunt v31 — rustige home + centraal beeldbeheer.
-// Bestaande knoppen/functies blijven behouden; deze laag herschikt alleen de presentatie.
+// Snazzle Hunt v31.1 — rustige home + compleet centraal beeldbeheer.
+// Zichtbare home-tegels, tegel-iconen, dorpen en ondermenu zijn via Beheer → Afbeeldingen vervangbaar.
 
-const V31='31.0.0';
+const V31='31.1.0';
 const q31=(s,r=document)=>r.querySelector(s);
 const qa31=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB31='snazzleVisualAssetsV28';
@@ -11,9 +11,16 @@ let db31Promise=null;
 let queued31=false;
 
 const extraAssets31=[
-  ['quickFinds','Kaart Mijn vondsten'],
-  ['quickProfile','Kaart Mijn profiel'],
-  ['collectionCard','Kaart Mijn verzameling'],
+  ['quickFinds','Achtergrond Mijn vondsten'],
+  ['quickFindsIcon','Icoon Mijn vondsten'],
+  ['quickProfile','Achtergrond Mijn profiel'],
+  ['quickProfileIcon','Icoon Mijn profiel'],
+  ['biebCard','Achtergrond De Bieb'],
+  ['biebTileIcon','Icoon De Bieb'],
+  ['collectionCard','Achtergrond Mijn Snazzles'],
+  ['collectionTileIcon','Icoon Mijn Snazzles'],
+  ['newsCard','Achtergrond Snazzle Nieuws'],
+  ['newsTileIcon','Icoon Snazzle Nieuws'],
   ['guideCharacter','Snazzle gids / menu'],
   ['secretCharacter','Geheime bewegende Snazzle'],
   ['natureCharacter','Natuur Snazzle'],
@@ -123,19 +130,62 @@ async function applyNav31(){
     const b=buttons[i],holder=b.querySelector('b');if(!holder)continue;
     if(!holder.dataset.v31Original)holder.dataset.v31Original=holder.innerHTML;
     const src=await get31(keys[i]);
-    if(src){holder.innerHTML=`<img class="v31-nav-img" src="${src}" alt="">`;}
-    else if(holder.innerHTML.includes('v31-nav-img'))holder.innerHTML=holder.dataset.v31Original;
+    if(src){
+      const current=holder.querySelector(':scope > img.v31-nav-img');
+      if(current?.getAttribute('src')!==src)holder.innerHTML=`<img class="v31-nav-img" src="${src}" alt="">`;
+    }else if(holder.querySelector(':scope > img.v31-nav-img'))holder.innerHTML=holder.dataset.v31Original;
   }
 }
 function bg31(el,src){
   if(!el)return;
-  if(src){el.style.setProperty('background-image',`linear-gradient(180deg,rgba(5,45,35,.04),rgba(3,36,29,.72)),url("${src}")`,'important');el.style.setProperty('background-size','cover','important');el.style.setProperty('background-position','center','important');el.dataset.v31Bg='1';}
-  else if(el.dataset.v31Bg==='1'){el.style.removeProperty('background-image');el.style.removeProperty('background-size');el.style.removeProperty('background-position');delete el.dataset.v31Bg;}
+  if(src){
+    if(el.dataset.v31BgSrc===src)return;
+    el.style.setProperty('background-image',`linear-gradient(180deg,rgba(5,45,35,.10),rgba(3,36,29,.66)),url("${src}")`,'important');
+    el.style.setProperty('background-size','cover','important');
+    el.style.setProperty('background-position','center','important');
+    el.dataset.v31Bg='1';el.dataset.v31BgSrc=src;
+  }else if(el.dataset.v31Bg==='1'){
+    el.style.removeProperty('background-image');el.style.removeProperty('background-size');el.style.removeProperty('background-position');
+    delete el.dataset.v31Bg;delete el.dataset.v31BgSrc;
+  }
+}
+function tileIcon31(el,src,fallback){
+  if(!el)return;
+  if(!el.dataset.v31Original)el.dataset.v31Original=el.innerHTML||fallback||'';
+  const current=el.querySelector(':scope > img[data-v31-tile-icon]');
+  if(src){
+    if(current?.getAttribute('src')===src)return;
+    el.innerHTML=`<img data-v31-tile-icon="1" src="${src}" alt="" style="display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:2px">`;
+  }else if(current){
+    el.innerHTML=el.dataset.v31Original||fallback||'';
+  }
+}
+function quickIconHolder31(button,fallback){
+  if(!button)return null;
+  let holder=button.querySelector(':scope > .v31-quick-icon');
+  if(holder)return holder;
+  holder=document.createElement('span');
+  holder.className='v31-quick-icon';
+  holder.style.cssText='display:inline-grid;place-items:center;width:34px;height:34px;margin-right:4px;vertical-align:middle;font-size:24px;border-radius:10px;overflow:hidden';
+  holder.textContent=fallback;
+  const textNode=[...button.childNodes].find(n=>n.nodeType===3&&String(n.textContent||'').trim());
+  if(textNode){holder.textContent=String(textNode.textContent||'').trim()||fallback;button.replaceChild(holder,textNode);}
+  else button.prepend(holder);
+  return holder;
 }
 async function applyExtraImages31(){
   bg31(q31('.finds'),await get31('quickFinds'));
   bg31(q31('.profile'),await get31('quickProfile'));
+  bg31(q31('#snBiebHome73'),await get31('biebCard'));
   bg31(q31('#collectionHomeCard'),await get31('collectionCard'));
+  bg31(q31('#snNewsLaunch'),await get31('newsCard'));
+
+  tileIcon31(quickIconHolder31(q31('#findsBtn'),'🏆'),await get31('quickFindsIcon'),'🏆');
+  tileIcon31(quickIconHolder31(q31('#profileBtn'),'👤'),await get31('quickProfileIcon'),'👤');
+  tileIcon31(q31('#snBiebHome73 .icon'),await get31('biebTileIcon'),'📚');
+  tileIcon31(q31('#collectionHomeCard .collection-home-icon'),await get31('collectionTileIcon'),'✨');
+  tileIcon31(q31('#snNewsLaunch .sn-news-launch-icon'),await get31('newsTileIcon'),'🦆');
+
   wrapVillages31();
   for(const b of qa31('.village'))bg31(b,await get31('village:'+slug31(villageName31(b))));
   await applyNav31();
@@ -150,18 +200,18 @@ async function addLocalCard31(grid,key,label){
 }
 async function addDbCard31(grid,key,label){
   const src=await get31(key),item=card31(label,src),input=item.querySelector('input'),remove=item.querySelector('button');
-  input.onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=await compress31(file,key.includes('Character')?950:1200,.86);await set31(key,data);input.value='';item.querySelector('.v31-image-preview').innerHTML=previewHtml31(data);await applyExtraImages31();toast31('Afbeelding aangepast ✓');}catch(err){toast31(err.message||'Opslaan mislukt');}};
+  input.onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const icon=/Icon$|TileIcon$|^nav/.test(key),data=await compress31(file,icon?720:key.includes('Character')?950:1200,icon?.90:.86);await set31(key,data);input.value='';item.querySelector('.v31-image-preview').innerHTML=previewHtml31(data);await applyExtraImages31();toast31('Afbeelding aangepast ✓');}catch(err){toast31(err.message||'Opslaan mislukt');}};
   remove.onclick=async()=>{await del31(key);item.querySelector('.v31-image-preview').innerHTML=previewHtml31('');await applyExtraImages31();toast31('Afbeelding verwijderd');};grid.appendChild(item);
 }
 async function ensureManager31(){
   const admin=q31('#imagesAdmin');if(!admin||q31('#v31ImageManager',admin))return;
   const box=document.createElement('div');box.id='v31ImageManager';box.className='v31-image-manager';
-  box.innerHTML='<h3>🖼️ Alle app-afbeeldingen</h3><p>Hier pas je de zichtbare afbeeldingen van de home, Snazzles, dorpen en ondermenu zelf aan. We voegen nergens automatisch dezelfde foto meerdere keren toe.</p><div class="v31-image-grid" id="v31ImageGrid"></div><div class="v31-manager-note">Hunt-foto’s pas je per Hunt aan bij <b>Beheer → Hunts</b>. Productfoto’s blijven bij het Shop-beheer. Zo blijft elk beeld aan de juiste inhoud gekoppeld.</div>';
+  box.innerHTML='<h3>🖼️ Alle app-afbeeldingen</h3><p>Hier pas je de zichtbare afbeeldingen én tegel-iconen van de home, Snazzles, dorpen en het ondermenu zelf aan.</p><div class="v31-image-grid" id="v31ImageGrid"></div><div class="v31-manager-note"><b>Waar wijzig je de rest?</b><br>Hunt-foto’s: <b>Beheer → Hunts</b> · Nieuwsberichten/posters: <b>Beheer → Nieuws</b> · Snazzle Card-afbeeldingen: <b>Beheer → Kaarten</b> · Productfoto’s: webshopbeheer. De home-tegels en iconen pas je hierboven aan.</div>';
   admin.appendChild(box);const grid=q31('#v31ImageGrid',box);
   await addLocalCard31(grid,'profileImage','Logo / Snazzle linksboven');
   await addLocalCard31(grid,'heroImage','Grote Hunt-afbeelding');
-  await addLocalCard31(grid,'homeImage1','Home banner 1');
-  await addLocalCard31(grid,'homeImage2','Home banner 2');
+  await addLocalCard31(grid,'homeImage1','Oude home banner 1 / fallback');
+  await addLocalCard31(grid,'homeImage2','Actie / evenement afbeelding');
   for(const [key,label] of extraAssets31)await addDbCard31(grid,key,label);
   wrapVillages31();
   for(const b of qa31('.village'))await addDbCard31(grid,'village:'+slug31(villageName31(b)),`Dorpkaart ${villageName31(b)}`);
