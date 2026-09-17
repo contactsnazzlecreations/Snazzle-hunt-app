@@ -1,0 +1,145 @@
+name: Fix home visuals v264
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-home-visuals-v264.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-home-visuals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply v264 home fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Marker niet gevonden in {path}: {old[:100]!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # 1) De Bieb krijgt al tijdens de eerste home-render een lichte shell.
+          #    Daardoor verschuift de hoofdpagina niet meer wanneer de zware Bieb-module later klaar is.
+          bieb_shell = r'''function ensureFastBiebShell31(){
+            let button=q31('#snBiebHome73');
+            if(button)return button;
+            const quick=q31('.quick');if(!quick)return null;
+            button=document.createElement('button');
+            button.id='snBiebHome73';button.className='sn-bieb-home sn-bieb-home-shell';button.type='button';
+            button.innerHTML='<span class="icon">📚</span><span><strong>De Bieb</strong><small>Vul je eigen boekenkast en bouw met lezen je Snazzle-leeshoek.</small></span><span class="arrow">›</span>';
+            button.addEventListener('click',async()=>{
+              if(window.SnazzleBiebV73?.open){window.SnazzleBiebV73.open();return;}
+              button.setAttribute('aria-busy','true');
+              try{
+                if(typeof window.__snazzleImport==='function')await window.__snazzleImport('./snazzle-bieb-v73.js');
+                else await import('./snazzle-bieb-v73.js?v=264');
+                window.SnazzleBiebV73?.open?.();
+              }catch(err){console.warn('Snazzle Bieb snel openen',err);toast31('De Bieb wordt nog geladen…');}
+              finally{button.removeAttribute('aria-busy');}
+            });
+            quick.insertAdjacentElement('afterend',button);
+            return button;
+          }
+          '''
+          replace_once(
+              'snazzle-clean-home-v31.js',
+              'function saveCentralKey31(key,data){',
+              bieb_shell + '\nfunction saveCentralKey31(key,data){'
+          )
+          replace_once(
+              'snazzle-clean-home-v31.js',
+              'cleanWelcome31();structureHero31();wrapVillages31();applyLegacyImages31();hideOldExtraManager31();await applyExtraImages31();await ensureManager31();',
+              'cleanWelcome31();structureHero31();wrapVillages31();applyLegacyImages31();hideOldExtraManager31();ensureFastBiebShell31();await applyExtraImages31();await ensureManager31();'
+          )
+
+          # 2) De shell ziet er direct exact als een echte Bieb-kaart uit, nog vóór de Bieb-module geladen is.
+          css_block = r'''
+          /* De Bieb staat al in de eerste paint zodat de home niet meer verspringt. */
+          .sn-bieb-home{
+            width:100%;margin:0 0 10px;border:2px solid #b68e4d;border-radius:20px;padding:13px 14px;
+            background:linear-gradient(135deg,#6b4027 0%,#8b5c30 46%,#365b36 100%);color:#fff8df;
+            box-shadow:0 4px 0 #45321f,0 8px 15px rgba(0,0,0,.15);display:grid;grid-template-columns:58px 1fr 34px;
+            align-items:center;gap:12px;text-align:left;position:relative;overflow:hidden;min-height:102px;
+          }
+          .sn-bieb-home:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 0 62%,rgba(255,221,118,.10) 62% 76%,transparent 76%);pointer-events:none}
+          .sn-bieb-home .icon{width:58px;height:58px;border-radius:17px;display:grid;place-items:center;background:#f6d67b;color:#4b2f1d;font-size:31px;border:3px solid #9b6b35;box-shadow:0 4px 0 #50311d;position:relative;z-index:1;overflow:hidden}
+          .sn-bieb-home strong{display:block;font-size:20px;line-height:1.05;position:relative;z-index:1}.sn-bieb-home small{display:block;margin-top:5px;color:#e8edc4;font-weight:760;line-height:1.3;position:relative;z-index:1}.sn-bieb-home .arrow{font-size:34px;color:#ffd96a;text-align:center;position:relative;z-index:1}
+          .sn-bieb-home[aria-busy="true"]{opacity:.88}
+          '''
+          replace_once(
+              'snazzle-clean-home-v31.css',
+              '/* Dorpen: duidelijke fotokaarten, horizontaal scrollen, geen tekst door elkaar. */',
+              css_block + '\n\n/* Dorpen: duidelijke fotokaarten, horizontaal scrollen, geen tekst door elkaar. */'
+          )
+
+          # 3) Start de centrale beeldsync en de twee homefeatures meteen parallel.
+          #    Dit voorkomt dat remote beheerafbeeldingen pas seconden later binnenkomen.
+          early_load = r'''// Homebeelden en De Bieb starten al parallel; ze blokkeren de hoofdruntime niet.
+          const earlyVisualSyncPromise=safeImport('./snazzle-central-visuals-v54.js');
+          const earlyBiebPromise=safeImport('./snazzle-bieb-v73.js');
+          const earlyNewsCardBgPromise=safeImport('./snazzle-news-card-bg-v49.js');
+          void earlyVisualSyncPromise;void earlyBiebPromise;void earlyNewsCardBgPromise;
+
+          '''
+          replace_once(
+              'app-runtime-v245.js',
+              "await safeImport('./snazzle-core-performance-v248.js');\nsuppressLateStartupOverlays();await nextPaint();\n\n",
+              "await safeImport('./snazzle-core-performance-v248.js');\nsuppressLateStartupOverlays();await nextPaint();\n\n" + early_load
+          )
+
+          # 4) Cache-bust alle kritieke startbestanden naar v264.
+          p=Path('app-runtime-v245.js')
+          text=p.read_text(encoding='utf-8')
+          text=text.replace("const runtimeVersion='20260917-v263-news-card';", "const runtimeVersion='20260917-v264-home-visuals';")
+          text=text.replace('?v=263','?v=264')
+          text=text.replace('v263 —','v264 —')
+          p.write_text(text,encoding='utf-8')
+
+          p=Path('app.js')
+          text=p.read_text(encoding='utf-8')
+          text=text.replace('Snazzle Hunt v263','Snazzle Hunt v264')
+          text=text.replace('20260917-v263-news-card','20260917-v264-home-visuals')
+          text=text.replace('?v=263','?v=264')
+          # Kritieke home-modules alvast downloaden terwijl het laadscherm zichtbaar is.
+          marker="    './snazzle-home-card-backgrounds-v75.js?v=264'\n"
+          if marker in text and "./snazzle-central-visuals-v54.js?fresh=20260917-v264-home-visuals" not in text:
+              text=text.replace(marker, marker + "    ,'./snazzle-central-visuals-v54.js?fresh=20260917-v264-home-visuals'\n    ,'./snazzle-bieb-v73.js?fresh=20260917-v264-home-visuals'\n    ,'./snazzle-news-card-bg-v49.js?fresh=20260917-v264-home-visuals'\n")
+          p.write_text(text,encoding='utf-8')
+
+          p=Path('index.html')
+          text=p.read_text(encoding='utf-8')
+          text=text.replace('?v=263','?v=264')
+          text=text.replace('v263','v264')
+          p.write_text(text,encoding='utf-8')
+
+          # 5) Nieuwsachtergrond: zodra sync klaar is nog een korte extra hercontrole,
+          #    zodat een net binnengekomen cloudafbeelding direct op de tegel verschijnt.
+          p=Path('snazzle-news-card-bg-v49.js')
+          text=p.read_text(encoding='utf-8')
+          old="window.addEventListener('snazzle:visual-sync-ready',()=>queue(20));"
+          new="window.addEventListener('snazzle:visual-sync-ready',()=>{queue(20);setTimeout(()=>queue(0),220);setTimeout(()=>queue(0),700);});"
+          if old in text:
+              text=text.replace(old,new,1)
+          p.write_text(text,encoding='utf-8')
+          PY
+
+      - name: Commit v264
+        shell: bash
+        run: |
+          git config user.name "Snazzle Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add app-runtime-v245.js app.js index.html snazzle-clean-home-v31.js snazzle-clean-home-v31.css snazzle-news-card-bg-v49.js
+          git commit -m "Fix home Bieb timing and news background v264" || exit 0
+          git push
