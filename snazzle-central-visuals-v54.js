@@ -1,5 +1,5 @@
-// Snazzle v54.1 — centrale synchronisatie voor alle vervangbare visuele assets.
-// Gebruikt verborgen documenten in de bestaande villages-collectie zodat geen nieuwe Firebase-regels nodig zijn.
+// Snazzle v54.2 — centrale synchronisatie voor alle vervangbare visuele assets.
+// Belangrijk: lokale beheerwijzigingen worden eerst naar de cloud gezet voordat remote data lokaal mag overschrijven.
 
 import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -13,7 +13,7 @@ const STORE='assets';
 const PURPOSE='snazzleVisualAssetV54';
 const COLLECTION='villages';
 const MAX_CLOUD_CHARS=680000;
-let dbPromise=null,superAdmin=false,pushing=false,reloadTimer=0;
+let dbPromise=null,superAdmin=false,pushing=false,reloadTimer=0,listenerStarted=false;
 let remoteMap=new Map();
 
 function toast(text){const el=document.getElementById('toast');if(!el)return;el.textContent=text;el.classList.add('show');clearTimeout(window.__v54Toast);window.__v54Toast=setTimeout(()=>el.classList.remove('show'),3300);}
@@ -60,7 +60,22 @@ async function readRemoteOnce(){
 async function saveRemote(key,raw,user,extra={}){
   const dataUrl=await cloudSafe(raw);
   await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl,cleared:false,updatedAt:new Date().toISOString(),updatedBy:user.uid,...extra},{merge:true});
+  remoteMap.set(String(key),{dataUrl,cleared:false});
   return dataUrl;
+}
+async function saveOne(key,raw){
+  if(!superAdmin) return false;
+  const user=auth.currentUser;if(!user||!key||!raw)return false;
+  try{
+    const dataUrl=await saveRemote(String(key),raw,user);
+    await putLocal(String(key),dataUrl);
+    toast('Afbeelding centraal opgeslagen ✓');
+    return true;
+  }catch(err){
+    console.warn('Snazzle v54 losse afbeelding opslaan',key,err);
+    toast('Afbeelding staat lokaal; centrale opslag wordt opnieuw geprobeerd');
+    return false;
+  }
 }
 async function clearRemote(key){
   if(!superAdmin)return false;
@@ -74,13 +89,19 @@ async function pushLocalSnapshot(){
   if(!superAdmin||pushing) return 0;pushing=true;let count=0;
   try{
     const user=auth.currentUser;if(!user)return 0;const local=await allLocal();const remote=await readRemoteOnce();
-    for(const [key,raw] of local){const current=remote.get(key);const dataUrl=await cloudSafe(raw);if(current?.dataUrl===dataUrl&&!current?.cleared)continue;await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl,cleared:false,updatedAt:new Date().toISOString(),updatedBy:user.uid},{merge:true});count++;}
+    for(const [key,raw] of local){
+      const current=remote.get(key);const dataUrl=await cloudSafe(raw);
+      if(current?.dataUrl===dataUrl&&!current?.cleared)continue;
+      await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl,cleared:false,updatedAt:new Date().toISOString(),updatedBy:user.uid},{merge:true});
+      remoteMap.set(String(key),{dataUrl,cleared:false});count++;
+    }
     if(count) toast(`${count} Snazzle-afbeelding${count===1?'':'en'} centraal opgeslagen ✓`);
   }catch(err){console.warn('Snazzle v54 centraal opslaan',err);toast('Een afbeelding kon nog niet centraal worden opgeslagen');}
   finally{pushing=false;}
   return count;
 }
 function startRemoteListener(){
+  if(listenerStarted)return;listenerStarted=true;
   const q=query(collection(db,COLLECTION),where('purpose','==',PURPOSE));
   onSnapshot(q,async snap=>{
     const next=new Map();snap.docs.forEach(d=>{const x=d.data()||{},key=String(x.key||'');if(key)next.set(key,{dataUrl:String(x.dataUrl||''),cleared:x.cleared===true});});remoteMap=next;
@@ -94,9 +115,29 @@ function startRemoteListener(){
 }
 async function isCurrentUserSuperAdmin(user){try{const snap=await getDoc(doc(db,'adminUsers',user.uid));const d=snap.data()||{};return snap.exists()&&d.active===true&&d.role==='superadmin';}catch{return false;}}
 function watchAdminImageEdits(){
-  document.addEventListener('change',e=>{const input=e.target;if(!superAdmin||!(input instanceof HTMLInputElement)||input.type!=='file')return;if(input.closest('#imagesAdmin,#v32ImageManager,#adminVillageList'))setTimeout(()=>pushLocalSnapshot(),1400);},true);
-  document.addEventListener('click',e=>{if(!superAdmin)return;const b=e.target.closest?.('button');if(!b||!b.closest('#imagesAdmin,#v32ImageManager,#adminVillageList'))return;if(/verwijder|standaard|terug/i.test(b.textContent||''))setTimeout(()=>pushLocalSnapshot(),900);},true);
+  document.addEventListener('change',e=>{
+    const input=e.target;
+    if(!superAdmin||!(input instanceof HTMLInputElement)||input.type!=='file')return;
+    if(input.closest('#imagesAdmin,#v32ImageManager,#adminVillageList'))setTimeout(()=>pushLocalSnapshot(),1100);
+  },true);
+  document.addEventListener('click',e=>{
+    if(!superAdmin)return;const b=e.target.closest?.('button');
+    if(!b||!b.closest('#imagesAdmin,#v32ImageManager,#adminVillageList'))return;
+    if(/verwijder|standaard|terug/i.test(b.textContent||''))setTimeout(()=>pushLocalSnapshot(),700);
+  },true);
 }
-onAuthStateChanged(auth,async user=>{if(!user)return;superAdmin=await isCurrentUserSuperAdmin(user);startRemoteListener();if(superAdmin)setTimeout(()=>pushLocalSnapshot(),700);});
+
+onAuthStateChanged(auth,async user=>{
+  if(!user)return;
+  superAdmin=await isCurrentUserSuperAdmin(user);
+
+  // Dit was de fout: vroeger begon de remote listener eerst en kon een oude cloudwaarde
+  // een net gekozen beheerafbeelding lokaal terug overschrijven. Beheer wint nu eerst.
+  if(superAdmin){
+    await pushLocalSnapshot();
+  }
+  startRemoteListener();
+  window.dispatchEvent(new CustomEvent('snazzle:visual-sync-ready',{detail:{superAdmin}}));
+});
 watchAdminImageEdits();
-window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,clear:clearRemote,local:allLocal};
+window.SnazzleVisualSyncV54={push:pushLocalSnapshot,pushAndClean:pushLocalSnapshot,recover:pushLocalSnapshot,save:saveOne,clear:clearRemote,local:allLocal};
