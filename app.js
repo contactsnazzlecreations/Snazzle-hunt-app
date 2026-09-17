@@ -1,4 +1,4 @@
-// Snazzle Hunt v251 — vloeiende single-start bootstrap met AR-vondstenteller in beheer.
+// Snazzle Hunt v252 — externe webshop via snazzle.nl, zonder interne shop-pagina.
 // Eerst de bruikbare app; zware kaart- en cloudvoortgang daarna alleen wanneer nodig.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -11,7 +11,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=251`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=252`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -23,9 +23,29 @@ async function pacedImports(entries){
 }
 
 // Kritieke route: de echte app eerst. Geen kaart-seeds vóór het beginscherm.
-await import('./app-runtime-v245.js?v=249');
+await import('./app-runtime-v245.js?v=252');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
+
+// De Hunt-app heeft geen eigen winkelpagina meer. De vaste Shop-knop blijft staan
+// en brengt bezoekers rechtstreeks naar de webshop op snazzle.nl.
+const EXTERNAL_SHOP_URL='https://snazzle.nl/#shop';
+function installExternalShopLink(){
+  const shopButton=document.getElementById('navShop');
+  if(shopButton){
+    shopButton.onclick=()=>window.location.assign(EXTERNAL_SHOP_URL);
+    shopButton.setAttribute('aria-label','Open de Snazzle Shop op snazzle.nl');
+  }
+  document.getElementById('shopSheet')?.remove();
+}
+installExternalShopLink();
+document.addEventListener('click',event=>{
+  const quickShop=event.target?.closest?.('[data-quick-action="shop"]');
+  if(!quickShop)return;
+  event.preventDefault();
+  event.stopPropagation();
+  window.location.assign(EXTERNAL_SHOP_URL);
+},{capture:true});
 
 function repairSupplementalUi(){
   window.SnazzleMysticV221?.repair?.();
