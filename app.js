@@ -1,4 +1,4 @@
-// Snazzle Hunt v256 — stabiele eenmalige opstart met speels Snazzle-laadscherm.
+// Snazzle Hunt v258 — stabiele opstart + compleet vervangbare app-afbeeldingen.
 // Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -34,14 +34,14 @@ function releaseStableBoot(){
 }
 function preloadCriticalAssets(){
   const moduleHrefs=[
-    './app-runtime-v245.js?v=256',
+    './app-runtime-v245.js?v=258',
     './snazzle-runtime-stability-v71.js?fresh=20260917-v254-news-background',
     './snazzle-image-stability-v72.js?fresh=20260917-v254-news-background',
     './snazzle-leaflet-isolation-v190.js?fresh=20260917-v254-news-background',
     './app-core.js?fresh=20260917-v254-news-background',
     './snazzle-core-performance-v248.js?fresh=20260917-v254-news-background',
     './snazzle-adventure-ui-v28.js?fresh=20260917-v254-news-background',
-    './snazzle-clean-home-v31.js?fresh=20260917-v254-news-background'
+    './snazzle-clean-home-v31.js?v=258'
   ];
   moduleHrefs.forEach(href=>{
     if(document.head.querySelector(`link[rel="modulepreload"][href="${href}"]`))return;
@@ -65,7 +65,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=256`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=258`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -78,7 +78,7 @@ async function pacedImports(entries){
 
 // Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
 // kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
-await import('./app-runtime-v245.js?v=256');
+await import('./app-runtime-v245.js?v=258');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
