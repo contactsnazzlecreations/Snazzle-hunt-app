@@ -1,6 +1,6 @@
-// Snazzle v72.2 — stabielere afbeeldingen + robuuste Snazzle AR-achtergrondupload.
-// Voorkomt vooral dat dezelfde afbeelding opnieuw wordt gezet en vangt Android-bestandsuploads betrouwbaar af.
-const V72='72.2.0';
+// Snazzle v72.3 — stabielere afbeeldingen + robuuste Android-afbeeldingsuploads.
+// Voorkomt vooral dat dezelfde afbeelding opnieuw wordt gezet en herstelt ontbrekende MIME-types van beeldbestanden.
+const V72='72.3.0';
 
 function sameImageSource72(img,next){
   const value=String(next??'');
@@ -129,11 +129,57 @@ function prepareExisting72(root=document){
 }
 
 /*
+ * Android upload repair.
+ * Sommige Android/Xiaomi-bestandskiezers leveren een geldige PNG/JPG/WebP met een leeg of generiek
+ * MIME-type. De oudere beeldbeheerder controleert file.type en stopte daardoor vóór preview en opslag.
+ * Herstel daarom het MIME-type voor ALLE beeldkaarten vóór hun bestaande onchange-handler draait.
+ */
+function imageMimeFromName72(name){
+  const n=String(name||'').toLowerCase();
+  if(/\.png$/.test(n))return 'image/png';
+  if(/\.jpe?g$/.test(n))return 'image/jpeg';
+  if(/\.webp$/.test(n))return 'image/webp';
+  if(/\.gif$/.test(n))return 'image/gif';
+  if(/\.bmp$/.test(n))return 'image/bmp';
+  if(/\.avif$/.test(n))return 'image/avif';
+  return '';
+}
+function isManagedImageInput72(input){
+  return input instanceof HTMLInputElement&&input.type==='file'&&!!input.closest('.v31-image-item,.v32-image-item,#imagesAdmin');
+}
+function repairManagedImageMime72(input){
+  if(!isManagedImageInput72(input))return false;
+  const file=input.files?.[0];
+  if(!file)return false;
+  if(String(file.type||'').toLowerCase().startsWith('image/'))return true;
+  const mime=imageMimeFromName72(file.name);
+  if(!mime)return false;
+  try{
+    const repaired=new File([file],file.name,{type:mime,lastModified:file.lastModified||Date.now()});
+    const transfer=new DataTransfer();
+    transfer.items.add(repaired);
+    input.files=transfer.files;
+    return true;
+  }catch(err){
+    console.warn('Snazzle Android MIME-herstel kon bestand niet vervangen',err);
+    return false;
+  }
+}
+function installManagedUploadMimeRepair72(){
+  if(window.__snazzleManagedUploadMimeRepair72)return;
+  window.__snazzleManagedUploadMimeRepair72=true;
+  // Capture: dit moet vóór de bestaande input.onchange-handlers lopen.
+  document.addEventListener('change',event=>{
+    const input=event.target;
+    if(!isManagedImageInput72(input))return;
+    repairManagedImageMime72(input);
+  },true);
+}
+
+/*
  * Snazzle AR upload rescue.
- * Op sommige Android-bestandsproviders komt een PNG/JPG binnen met een lege of generieke MIME-type.
- * De gewone beeldbeheerder kon zo stoppen vóór de preview en IndexedDB-save. Deze handler pakt alleen
- * de kaart “Achtergrond Snazzle AR”, accepteert ook geldige beeldextensies en bewaart direct in dezelfde
- * IndexedDB-sleutel (arCard) die de home gebruikt.
+ * Extra vangnet voor de AR-kaart. Deze blijft ook werken als een Android-provider het bestandstype
+ * niet netjes doorgeeft of DataTransfer op een toestel niet beschikbaar is.
  */
 const AR_VISUAL_DB72='snazzleVisualAssetsV28';
 const AR_VISUAL_STORE72='assets';
@@ -272,6 +318,7 @@ function installArUploadRescue72(){
 
 installSourceGuard72();
 installStyles72();
+installManagedUploadMimeRepair72();
 installArUploadRescue72();
 if(document.body) prepareExisting72();
 else document.addEventListener('DOMContentLoaded',()=>prepareExisting72(),{once:true});
