@@ -1,7 +1,7 @@
-// Snazzle Hunt v31.2 — rustige home + compleet centraal beeldbeheer.
+// Snazzle Hunt v31.3 — rustige home + robuust centraal beeldbeheer.
 // Zichtbare home-tegels, tegel-iconen, dorpen en ondermenu zijn via Beheer → Afbeeldingen vervangbaar.
 
-const V31='31.2.0';
+const V31='31.3.0';
 const q31=(s,r=document)=>r.querySelector(s);
 const qa31=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB31='snazzleVisualAssetsV28';
@@ -38,7 +38,7 @@ const extraAssets31=[
 
 function ensureCss31(){
   if(q31('#snazzleCleanHomeV31'))return;
-  const l=document.createElement('link');l.id='snazzleCleanHomeV31';l.rel='stylesheet';l.href='./snazzle-clean-home-v31.css?v=31';document.head.appendChild(l);
+  const l=document.createElement('link');l.id='snazzleCleanHomeV31';l.rel='stylesheet';l.href='./snazzle-clean-home-v31.css?v=31.3';document.head.appendChild(l);
 }
 function db31(){
   if(db31Promise)return db31Promise;
@@ -67,19 +67,29 @@ async function del31(key){
   await new Promise((resolve,reject)=>{const tx=db.transaction(STORE31,'readwrite');tx.objectStore(STORE31).delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
   cache31.set(key,'');
 }
+function isImageFile31(file){
+  if(!file)return false;
+  if(String(file.type||'').toLowerCase().startsWith('image/'))return true;
+  return /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(String(file.name||''));
+}
 function compress31(file,max=1200,quality=.84){
   return new Promise((resolve,reject)=>{
-    if(!file||!file.type?.startsWith('image/'))return reject(new Error('Kies een afbeelding'));
+    if(!isImageFile31(file))return reject(new Error('Kies een PNG, JPG of WebP-afbeelding'));
     const fr=new FileReader();fr.onerror=()=>reject(new Error('Afbeelding kon niet worden gelezen'));
     fr.onload=()=>{const im=new Image();im.onerror=()=>reject(new Error('Afbeelding kon niet worden geopend'));im.onload=()=>{
-      const w=im.naturalWidth||im.width,h=im.naturalHeight||im.height,scale=Math.min(1,max/Math.max(w,h));
-      const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-      let out=c.toDataURL('image/webp',quality);if(!out.startsWith('data:image/webp'))out=c.toDataURL('image/jpeg',quality);resolve(out);
-    };im.src=fr.result;};fr.readAsDataURL(file);
+      try{
+        const w=im.naturalWidth||im.width,h=im.naturalHeight||im.height;
+        if(!w||!h)throw new Error('Afbeelding heeft geen geldige afmetingen');
+        const scale=Math.min(1,max/Math.max(w,h));
+        const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));
+        const ctx=c.getContext('2d');if(!ctx)throw new Error('Afbeelding verwerken lukt niet op dit toestel');ctx.drawImage(im,0,0,c.width,c.height);
+        let out=c.toDataURL('image/webp',quality);if(!out.startsWith('data:image/webp'))out=c.toDataURL('image/jpeg',quality);resolve(out);
+      }catch(err){reject(err);}
+    };im.src=String(fr.result||'');};fr.readAsDataURL(file);
   });
 }
 function toast31(text){
-  const t=q31('#toast');if(!t){console.info(text);return;}t.textContent=text;t.classList.add('show');clearTimeout(window.__v31toast);window.__v31toast=setTimeout(()=>t.classList.remove('show'),2400);
+  const t=q31('#toast');if(!t){console.info(text);return;}t.textContent=text;t.classList.add('show');clearTimeout(window.__v31toast);window.__v31toast=setTimeout(()=>t.classList.remove('show'),2600);
 }
 function loadLocal31(){try{return JSON.parse(localStorage.getItem('snazzleSettings')||'{}');}catch{return {};}}
 function saveLocal31(key,value){const s=loadLocal31();s[key]=value;localStorage.setItem('snazzleSettings',JSON.stringify(s));applyLegacyImages31();}
@@ -181,16 +191,16 @@ function queueCentralPush31(){
   let tries=0;
   const run=()=>{
     const api=window.SnazzleVisualSyncV54;
-    if(api?.push){api.push().catch?.(()=>{});return;}
-    if(++tries<20)setTimeout(run,250);
+    if(api?.push){Promise.resolve(api.push()).catch(()=>{});return;}
+    if(++tries<120)setTimeout(run,500);
   };
-  setTimeout(run,80);
+  setTimeout(run,100);
 }
 async function clearCentral31(key){
-  for(let i=0;i<20;i++){
+  for(let i=0;i<120;i++){
     const api=window.SnazzleVisualSyncV54;
     if(api?.clear){try{return await api.clear(key);}catch{return false;}}
-    await new Promise(resolve=>setTimeout(resolve,250));
+    await new Promise(resolve=>setTimeout(resolve,500));
   }
   return false;
 }
@@ -248,9 +258,12 @@ function hideOldExtraManager31(){
 async function sync31(){
   cleanWelcome31();structureHero31();wrapVillages31();applyLegacyImages31();hideOldExtraManager31();await applyExtraImages31();await ensureManager31();
 }
-function queue31(){if(queued31)return;queued31=true;setTimeout(async()=>{queued31=false;try{await sync31();}catch(e){console.warn('Snazzle v31',e);}},120);}
+function queue31(){if(queued31)return;queued31=true;setTimeout(async()=>{queued31=false;try{await sync31();}catch(e){console.warn('Snazzle v31',e);}},140);}
 function observe31(){
-  new MutationObserver(queue31).observe(document.body,{childList:true,subtree:true});
+  new MutationObserver(mutations=>{
+    if(mutations.every(m=>m.target?.closest?.('#v31ImageManager,#v32PageAddon')))return;
+    queue31();
+  }).observe(document.body,{childList:true,subtree:true});
   document.addEventListener('click',e=>{if(e.target.closest?.('.village,#saveNameBtn,[data-tab]'))setTimeout(queue31,80);});
 }
 async function init31(){
