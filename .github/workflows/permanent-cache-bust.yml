@@ -1,4 +1,4 @@
-name: Snazzle v262 cache activation
+name: Snazzle v263 news card activation
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
       - 'snazzle-clean-home-v31.js'
       - 'snazzle-home-card-backgrounds-v75.js'
       - 'snazzle-central-visuals-v54.js'
+      - 'snazzle-news-card-bg-v49.js'
   workflow_dispatch:
 
 permissions:
@@ -20,14 +21,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Activate fresh v262 assets
+      - name: Activate fresh v263 assets
         run: |
           python - <<'PY'
           from pathlib import Path
           import re, json
 
-          version='262'
-          runtime='20260917-v262-image-manager'
+          version='263'
+          runtime='20260917-v263-news-card'
 
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
@@ -52,6 +53,12 @@ jobs:
           s=re.sub(r"const runtimeVersion='[^']+';", "const runtimeVersion='"+runtime+"';", s, count=1)
           s=re.sub(r'\.\/snazzle-clean-home-v31\.js\?v=\d+', './snazzle-clean-home-v31.js?v='+version, s)
           s=re.sub(r'\.\/snazzle-central-visuals-v54\.js\?v=\d+', './snazzle-central-visuals-v54.js?v='+version, s)
+          needle="'./snazzle-news-v47.js','./snazzle-news-bg-v48.js','./snazzle-parent-hub-v65.js'"
+          replacement="'./snazzle-news-v47.js','./snazzle-news-bg-v48.js','./snazzle-news-card-bg-v49.js','./snazzle-parent-hub-v65.js'"
+          if 'snazzle-news-card-bg-v49.js' not in s:
+              if needle not in s:
+                  raise SystemExit('Snazzle Nieuws fast bundle not found')
+              s=s.replace(needle,replacement,1)
           p.write_text(s,encoding='utf-8')
 
           p=Path('manifest.json')
@@ -69,5 +76,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html app.js app-runtime-v245.js manifest.json
-          git commit -m "Activate Snazzle image manager v262"
+          git commit -m "Activate Snazzle Nieuws background v263"
           git push
