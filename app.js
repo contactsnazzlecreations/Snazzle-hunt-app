@@ -1,4 +1,4 @@
-// Snazzle Hunt v253 — visueel Snazzle Nieuws, externe webshop via snazzle.nl.
+// Snazzle Hunt v254 — speelse leesbare Snazzle Nieuws-achtergrond en externe webshop via snazzle.nl.
 // Eerst de bruikbare app; zware kaart- en cloudvoortgang daarna alleen wanneer nodig.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -11,7 +11,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=253`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=254`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -23,7 +23,7 @@ async function pacedImports(entries){
 }
 
 // Kritieke route: de echte app eerst. Geen kaart-seeds vóór het beginscherm.
-await import('./app-runtime-v245.js?v=253');
+await import('./app-runtime-v245.js?v=254');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
