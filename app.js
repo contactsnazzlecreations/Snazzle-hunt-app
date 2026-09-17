@@ -1,17 +1,71 @@
-// Snazzle Hunt v254 — speelse leesbare Snazzle Nieuws-achtergrond en externe webshop via snazzle.nl.
-// Eerst de bruikbare app; zware kaart- en cloudvoortgang daarna alleen wanneer nodig.
+// Snazzle Hunt v255 — stabiele eenmalige opstart zonder zichtbaar herladen.
+// Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
 const quiet=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>resolve()));
 const idle=()=>new Promise(resolve=>{'requestIdleCallback'in window?requestIdleCallback(()=>resolve(),{timeout:500}):setTimeout(resolve,60);});
 
+const BOOT_ID='snazzleStableBootV255';
+const BOOT_STYLE_ID='snazzleStableBootStyleV255';
+let bootReleased=false;
+function installStableBoot(){
+  if(!document.getElementById(BOOT_STYLE_ID)){
+    const style=document.createElement('style');
+    style.id=BOOT_STYLE_ID;
+    style.textContent=`#${BOOT_ID}{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:radial-gradient(circle at 50% 32%,rgba(172,237,80,.22),transparent 26%),linear-gradient(180deg,#176c3b 0%,#0c4f2e 58%,#073820 100%);color:#fff;text-align:center;padding:24px;opacity:1;transition:opacity .24s ease}#${BOOT_ID}.sn-boot-away{opacity:0;pointer-events:none}.sn-boot-card{width:min(360px,88vw);padding:28px 24px 25px;border-radius:28px;background:rgba(8,54,32,.68);border:2px solid rgba(255,223,111,.5);box-shadow:0 18px 48px rgba(0,0,0,.28)}.sn-boot-duck{font-size:58px;line-height:1;filter:drop-shadow(0 6px 8px rgba(0,0,0,.22));animation:snBootBob 1.15s ease-in-out infinite alternate}.sn-boot-title{margin:13px 0 4px;font-size:27px;font-weight:1000;letter-spacing:.2px;color:#ffd65a;text-shadow:0 2px 6px rgba(0,0,0,.28)}.sn-boot-copy{font-size:15px;font-weight:780;color:#f7f4dc}.sn-boot-track{height:8px;margin-top:19px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.14)}.sn-boot-bar{height:100%;width:44%;border-radius:99px;background:linear-gradient(90deg,#ffe36a,#a9ed50);animation:snBootSlide 1s ease-in-out infinite}@keyframes snBootBob{to{transform:translateY(-7px) rotate(2deg)}}@keyframes snBootSlide{0%{transform:translateX(-115%)}100%{transform:translateX(265%)}}@media(prefers-reduced-motion:reduce){.sn-boot-duck,.sn-boot-bar{animation:none}.sn-boot-bar{width:68%}}`;
+    document.head.appendChild(style);
+  }
+  if(document.getElementById(BOOT_ID))return;
+  const boot=document.createElement('div');
+  boot.id=BOOT_ID;
+  boot.setAttribute('role','status');
+  boot.setAttribute('aria-live','polite');
+  boot.innerHTML='<div class="sn-boot-card"><div class="sn-boot-duck">🦆✨</div><div class="sn-boot-title">Snazzle Hunt</div><div class="sn-boot-copy">Even de Snazzle-magie laden…</div><div class="sn-boot-track" aria-hidden="true"><div class="sn-boot-bar"></div></div></div>';
+  document.body.appendChild(boot);
+}
+function releaseStableBoot(){
+  if(bootReleased)return;
+  bootReleased=true;
+  const boot=document.getElementById(BOOT_ID);
+  if(!boot)return;
+  boot.classList.add('sn-boot-away');
+  setTimeout(()=>boot.remove(),280);
+}
+function preloadCriticalAssets(){
+  const moduleHrefs=[
+    './app-runtime-v245.js?v=255',
+    './snazzle-runtime-stability-v71.js?fresh=20260917-v254-news-background',
+    './snazzle-image-stability-v72.js?fresh=20260917-v254-news-background',
+    './snazzle-leaflet-isolation-v190.js?fresh=20260917-v254-news-background',
+    './app-core.js?fresh=20260917-v254-news-background',
+    './snazzle-core-performance-v248.js?fresh=20260917-v254-news-background',
+    './snazzle-adventure-ui-v28.js?fresh=20260917-v254-news-background',
+    './snazzle-clean-home-v31.js?fresh=20260917-v254-news-background'
+  ];
+  moduleHrefs.forEach(href=>{
+    if(document.head.querySelector(`link[rel="modulepreload"][href="${href}"]`))return;
+    const link=document.createElement('link');link.rel='modulepreload';link.href=href;document.head.appendChild(link);
+  });
+  ['./snazzle-reference-layout.css?v=28','./snazzle-clean-home-v31.css?v=31'].forEach(href=>{
+    if(document.head.querySelector(`link[rel="preload"][href="${href}"]`))return;
+    const link=document.createElement('link');link.rel='preload';link.as='style';link.href=href;document.head.appendChild(link);
+  });
+}
+
+installStableBoot();
+preloadCriticalAssets();
+document.addEventListener('snazzle:home-ui-ready',releaseStableBoot,{once:true});
+document.addEventListener('snazzle:interactive',releaseStableBoot,{once:true});
+// Veiligheidsnet: bij een onverwachte netwerkfout blijft niemand op een laadscherm vastzitten.
+setTimeout(releaseStableBoot,9000);
+
 async function optionalImport(path,label){
   try{
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=254`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=255`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -22,8 +76,9 @@ async function pacedImports(entries){
   }
 }
 
-// Kritieke route: de echte app eerst. Geen kaart-seeds vóór het beginscherm.
-await import('./app-runtime-v245.js?v=254');
+// Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
+// kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
+await import('./app-runtime-v245.js?v=255');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
