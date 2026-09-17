@@ -1,7 +1,7 @@
-// Snazzle Hunt v31.3 — rustige home + robuust centraal beeldbeheer.
+// Snazzle Hunt v31.4 — rustige home + één betrouwbaar centraal beeldbeheer.
 // Zichtbare home-tegels, tegel-iconen, dorpen en ondermenu zijn via Beheer → Afbeeldingen vervangbaar.
 
-const V31='31.3.0';
+const V31='31.4.0';
 const q31=(s,r=document)=>r.querySelector(s);
 const qa31=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB31='snazzleVisualAssetsV28';
@@ -38,7 +38,7 @@ const extraAssets31=[
 
 function ensureCss31(){
   if(q31('#snazzleCleanHomeV31'))return;
-  const l=document.createElement('link');l.id='snazzleCleanHomeV31';l.rel='stylesheet';l.href='./snazzle-clean-home-v31.css?v=31.3';document.head.appendChild(l);
+  const l=document.createElement('link');l.id='snazzleCleanHomeV31';l.rel='stylesheet';l.href='./snazzle-clean-home-v31.css?v=31.4';document.head.appendChild(l);
 }
 function db31(){
   if(db31Promise)return db31Promise;
@@ -83,13 +83,15 @@ function compress31(file,max=1200,quality=.84){
         const scale=Math.min(1,max/Math.max(w,h));
         const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));
         const ctx=c.getContext('2d');if(!ctx)throw new Error('Afbeelding verwerken lukt niet op dit toestel');ctx.drawImage(im,0,0,c.width,c.height);
-        let out=c.toDataURL('image/webp',quality);if(!out.startsWith('data:image/webp'))out=c.toDataURL('image/jpeg',quality);resolve(out);
+        let out=c.toDataURL('image/webp',quality);if(!out.startsWith('data:image/webp'))out=c.toDataURL('image/jpeg',quality);
+        if(!out.startsWith('data:image/'))throw new Error('Afbeelding kon niet worden omgezet');
+        resolve(out);
       }catch(err){reject(err);}
     };im.src=String(fr.result||'');};fr.readAsDataURL(file);
   });
 }
 function toast31(text){
-  const t=q31('#toast');if(!t){console.info(text);return;}t.textContent=text;t.classList.add('show');clearTimeout(window.__v31toast);window.__v31toast=setTimeout(()=>t.classList.remove('show'),2600);
+  const t=q31('#toast');if(!t){console.info(text);return;}t.textContent=text;t.classList.add('show');clearTimeout(window.__v31toast);window.__v31toast=setTimeout(()=>t.classList.remove('show'),3000);
 }
 function loadLocal31(){try{return JSON.parse(localStorage.getItem('snazzleSettings')||'{}');}catch{return {};}}
 function saveLocal31(key,value){const s=loadLocal31();s[key]=value;localStorage.setItem('snazzleSettings',JSON.stringify(s));applyLegacyImages31();}
@@ -154,12 +156,13 @@ function bg31(el,src){
   if(!el)return;
   if(src){
     if(el.dataset.v31BgSrc===src)return;
-    el.style.setProperty('background-image',`linear-gradient(180deg,rgba(5,45,35,.10),rgba(3,36,29,.66)),url("${src}")`,'important');
+    el.style.setProperty('background-image',`linear-gradient(180deg,rgba(5,45,35,.10),rgba(3,36,29,.52)),url("${src}")`,'important');
     el.style.setProperty('background-size','cover','important');
     el.style.setProperty('background-position','center','important');
+    el.style.setProperty('background-repeat','no-repeat','important');
     el.dataset.v31Bg='1';el.dataset.v31BgSrc=src;
   }else if(el.dataset.v31Bg==='1'){
-    el.style.removeProperty('background-image');el.style.removeProperty('background-size');el.style.removeProperty('background-position');
+    el.style.removeProperty('background-image');el.style.removeProperty('background-size');el.style.removeProperty('background-position');el.style.removeProperty('background-repeat');
     delete el.dataset.v31Bg;delete el.dataset.v31BgSrc;
   }
 }
@@ -187,18 +190,22 @@ function quickIconHolder31(button,fallback){
   else button.prepend(holder);
   return holder;
 }
-function queueCentralPush31(){
+function saveCentralKey31(key,data){
   let tries=0;
   const run=()=>{
     const api=window.SnazzleVisualSyncV54;
+    api?.markDirty?.(key);
+    if(api?.saveKey){Promise.resolve(api.saveKey(key,data)).catch(()=>{});return;}
+    if(api?.save){Promise.resolve(api.save(key,data)).catch(()=>{});return;}
     if(api?.push){Promise.resolve(api.push()).catch(()=>{});return;}
     if(++tries<120)setTimeout(run,500);
   };
-  setTimeout(run,100);
+  setTimeout(run,60);
 }
 async function clearCentral31(key){
   for(let i=0;i<120;i++){
     const api=window.SnazzleVisualSyncV54;
+    api?.markDirty?.(key);
     if(api?.clear){try{return await api.clear(key);}catch{return false;}}
     await new Promise(resolve=>setTimeout(resolve,500));
   }
@@ -207,11 +214,14 @@ async function clearCentral31(key){
 async function applyExtraImages31(){
   bg31(q31('#bigStart'),await get31('mainStartCard'));
   bg31(q31('#snArLaunch'),await get31('arCard'));
-  bg31(q31('.finds'),await get31('quickFinds'));
-  bg31(q31('.profile'),await get31('quickProfile'));
-  bg31(q31('#snBiebHome73'),await get31('biebCard'));
-  bg31(q31('#collectionHomeCard'),await get31('collectionCard'));
-  bg31(q31('#snNewsLaunch'),await get31('newsCard'));
+  bg31(q31('#findsBtn')||q31('.finds'),await get31('quickFinds'));
+  bg31(q31('#profileBtn')||q31('.profile'),await get31('quickProfile'));
+  bg31(q31('#snBiebHome73')||q31('.sn-bieb-home'),await get31('biebCard'));
+  const collectionBg31=await get31('collectionCard');
+  bg31(q31('#collectionHomeCard')||q31('.collection-home-card'),collectionBg31);
+  const newsBg31=await get31('newsCard');
+  bg31(q31('#snNewsLaunch')||q31('.sn-news-launch'),newsBg31);
+  bg31(q31('.home-card.sn-news-launch-card'),newsBg31);
 
   tileIcon31(q31('#bigStart .compass'),await get31('mainStartIcon'),'🧭');
   tileIcon31(q31('#snArLaunch .sn-ar-icon'),await get31('arTileIcon'),'📷');
@@ -235,8 +245,34 @@ async function addLocalCard31(grid,key,label){
 }
 async function addDbCard31(grid,key,label){
   const src=await get31(key),item=card31(label,src),input=item.querySelector('input'),remove=item.querySelector('button');
-  input.onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const icon=/Icon$|TileIcon$|^nav/.test(key),data=await compress31(file,icon?720:key.includes('Character')?950:1200,icon?.90:.86);await set31(key,data);input.value='';item.querySelector('.v31-image-preview').innerHTML=previewHtml31(data);await applyExtraImages31();queueCentralPush31();toast31('Afbeelding aangepast ✓');}catch(err){toast31(err.message||'Opslaan mislukt');}};
-  remove.onclick=async()=>{await del31(key);item.querySelector('.v31-image-preview').innerHTML=previewHtml31('');await applyExtraImages31();const cleared=await clearCentral31(key);toast31(cleared?'Afbeelding overal verwijderd':'Afbeelding verwijderd; centrale sync volgt');};grid.appendChild(item);
+  item.dataset.assetKey=key;input.dataset.assetKey=key;
+  input.onchange=async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    const preview=item.querySelector('.v31-image-preview');const previous=preview?.innerHTML||'';
+    if(preview)preview.textContent='Afbeelding verwerken…';
+    try{
+      window.SnazzleVisualSyncV54?.markDirty?.(key);
+      const icon=/Icon$|TileIcon$|^nav/.test(key);
+      const data=await compress31(file,icon?720:key.includes('Character')?950:1500,icon?.90:.87);
+      await set31(key,data);input.value='';
+      if(preview)preview.innerHTML=previewHtml31(data);
+      await applyExtraImages31();
+      document.dispatchEvent(new CustomEvent('snazzle:visual-asset-changed',{detail:{key,source:'v31'}}));
+      saveCentralKey31(key,data);
+      toast31('Afbeelding aangepast ✓');
+    }catch(err){
+      if(preview)preview.innerHTML=previous;
+      console.error('Snazzle afbeelding upload',key,err);
+      toast31(err?.message||'Opslaan mislukt');
+    }
+  };
+  remove.onclick=async()=>{
+    window.SnazzleVisualSyncV54?.markDirty?.(key);
+    await del31(key);item.querySelector('.v31-image-preview').innerHTML=previewHtml31('');await applyExtraImages31();
+    document.dispatchEvent(new CustomEvent('snazzle:visual-asset-changed',{detail:{key,source:'v31',deleted:true}}));
+    const cleared=await clearCentral31(key);toast31(cleared?'Afbeelding overal verwijderd':'Afbeelding verwijderd; centrale sync volgt');
+  };
+  grid.appendChild(item);
 }
 async function ensureManager31(){
   const admin=q31('#imagesAdmin');if(!admin||q31('#v31ImageManager',admin))return;
@@ -269,4 +305,6 @@ function observe31(){
 async function init31(){
   if(window.__snazzleV31)return;window.__snazzleV31=true;ensureCss31();await sync31();observe31();console.info(`Snazzle clean home ${V31} geladen`);
 }
+document.addEventListener('snazzle:visual-assets-updated',()=>{cache31.clear();queue31();});
+document.addEventListener('snazzle:visual-asset-changed',event=>{const key=String(event.detail?.key||'');if(key)cache31.delete(key);setTimeout(queue31,20);});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init31,{once:true});else init31();
