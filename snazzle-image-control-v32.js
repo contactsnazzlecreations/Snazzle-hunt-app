@@ -1,7 +1,7 @@
 // Snazzle Hunt v32.1 — extra paginabeeldbeheer zonder conflict met het centrale v31-beheer.
 // v31 blijft de enige hoofdbeheerder voor home/tegels/iconen; v32 voegt alleen overige pagina-afbeeldingen toe.
 
-const V32='32.1.0';
+const V32='32.2.0';
 const q32=(s,r=document)=>r.querySelector(s);
 const qa32=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB32='snazzleVisualAssetsV28';
@@ -321,6 +321,8 @@ function observe32(){
     if(e.target.closest?.('.village,[data-tab],.bottom button,.quick-menu-list button'))setTimeout(queue32,120);
   });
 }
+document.addEventListener('snazzle:visual-assets-updated',()=>queue32());
+document.addEventListener('snazzle:visual-asset-changed',()=>queue32());
 async function init32(){
   if(window.__snazzleV32)return;
   window.__snazzleV32=true;
