@@ -78,4 +78,4 @@ jobs:
           grep -q "snazzle_ar_world_v1" snazzle-ar-placement-v245.js
           grep -q "snazzle-zones.html?v=245" snazzle-ar-engine-v245.js
           grep -q "playsinline" snazzle-ar-v80.js
-          grep -Eq 'src="\\./app\\.js\\?v=[0-9]+"' index.html
+          grep -Eq 'src="./app\.js\?v=[0-9]+"' index.html
