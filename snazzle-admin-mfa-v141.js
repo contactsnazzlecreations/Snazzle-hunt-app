@@ -1,4 +1,4 @@
-// Snazzle v141 — server-side afgedwongen 2-stapsverificatie voor Beheer.
+// Snazzle v141/v265 — één betrouwbare beheerlogin met server-side 2-stapsverificatie.
 // Veilige overgang: zolang de nieuwe MFA Functions aantoonbaar nog niet online zijn,
 // blijft de bestaande beheerlogin werken. Zodra de backend online is, wordt OTP gebruikt.
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
@@ -21,6 +21,16 @@ const verifyCode=fn?httpsCallable(fn,'verifyAdminLoginCode'):null;
 const $=s=>document.querySelector(s);
 let maskedEmail='';
 let busy=false;
+const LOGIN_LABEL='Inloggen';
+
+function setLoginButton(label=LOGIN_LABEL,disabled=false){
+  const btn=$('#adminLoginBtn');
+  if(!btn)return;
+  btn.type='button';
+  btn.textContent=label;
+  btn.disabled=disabled;
+  btn.setAttribute('aria-busy',disabled?'true':'false');
+}
 
 function toast(message){
   const el=$('#toast');
@@ -113,17 +123,19 @@ async function openExistingAdminTemporarily(){
 }
 
 async function loginWithMfa(){
-  if(busy||!auth||!requestCode)return;
+  if(busy)return;
+  if(!auth||!requestCode){toast('Beheerverbinding is nog niet klaar. Probeer opnieuw.');return;}
   const email=$('#adminEmail')?.value.trim()||'';
   const password=$('#adminPassword')?.value||'';
   if(!email||!password)return toast('Vul e-mail en wachtwoord in');
   busy=true;
-  const btn=$('#adminLoginBtn');if(btn)btn.disabled=true;
+  setLoginButton('Bezig met inloggen…',true);
   let verifiedAdmin=null;
   try{
     const credential=await signInWithEmailAndPassword(auth,email,password);
     verifiedAdmin=await checkAdmin(credential.user.uid);
     if(!verifiedAdmin){await restoreAnonymous();throw new Error('geen-beheer');}
+    setLoginButton('Beveiligingscode sturen…',true);
     const result=await requestCode({});
     maskedEmail=result.data?.maskedEmail||email;
     if($('#adminPassword'))$('#adminPassword').value='';
@@ -147,7 +159,8 @@ async function loginWithMfa(){
       toast('Inloggen mislukt. Controleer e-mail en wachtwoord.');
     }
   }finally{
-    busy=false;if(btn)btn.disabled=false;
+    busy=false;
+    setLoginButton(LOGIN_LABEL,false);
   }
 }
 
@@ -198,7 +211,13 @@ async function cancelMfa(){
 function bind(){
   styles();ensureOverlay();
   const btn=$('#adminLoginBtn');
-  if(btn){btn.onclick=loginWithMfa;btn.dataset.snazzleMfa='1';}
+  if(btn){
+    setLoginButton(LOGIN_LABEL,false);
+    btn.onclick=event=>{event?.preventDefault?.();loginWithMfa();};
+    btn.dataset.snazzleMfa='1';
+    btn.style.setProperty('pointer-events','auto','important');
+    btn.style.setProperty('touch-action','manipulation','important');
+  }
   const input=$('#adminPassword');
   if(input&&!input.dataset.snazzleMfaEnter){
     input.dataset.snazzleMfaEnter='1';
@@ -207,4 +226,7 @@ function bind(){
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
-console.info('Snazzle admin 2-stapsverificatie v141 geladen');
+document.addEventListener('snazzle:admin-ui-ready',bind);
+setTimeout(bind,1200);
+window.SnazzleAdminMfaV141={login:loginWithMfa,rebind:bind};
+console.info('Snazzle admin 2-stapsverificatie v141/v265 geladen');
