@@ -4,6 +4,7 @@ module.exports = {
   ...require('./hunt-codes'),
   ...require('./meetups'),
   ...require('./admin-mfa'),
+  ...require('./ar-admin'),
   ...require('./org-hunts'),
   ...require('./card-progress'),
   ...require('./card-state'),
