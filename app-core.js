@@ -125,6 +125,132 @@ function statusOf(h){
 function liveForVillage(v){ return hunts.filter(h=>h.village===v && statusOf(h)==='live').sort((a,b)=>new Date(b.start||0)-new Date(a.start||0)); }
 function activeHunt(){ return liveForVillage(selectedVillage)[0] || null; }
 
+// Extra hint: pas vrij na 60 minuten zoeken EN minimaal 200 meter echte GPS-beweging.
+// Voortgang blijft op dit toestel bewaard per hunt. Kleine GPS-drift en onrealistische sprongen tellen niet mee.
+const HUNT_HINT_DELAY_MS=60*60*1000;
+const HUNT_HINT_DISTANCE_M=200;
+let huntHintWatchId=null;
+let huntHintWatchHuntId='';
+let huntHintGpsWarned=false;
+let huntHintUnlockNotified='';
+function hintProgressKey(id){return 'snazzleHintProgress:v1:'+String(id||'');}
+function readHuntHintProgress(id){
+  try{
+    const p=JSON.parse(localStorage.getItem(hintProgressKey(id))||'{}');
+    return{
+      startedAt:Number.isFinite(Number(p.startedAt))?Number(p.startedAt):0,
+      distanceM:Number.isFinite(Number(p.distanceM))?Math.max(0,Number(p.distanceM)):0,
+      anchor:p.anchor&&Number.isFinite(Number(p.anchor.lat))&&Number.isFinite(Number(p.anchor.lon))?{
+        lat:Number(p.anchor.lat),lon:Number(p.anchor.lon),accuracy:Number(p.anchor.accuracy||0),ts:Number(p.anchor.ts||0)
+      }:null
+    };
+  }catch{return{startedAt:0,distanceM:0,anchor:null};}
+}
+function saveHuntHintProgress(id,p){
+  try{localStorage.setItem(hintProgressKey(id),JSON.stringify({startedAt:p.startedAt,distanceM:p.distanceM,anchor:p.anchor||null}));}catch{}
+}
+function ensureHuntHintProgress(h){
+  if(!h?.id)return{startedAt:0,distanceM:0,anchor:null};
+  const p=readHuntHintProgress(h.id);
+  if(!p.startedAt){p.startedAt=Date.now();saveHuntHintProgress(h.id,p);}
+  return p;
+}
+function hintGateState(h){
+  const joined=!!h?.id&&joinedHunts.includes(h.id);
+  const p=joined?readHuntHintProgress(h.id):{startedAt:0,distanceM:0,anchor:null};
+  const elapsed=p.startedAt?Math.max(0,Date.now()-p.startedAt):0;
+  const timeRemaining=Math.max(0,HUNT_HINT_DELAY_MS-elapsed);
+  const distanceM=Math.max(0,p.distanceM||0);
+  const distanceRemaining=Math.max(0,HUNT_HINT_DISTANCE_M-distanceM);
+  return{joined,p,elapsed,timeRemaining,distanceM,distanceRemaining,unlocked:joined&&elapsed>=HUNT_HINT_DELAY_MS&&distanceM>=HUNT_HINT_DISTANCE_M};
+}
+function huntDistanceMeters(a,b){
+  const rad=d=>d*Math.PI/180,R=6371000,p1=rad(a.lat),p2=rad(b.lat),dp=rad(b.lat-a.lat),dl=rad(b.lon-a.lon);
+  const q=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));
+}
+function stopHuntHintTracking(){
+  if(huntHintWatchId!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(huntHintWatchId);}catch{}}
+  huntHintWatchId=null;huntHintWatchHuntId='';huntHintGpsWarned=false;
+}
+function recordHuntHintPosition(h,pos){
+  if(!h?.id||String(h.id)!==huntHintWatchHuntId||!joinedHunts.includes(h.id))return;
+  const lat=Number(pos?.coords?.latitude),lon=Number(pos?.coords?.longitude),accuracy=Number(pos?.coords?.accuracy??999),ts=Number(pos?.timestamp||Date.now());
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)||accuracy>45)return;
+  const before=hintGateState(h);
+  const p=ensureHuntHintProgress(h);
+  const current={lat,lon,accuracy:Math.max(0,accuracy),ts};
+  if(!p.anchor){p.anchor=current;saveHuntHintProgress(h.id,p);return;}
+  const segment=huntDistanceMeters(p.anchor,current);
+  const dt=Math.max(1,(current.ts-(p.anchor.ts||current.ts))/1000);
+  const speed=segment/dt;
+  const minMove=Math.max(10,Math.min(30,((p.anchor.accuracy||0)+current.accuracy)*.5));
+  if(segment>=minMove&&speed<=4.5){
+    p.distanceM=Math.min(100000,p.distanceM+segment);
+    p.anchor=current;
+    saveHuntHintProgress(h.id,p);
+  }else if(segment<minMove){
+    // Houd hetzelfde anker vast: zo telt gewone GPS-drift tijdens stilstand niet steeds op.
+  }else if(dt>180&&speed<=6){
+    // Na een langere onderbreking mag normale wandelverplaatsing alsnog meetellen.
+    p.distanceM=Math.min(100000,p.distanceM+segment);
+    p.anchor=current;
+    saveHuntHintProgress(h.id,p);
+  }
+  const after=hintGateState(h);
+  if(!before.unlocked&&after.unlocked&&huntHintUnlockNotified!==String(h.id)){
+    huntHintUnlockNotified=String(h.id);toast('💡 Extra hint ontgrendeld! 60 minuten én 200 meter gehaald.');
+  }
+  renderActive();
+}
+function syncHuntHintTracking(h=activeHunt()){
+  const should=!!h?.id&&!!h.hint&&statusOf(h)==='live'&&joinedHunts.includes(h.id)&&!hintGateState(h).unlocked;
+  if(!should){stopHuntHintTracking();return;}
+  ensureHuntHintProgress(h);
+  const id=String(h.id);
+  if(huntHintWatchId!==null&&huntHintWatchHuntId===id)return;
+  stopHuntHintTracking();
+  huntHintWatchHuntId=id;
+  if(!navigator.geolocation){huntHintGpsWarned=true;return;}
+  huntHintWatchId=navigator.geolocation.watchPosition(
+    pos=>recordHuntHintPosition(h,pos),
+    err=>{
+      if(String(h.id)!==huntHintWatchHuntId)return;
+      if(!huntHintGpsWarned){huntHintGpsWarned=true;toast(err?.code===1?'📍 Locatie is nodig om de 200 meter voor de extra hint te meten.':'📍 GPS-signaal tijdelijk niet beschikbaar.');}
+    },
+    {enableHighAccuracy:true,timeout:15000,maximumAge:3000}
+  );
+}
+function renderHuntHint(h){
+  const home=$('#hintBox'),sheet=$('#sheetHint');
+  if(!h?.hint){
+    if(home){home.textContent='';home.classList.remove('show');}
+    if(sheet)sheet.textContent='Er is voor deze hunt geen extra hint ingesteld.';
+    return;
+  }
+  if(!joinedHunts.includes(h.id)){
+    const text='🔒 Extra hint: start eerst de Hunt. Daarna verschijnt hij pas na 60 minuten én 200 meter lopen.';
+    if(home){home.textContent=text;home.classList.add('show');}
+    if(sheet)sheet.textContent=text;
+    return;
+  }
+  ensureHuntHintProgress(h);
+  const s=hintGateState(h);
+  if(s.unlocked){
+    const text='💡 Extra hint: '+h.hint;
+    if(home){home.textContent=text;home.classList.add('show');}
+    if(sheet)sheet.textContent=text;
+    return;
+  }
+  const mins=Math.ceil(s.timeRemaining/60000);
+  const walked=Math.min(HUNT_HINT_DISTANCE_M,Math.floor(s.distanceM));
+  const timeText=s.timeRemaining>0?`${mins} min te gaan`:'60 min gehaald ✅';
+  const distanceText=s.distanceRemaining>0?`${walked}/${HUNT_HINT_DISTANCE_M} m gelopen`:`${HUNT_HINT_DISTANCE_M} m gehaald ✅`;
+  const text=`🔒 Extra hint · ${timeText} · ${distanceText}`;
+  if(home){home.textContent=text;home.classList.add('show');}
+  if(sheet)sheet.textContent=text+' · Beide voorwaarden moeten gehaald zijn.';
+}
+
 function applyName(){
   const n=userName();
   $('#welcomeText').textContent=n ? `Welkom, ${n}!` : 'Welkom!';
@@ -180,7 +306,7 @@ function renderActive(){
     $('#proofBox').style.display='none';
     setImg($('#huntImg'),$('#huntPlaceholder'),''); $('#huntPlaceholder').textContent='Geen actieve hunt in '+selectedVillage;
     $('#startBtn').disabled=true; $('#startBtn').textContent='Geen hunt';
-    $('#foundBtn').disabled=true; $('#foundBtn').textContent='Geen hunt'; return;
+    $('#foundBtn').disabled=true; $('#foundBtn').textContent='Geen hunt'; syncHuntHintTracking(null); return;
   }
   $('#proofBox').style.display='block';
   $('#activeStatus').textContent='Actief in '+selectedVillage;
@@ -188,16 +314,15 @@ function renderActive(){
   $('#huntVillage').textContent='📍 '+h.village;
   $('#huntRule').textContent=h.rule ? '👨‍👩‍👧 '+h.rule : ''; $('#huntRule').style.display=h.rule ? '' : 'none'; $('#huntRule').style.display=h.rule ? '' : 'none';
   $('#huntDescription').textContent=h.description||'';
-  $('#hintBox').textContent=h.hint ? '💡 Hint: '+h.hint : '';
-  $('#hintBox').classList.toggle('show',!!h.hint);
+  renderHuntHint(h);
   setImg($('#huntImg'),$('#huntPlaceholder'),h.imageUrl||'');
   $('#sheetTitle').textContent=h.title;
   $('#sheetDescription').textContent=(h.description||'')+(h.rule?' Regel: '+h.rule+'.':'');
-  $('#sheetHint').textContent=h.hint ? '💡 Hint: '+h.hint : 'De hint verschijnt zodra de beheerder hem vrijgeeft.';
   setImg($('#sheetImg'),$('#sheetPlaceholder'),h.imageUrl||'');
   $('#startBtn').disabled=false;
   $('#startBtn').textContent=joinedHunts.includes(h.id) ? 'Ik zoek mee ✅' : 'Ik ga zoeken! 🔎';
   updateFoundButton();
+  syncHuntHintTracking(h);
 }
 function resetProof(){ proofPhoto=''; $('#proofPreview').style.display='none'; $('#proofImg').removeAttribute('src'); updateFoundButton(); }
 function updateFoundButton(){
@@ -553,6 +678,8 @@ async function joinActiveHunt(){
   } else {
     toast(`Je zoekt al mee naar ${h.title} ✅`);
   }
+  ensureHuntHintProgress(h);
+  syncHuntHintTracking(h);
   renderActive();
   openSheet('huntSheet');
 }
