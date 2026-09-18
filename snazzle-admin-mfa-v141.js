@@ -4,6 +4,7 @@
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import {
   getAuth,
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithCustomToken,
   signInAnonymously,
@@ -31,6 +32,34 @@ function setLoginButton(label=LOGIN_LABEL,disabled=false){
   btn.disabled=disabled;
   btn.setAttribute('aria-busy',disabled?'true':'false');
 }
+
+function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+function timeoutError(stage){const e=new Error('timeout:'+stage);e.code='snazzle/timeout';return e;}
+function withTimeout(promise,ms,stage){
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise).finally(()=>clearTimeout(timer)),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(timeoutError(stage)),ms);})
+  ]);
+}
+function waitForSignedInEmail(email,ms=12000){
+  return new Promise((resolve,reject)=>{
+    let done=false,unsub=()=>{};
+    const timer=setTimeout(()=>{if(done)return;done=true;try{unsub();}catch{}reject(timeoutError('auth'));},ms);
+    unsub=onAuthStateChanged(auth,user=>{
+      if(done||!user||user.isAnonymous)return;
+      if(String(user.email||'').toLowerCase()!==String(email||'').toLowerCase())return;
+      done=true;clearTimeout(timer);try{unsub();}catch{}resolve({user});
+    },err=>{
+      if(done)return;done=true;clearTimeout(timer);try{unsub();}catch{}reject(err);
+    });
+  });
+}
+async function signInRobust(email,password){
+  const direct=signInWithEmailAndPassword(auth,email,password);
+  return await Promise.race([direct,waitForSignedInEmail(email,12000)]);
+}
+function isTimeout(error){return String(error?.code||'').includes('snazzle/timeout')||String(error?.message||'').startsWith('timeout:');}
 
 function toast(message){
   const el=$('#toast');
@@ -92,14 +121,14 @@ async function restoreAnonymous(){
 
 async function checkAdmin(uid){
   if(!db||!uid)return null;
-  const snap=await getDoc(doc(db,'adminUsers',uid));
+  const snap=await withTimeout(getDoc(doc(db,'adminUsers',uid)),10000,'admin-check');
   const data=snap.exists()?(snap.data()||{}):{};
   return data.active===true&&['superadmin','village_admin'].includes(data.role)?data:null;
 }
 
 function backendNotPublished(error){
   const code=String(error?.code||'').toLowerCase();
-  return code.includes('functions/not-found') || code.includes('functions/unavailable');
+  return code.includes('functions/not-found') || code.includes('functions/unavailable') || isTimeout(error);
 }
 
 async function waitForAdminRender(){
@@ -129,25 +158,31 @@ async function loginWithMfa(){
   const password=$('#adminPassword')?.value||'';
   if(!email||!password)return toast('Vul e-mail en wachtwoord in');
   busy=true;
+  window.__snazzleAdminLoginInProgress=true;
   setLoginButton('Bezig met inloggen…',true);
   let verifiedAdmin=null;
+  let keepAdminSession=false;
   try{
-    const credential=await signInWithEmailAndPassword(auth,email,password);
+    const credential=await signInRobust(email,password);
+    setLoginButton('Beheerrechten controleren…',true);
     verifiedAdmin=await checkAdmin(credential.user.uid);
     if(!verifiedAdmin){await restoreAnonymous();throw new Error('geen-beheer');}
     setLoginButton('Beveiligingscode sturen…',true);
-    const result=await requestCode({});
+    const result=await withTimeout(requestCode({}),12000,'mfa-request');
     maskedEmail=result.data?.maskedEmail||email;
     if($('#adminPassword'))$('#adminPassword').value='';
     $('#adminLogin')?.classList.remove('show');
     showOverlay();
+    keepAdminSession=true;
     toast('Extra beveiligingscode verstuurd 🔐');
   }catch(e){
     console.warn('Snazzle MFA login',e);
     const code=String(e?.code||'');
     if(verifiedAdmin&&backendNotPublished(e)){
+      keepAdminSession=true;
       await openExistingAdminTemporarily();
     }else if(verifiedAdmin&&code.includes('resource-exhausted')){
+      keepAdminSession=true;
       maskedEmail=email;
       if($('#adminPassword'))$('#adminPassword').value='';
       $('#adminLogin')?.classList.remove('show');
@@ -155,11 +190,14 @@ async function loginWithMfa(){
       $('#snMfaMessage').textContent='Er is net al een code verstuurd. Gebruik de code uit je e-mail.';
     }else if(String(e?.message||'').includes('geen-beheer')){
       toast('Dit account heeft geen beheerdersrechten');
+    }else if(isTimeout(e)){
+      toast('De beheerverbinding reageerde te langzaam. Probeer opnieuw.');
     }else{
       toast('Inloggen mislukt. Controleer e-mail en wachtwoord.');
     }
   }finally{
     busy=false;
+    if(!keepAdminSession)window.__snazzleAdminLoginInProgress=false;
     setLoginButton(LOGIN_LABEL,false);
   }
 }
@@ -185,13 +223,14 @@ async function completeMfa(){
   const btn=$('#snMfaVerify');if(btn)btn.disabled=true;
   $('#snMfaMessage').textContent='🔐 Beveiliging controleren…';
   try{
-    const result=await verifyCode({code});
+    const result=await withTimeout(verifyCode({code}),12000,'mfa-verify');
     const customToken=result.data?.customToken;
     if(!customToken)throw new Error('Geen beveiligde beheertoken ontvangen');
     const credential=await signInWithCustomToken(auth,customToken);
     const tokenResult=await credential.user.getIdTokenResult(true);
     if(tokenResult.claims?.snazzle_admin_mfa!==true)throw new Error('MFA-claim ontbreekt');
     hideOverlay();
+    window.__snazzleAdminLoginInProgress=false;
     await waitForAdminRender();
     $('#adminSheet')?.classList.add('show');
     toast('Beheer veilig geopend ✅');
@@ -204,6 +243,7 @@ async function completeMfa(){
 
 async function cancelMfa(){
   hideOverlay();
+  window.__snazzleAdminLoginInProgress=false;
   await restoreAnonymous();
   toast('Beheerlogin geannuleerd');
 }
@@ -229,4 +269,4 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 document.addEventListener('snazzle:admin-ui-ready',bind);
 setTimeout(bind,1200);
 window.SnazzleAdminMfaV141={login:loginWithMfa,rebind:bind};
-console.info('Snazzle admin 2-stapsverificatie v141/v265 geladen');
+console.info('Snazzle admin 2-stapsverificatie v141/v269 geladen');
