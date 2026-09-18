@@ -173,7 +173,15 @@ body:before{opacity:.28!important}
 .bottom img.v31-nav-img{width:23px;height:23px;object-fit:contain;display:block;margin:0 auto 3px}
 
 /* V31 beeldbeheer */
-.v31-image-manager{margin-top:18px;padding-top:15px;border-top:2px solid rgba(126,91,49,.25)}
+.v31-image-manager{margin-top:14px;padding-top:4px}
+.v31-manager-head{padding:14px;border-radius:17px;background:#fff8e5;border:2px solid #b99661;color:#352519;box-shadow:0 3px 8px rgba(80,50,20,.08)}
+.v31-manager-head h3{margin:0 0 5px!important}
+.v31-manager-head p{margin:0!important;font-size:12px!important;line-height:1.45!important;color:#665033!important;font-weight:750!important}
+.v31-manager-head span{display:inline-block;margin-top:9px;padding:6px 9px;border-radius:999px;background:#e3f4d5;color:#2e6a38;font-size:10px;font-weight:950}
+.v31-manager-section{margin-top:14px;padding:12px;border-radius:17px;background:rgba(255,248,229,.72);border:1px solid rgba(185,150,97,.72)}
+.v31-manager-section h4{margin:0 0 4px;font-size:15px;color:#3a281b}
+.v31-manager-section>p{margin:0 0 8px;font-size:10px;line-height:1.4;color:#715c3f;font-weight:750}
+#snIntroImageAdmin{display:none!important}
 .v31-image-manager h3{margin:0 0 4px}.v31-image-manager>p{font-size:12px;font-weight:730;line-height:1.4;color:#665033}
 .v31-image-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .v31-image-item{background:#fff8e5;border:2px solid #b99661;border-radius:16px;padding:10px;color:#352519}
