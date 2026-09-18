@@ -1,7 +1,7 @@
 {
   "name": "Snazzle Hunt",
   "short_name": "Snazzle",
-  "start_url": "./?v=284",
+  "start_url": "./?v=285",
   "display": "standalone",
   "background_color": "#083a24",
   "theme_color": "#146b3a",
