@@ -27,6 +27,7 @@ import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/12.17.
 
 const firebaseConfig={apiKey:'AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4',authDomain:'snazzle-hunt.firebaseapp.com',projectId:'snazzle-hunt',storageBucket:'snazzle-hunt.firebasestorage.app',messagingSenderId:'647665502495',appId:'1:647665502495:web:686488b53db468e887482a',measurementId:'G-55G5DE19DL'};
 const rarityRank={COMMON:1,UNCOMMON:2,RARE:3,EPIC:4,GOLD:5,PLATINUM:6,BLACK:7,LEGENDARY:8,SECRET:9};
+const ZONE_VISUAL_SCALE=2.5; // Alleen visueel; echte vangafstand verandert niet.
 const rarityInfo={COMMON:{emoji:'🟢',color:'#4f9b4f',radius:90},UNCOMMON:{emoji:'🔵',color:'#3b82c4',radius:100},RARE:{emoji:'💜',color:'#7b55c7',radius:120},EPIC:{emoji:'✨',color:'#b242c1',radius:135},GOLD:{emoji:'⭐',color:'#d6a51d',radius:145},PLATINUM:{emoji:'💎',color:'#6d93a7',radius:155},BLACK:{emoji:'🖤',color:'#34343d',radius:170},LEGENDARY:{emoji:'👑',color:'#d77820',radius:190},SECRET:{emoji:'❓',color:'#b42d64',radius:210}};
 const status=document.getElementById('status'),legend=document.getElementById('legend');
 let leafletPromise=null;
@@ -69,7 +70,7 @@ async function boot(){
     const bounds=[];
     zones.forEach(z=>{
       const info=rarityInfo[z.top]||rarityInfo.COMMON;
-      const c=L.circle([z.lat,z.lon],{radius:info.radius,color:info.color,fillColor:info.color,fillOpacity:.18,weight:3,opacity:.9}).addTo(map);
+      const c=L.circle([z.lat,z.lon],{radius:info.radius*ZONE_VISUAL_SCALE,color:info.color,fillColor:info.color,fillOpacity:.18,weight:3,opacity:.9}).addTo(map);
       const areas=[...z.areas].join(' · ');
       c.bindPopup(`<strong>${info.emoji} ${z.top}-signaal</strong><br>${z.count===1?'Er zit een Snazzle in deze zoekzone.':`Er zitten ${z.count} Snazzle-signalen in deze zoekzone.`}<small>${summary(z)}${areas?`<br>Gebied: ${areas}`:''}<br>De exacte plek blijft geheim.</small>`);
       bounds.push([z.lat,z.lon]);
