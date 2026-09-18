@@ -6,7 +6,7 @@ import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/
 import { getFirestore, collection, query, where, getDocs, getDoc, doc, setDoc, updateDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
 
-const VERSION='272.0.0';
+const VERSION='272.1.0';
 const app=getApp(),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
 const VISUAL_DB='snazzleVisualAssetsV28',VISUAL_STORE='assets',VISUAL_PURPOSE='snazzleVisualAssetV54';
 const MAX_VISUAL=620000,MAX_MAIN=620000;
@@ -371,7 +371,16 @@ async function render(){
     console.error('Snazzle Image Manager v272',err);
   }finally{rendering=false;}
 }
+function ensureSfeerTab(){
+  const sheet=$('#adminSheet'),tabs=sheet?.querySelector('.super-only .tabs'),wrap=sheet?.querySelector('.super-only');
+  if(!sheet||!tabs||!wrap)return;
+  let tab=$('#sn272SfeerTab'),section=$('#sn272SfeerSection');
+  if(!tab){tab=document.createElement('button');tab.type='button';tab.id='sn272SfeerTab';tab.textContent='Sfeer';tabs.appendChild(tab);}
+  if(!section){section=document.createElement('section');section.id='sn272SfeerSection';section.className='admin-section';section.innerHTML='<div style="padding:2px 0 10px"><h3 style="margin:0 0 5px">🎨 Sfeer & seizoen</h3><p style="margin:0;font-size:11px;line-height:1.45;color:#6a5338;font-weight:760">Hier staan alleen de kleuren en seizoenssfeer. Afbeeldingen zelf beheer je bij Afbeeldingen.</p></div><div id="sn272SfeerMount"></div>';wrap.appendChild(section);}
+  tab.onclick=()=>{tabs.querySelectorAll('button').forEach(b=>b.classList.remove('on'));sheet.querySelectorAll('.super-only .admin-section').forEach(sec=>sec.classList.remove('on'));tab.classList.add('on');section.classList.add('on');document.dispatchEvent(new CustomEvent('snazzle:sfeer-admin-open'));};
+}
 function installWatch(){
+  ensureSfeerTab();
   document.addEventListener('click',e=>{
     const b=e.target?.closest?.('#adminSheet .tabs button');
     if(!b)return;
@@ -389,7 +398,7 @@ onAuthStateChanged(auth,async user=>{
   }
   const admin=$('#imagesAdmin');
   if(!superAdmin){admin?.classList.remove('sn272-owned');$('#'+ROOT_ID)?.remove();return;}
-  setTimeout(()=>{lastRender=0;render();},120);
+  setTimeout(()=>{ensureSfeerTab();lastRender=0;render();},120);
 });
 style();installWatch();
 window.SnazzleImageManagerV272={render:()=>{lastRender=0;return render();},version:VERSION};
