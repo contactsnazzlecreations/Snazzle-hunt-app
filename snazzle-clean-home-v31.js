@@ -269,7 +269,7 @@ async function applyExtraImages31(){
   bg31(q31('#snBiebHome73')||q31('.sn-bieb-home'),await get31('biebCard'));
   const collectionBg31=await get31('collectionCard');
   bg31(q31('#collectionHomeCard')||q31('.collection-home-card'),collectionBg31);
-  const newsBg31=await get31('newsCard');
+  const newsBg31=(await get31('newsCard'))||loadLocal31().homeImage1||'';
   bg31(q31('#snNewsLaunch')||q31('.sn-news-launch'),newsBg31);
   bg31(q31('.home-card.sn-news-launch-card'),newsBg31);
 
@@ -349,20 +349,68 @@ async function addDbCard31(grid,key,label){
   };
   grid.appendChild(item);
 }
+function managerSection31(title,description){
+  const section=document.createElement('section');
+  section.className='v31-manager-section';
+  const h=document.createElement('h4');h.textContent=title;section.appendChild(h);
+  if(description){const p=document.createElement('p');p.textContent=description;section.appendChild(p);}
+  const grid=document.createElement('div');grid.className='v31-image-grid';section.appendChild(grid);
+  return section;
+}
+function hideLegacyImageFields31(){
+  const admin=q31('#imagesAdmin');if(!admin)return;
+  const inputIds=['profileImageInput','heroImageInput','home1Input','home2Input'];
+  for(const id of inputIds){
+    const input=q31('#'+id,admin);if(!input)continue;
+    const preview=input.previousElementSibling;
+    const heading=preview?.previousElementSibling;
+    const remove=input.nextElementSibling;
+    [heading,preview,input,remove].forEach(el=>{if(el)el.style.setProperty('display','none','important');});
+  }
+  const note=admin.querySelector(':scope>p');if(note)note.style.setProperty('display','none','important');
+  const intro=q31('#snIntroImageAdmin',admin);if(intro)intro.style.setProperty('display','none','important');
+}
 async function ensureManager31(){
   const admin=q31('#imagesAdmin');if(!admin||q31('#v31ImageManager',admin))return;
+  hideLegacyImageFields31();
   const box=document.createElement('div');box.id='v31ImageManager';box.className='v31-image-manager';
-  box.innerHTML='<h3>🖼️ Alle app-afbeeldingen</h3><p>Hier pas je de zichtbare afbeeldingen én tegel-iconen van de home, Snazzles, dorpen en het ondermenu zelf aan. Deze beeldkeuzes worden centraal gesynchroniseerd zodat bezoekers dezelfde app-look krijgen.</p><div class="v31-image-grid" id="v31ImageGrid"></div><div class="v31-manager-note"><b>Waar wijzig je de rest?</b><br>Hunt-foto’s: <b>Beheer → Hunts</b> · Nieuwsberichten/posters: <b>Beheer → Nieuws</b> · Snazzle Card-afbeeldingen: <b>Beheer → Kaarten</b> · Productfoto’s: webshopbeheer. De home-tegels en iconen pas je hierboven aan.</div>';
-  admin.appendChild(box);const grid=q31('#v31ImageGrid',box);
-  await addLocalCard31(grid,'profileImage','Logo / Snazzle linksboven');
-  await addLocalCard31(grid,'heroImage','Grote Hunt-afbeelding');
-  await addLocalCard31(grid,'homeImage1','Oude home banner 1 / fallback');
-  await addLocalCard31(grid,'homeImage2','Actie / evenement afbeelding');
-  for(const [key,label] of extraAssets31)await addDbCard31(grid,key,label);
-  wrapVillages31();
-  for(const b of qa31('.village'))await addDbCard31(grid,'village:'+slug31(villageName31(b)),`Dorpkaart ${villageName31(b)}`);
-}
+  const head=document.createElement('div');head.className='v31-manager-head';
+  head.innerHTML='<h3>🖼️ Afbeeldingen beheren</h3><p>Alles wat je hier opslaat wordt centraal gecontroleerd. Na een bevestigde opslag zien bezoekers automatisch dezelfde afbeelding.</p><span>✓ Automatisch voor alle bezoekers</span>';
+  box.appendChild(head);
+  const home=managerSection31('🏠 Home & hoofdpagina','De belangrijkste afbeeldingen en tegels van de app.');
+  const people=managerSection31('🦆 Snazzles & personages','Beelden die als gids, geheim figuur of beloning in de app verschijnen.');
+  const nav=managerSection31('📱 Ondermenu','De vijf vaste iconen onderaan de app.');
+  const villageSection=managerSection31('📍 Dorpen','Achtergrond per dorp in de dorpskeuze.');
+  box.append(home,people,nav,villageSection);
+  admin.appendChild(box);
 
+  const homeGrid=home.querySelector('.v31-image-grid');
+  await addLocalCard31(homeGrid,'profileImage','Logo / Snazzle linksboven');
+  await addLocalCard31(homeGrid,'introImage','Afbeelding op laadscherm');
+  await addLocalCard31(homeGrid,'heroImage','Grote Hunt-afbeelding');
+  await addDbCard31(homeGrid,'newsCard','Snazzle Nieuws afbeelding');
+  await addDbCard31(homeGrid,'newsTileIcon','Icoon Snazzle Nieuws');
+  await addLocalCard31(homeGrid,'homeImage2','Actie / evenement afbeelding');
+
+  const homeKeys=['mainStartCard','mainStartIcon','arCard','arTileIcon','quickFinds','quickFindsIcon','quickProfile','quickProfileIcon','biebCard','biebTileIcon','collectionCard','collectionTileIcon'];
+  for(const key of homeKeys){
+    const pair=extraAssets31.find(([k])=>k===key);if(pair)await addDbCard31(homeGrid,pair[0],pair[1]);
+  }
+  const peopleKeys=['guideCharacter','secretCharacter','natureCharacter','celebrationCharacter'];
+  for(const key of peopleKeys){
+    const pair=extraAssets31.find(([k])=>k===key);if(pair)await addDbCard31(people.querySelector('.v31-image-grid'),pair[0],pair[1]);
+  }
+  const navKeys=['navHome','navHunt','navFriends','navShop','navProfile'];
+  for(const key of navKeys){
+    const pair=extraAssets31.find(([k])=>k===key);if(pair)await addDbCard31(nav.querySelector('.v31-image-grid'),pair[0],pair[1]);
+  }
+  wrapVillages31();
+  for(const b of qa31('.village'))await addDbCard31(villageSection.querySelector('.v31-image-grid'),'village:'+slug31(villageName31(b)),'Dorpkaart '+villageName31(b));
+
+  const note=document.createElement('div');note.className='v31-manager-note';
+  note.innerHTML='<b>Andere beelden:</b><br>Hunt-foto’s wijzig je bij <b>Hunts</b>. Nieuwsartikelen en posters wijzig je bij <b>Nieuws</b>. <b>Snazzle Nieuws afbeelding</b> hierboven is de afbeelding van de Nieuws-tegel op Home.';
+  box.appendChild(note);
+}
 function hideOldExtraManager31(){
   const old=q31('#referenceAssets');if(old)old.style.display='none';
 }
@@ -371,6 +419,7 @@ function expectedImageCards31(){
 }
 async function repairImageManager31(){
   const admin=q31('#imagesAdmin');if(!admin)return false;
+  hideLegacyImageFields31();
   let manager=q31('#v31ImageManager',admin);
   const current=manager?.querySelectorAll('.v31-image-item').length||0;
   const expected=expectedImageCards31();
