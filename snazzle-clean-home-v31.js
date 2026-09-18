@@ -290,8 +290,33 @@ function previewHtml31(src){return src?`<img src="${src}" alt="Voorbeeld">`:'Gee
 function card31(label,src){const item=document.createElement('div');item.className='v31-image-item';item.innerHTML=`<strong>${label}</strong><div class="v31-image-preview">${previewHtml31(src)}</div><input type="file" accept="image/*"><button type="button">Verwijderen</button>`;return item;}
 async function addLocalCard31(grid,key,label){
   const src=loadLocal31()[key]||'',item=card31(label,src),input=item.querySelector('input'),remove=item.querySelector('button');
-  input.onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=await compress31(file,key==='profileImage'?900:1400,.86);saveLocal31(key,data);input.value='';item.querySelector('.v31-image-preview').innerHTML=previewHtml31(data);toast31('Afbeelding aangepast ✓');}catch(err){toast31(err.message||'Opslaan mislukt');}};
-  remove.onclick=()=>{removeLocal31(key);item.querySelector('.v31-image-preview').innerHTML=previewHtml31('');toast31('Afbeelding verwijderd');};grid.appendChild(item);
+  item.dataset.assetKey=key;input.dataset.assetKey=key;
+  input.onchange=async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    const preview=item.querySelector('.v31-image-preview'),previous=preview?.innerHTML||'';
+    if(preview)preview.textContent='Afbeelding verwerken…';
+    try{
+      const max=key==='profileImage'?900:key==='introImage'?700:1400;
+      const data=await compress31(file,max,.86);
+      saveLocal31(key,data);input.value='';
+      if(preview)preview.innerHTML=previewHtml31(data);
+      const publicOk=await saveMainCentral31(key,data);
+      toast31(publicOk?label+' opgeslagen · zichtbaar voor bezoekers ✓':label+' lokaal opgeslagen · publieke sync nog niet bevestigd');
+    }catch(err){
+      if(preview)preview.innerHTML=previous;
+      toast31(err.message||'Opslaan mislukt');
+    }
+  };
+  remove.onclick=async()=>{
+    const publicOk=await clearMainCentral31(key);
+    if(publicOk){
+      removeLocal31(key);
+      const preview=item.querySelector('.v31-image-preview');
+      if(preview)preview.innerHTML=previewHtml31('');
+    }
+    toast31(publicOk?label+' verwijderd voor iedereen':'Verwijderen is nog niet centraal bevestigd');
+  };
+  grid.appendChild(item);
 }
 async function addDbCard31(grid,key,label){
   const src=await get31(key),item=card31(label,src),input=item.querySelector('input'),remove=item.querySelector('button');
@@ -308,8 +333,8 @@ async function addDbCard31(grid,key,label){
       if(preview)preview.innerHTML=previewHtml31(data);
       await applyExtraImages31();
       document.dispatchEvent(new CustomEvent('snazzle:visual-asset-changed',{detail:{key,source:'v31'}}));
-      saveCentralKey31(key,data);
-      toast31('Afbeelding aangepast ✓');
+      const publicOk=await saveCentralKey31(key,data);
+      toast31(publicOk?label+' opgeslagen · zichtbaar voor bezoekers ✓':label+' lokaal opgeslagen · publieke sync nog niet bevestigd');
     }catch(err){
       if(preview)preview.innerHTML=previous;
       console.error('Snazzle afbeelding upload',key,err);
