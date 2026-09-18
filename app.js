@@ -1,4 +1,4 @@
-// Snazzle Hunt v272 — stabiele opstart + één compleet afbeeldingsbeheer.
+// Snazzle Hunt v273 — stabiele opstart + definitief compleet afbeeldingsbeheer.
 // Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -34,25 +34,25 @@ function releaseStableBoot(){
 }
 function preloadCriticalAssets(){
   const moduleHrefs=[
-    './app-runtime-v245.js?v=272',
-    './snazzle-runtime-stability-v71.js?fresh=20260918-v272-image-manager',
-    './snazzle-image-stability-v72.js?fresh=20260918-v272-image-manager',
-    './snazzle-leaflet-isolation-v190.js?fresh=20260918-v272-image-manager',
-    './app-core.js?fresh=20260918-v272-image-manager',
-    './snazzle-core-performance-v248.js?fresh=20260918-v272-image-manager',
-    './snazzle-adventure-ui-v28.js?fresh=20260918-v272-image-manager',
-    './snazzle-clean-home-v31.js?v=272',
-    './snazzle-home-card-backgrounds-v75.js?v=272'
-    ,'./snazzle-central-visuals-v54.js?fresh=20260918-v272-image-manager'
-    ,'./snazzle-bieb-v73.js?fresh=20260918-v272-image-manager'
-    ,'./snazzle-news-card-bg-v49.js?fresh=20260918-v272-image-manager'
-    ,'./snazzle-image-manager-v272.js?fresh=20260918-v272-image-manager'
+    './app-runtime-v245.js?v=273',
+    './snazzle-runtime-stability-v71.js?fresh=20260918-v273-image-manager-final',
+    './snazzle-image-stability-v72.js?fresh=20260918-v273-image-manager-final',
+    './snazzle-leaflet-isolation-v190.js?fresh=20260918-v273-image-manager-final',
+    './app-core.js?fresh=20260918-v273-image-manager-final',
+    './snazzle-core-performance-v248.js?fresh=20260918-v273-image-manager-final',
+    './snazzle-adventure-ui-v28.js?fresh=20260918-v273-image-manager-final',
+    './snazzle-clean-home-v31.js?v=273',
+    './snazzle-home-card-backgrounds-v75.js?v=273'
+    ,'./snazzle-central-visuals-v54.js?fresh=20260918-v273-image-manager-final'
+    ,'./snazzle-bieb-v73.js?fresh=20260918-v273-image-manager-final'
+    ,'./snazzle-news-card-bg-v49.js?fresh=20260918-v273-image-manager-final'
+    ,'./snazzle-image-manager-v272.js?fresh=20260918-v273-image-manager-final'
   ];
   moduleHrefs.forEach(href=>{
     if(document.head.querySelector(`link[rel="modulepreload"][href="${href}"]`))return;
     const link=document.createElement('link');link.rel='modulepreload';link.href=href;document.head.appendChild(link);
   });
-  ['./snazzle-reference-layout.css?v=272','./snazzle-clean-home-v31.css?v=272'].forEach(href=>{
+  ['./snazzle-reference-layout.css?v=273','./snazzle-clean-home-v31.css?v=273'].forEach(href=>{
     if(document.head.querySelector(`link[rel="preload"][href="${href}"]`))return;
     const link=document.createElement('link');link.rel='preload';link.as='style';link.href=href;document.head.appendChild(link);
   });
@@ -70,7 +70,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=272`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=273`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -83,7 +83,7 @@ async function pacedImports(entries){
 
 // Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
 // kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
-await import('./app-runtime-v245.js?v=272');
+await import('./app-runtime-v245.js?v=273');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
