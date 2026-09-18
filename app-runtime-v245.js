@@ -1,6 +1,6 @@
-// Snazzle Hunt v287 — definitief centraal afbeeldingsbeheer.
+// Snazzle Hunt v288 — extra hint na 60 minuten én 200 meter GPS-beweging.
 
-const runtimeVersion='20260918-v287-zone-scale';
+const runtimeVersion='20260918-v288-hint-60m-200m';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
