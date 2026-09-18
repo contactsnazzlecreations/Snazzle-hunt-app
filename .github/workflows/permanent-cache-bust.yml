@@ -20,7 +20,7 @@ jobs:
           import re, json
 
           version='274'
-          runtime='20260918-v274-image-manager-final'
+          runtime='20260918-v274-ar-maps-stability'
 
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
