@@ -1,4 +1,4 @@
-// Snazzle AR Placement v276 — robuuste kaart + lusvrije beheerknop.
+// Snazzle AR Placement v277 — native link naar zelfstandige plaatsingspagina.
 // Kaartgebaren blijven binnen de kaart: slepen verplaatst de plaatsing, knijpen zoomt de kaart en niet de pagina.
 
 import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -158,7 +158,7 @@ function updateMap(note='',zoom=null){
 function installStyle(){
   if($('#snArPlacement245Style'))return;
   const s=document.createElement('style');s.id='snArPlacement245Style';s.textContent=`
-#${BUTTON_ID}{width:100%;margin-top:9px;min-height:50px;border:0;border-radius:14px;padding:12px;background:linear-gradient(#4279ca,#315da3);color:#fff;font-weight:1000;font-size:14px;box-shadow:0 4px 0 #244879;touch-action:manipulation;pointer-events:auto!important;position:relative;z-index:12}
+#${BUTTON_ID}{width:100%;margin-top:9px;min-height:50px;border:0;border-radius:14px;padding:12px;background:linear-gradient(#4279ca,#315da3);color:#fff;font-weight:1000;font-size:14px;box-shadow:0 4px 0 #244879;touch-action:manipulation;pointer-events:auto!important;position:relative;z-index:12;text-decoration:none;display:flex;align-items:center;justify-content:center;text-align:center}
 #${MODAL_ID}{position:fixed;inset:0;z-index:52000;display:none;overflow:auto;background:#082419;color:#2d2116;-webkit-overflow-scrolling:touch}#${MODAL_ID}.show{display:block}
 .sn245-shell{width:min(650px,100%);min-height:100%;margin:auto;background:linear-gradient(#fff1bd,#edd18e);padding:calc(12px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))}
 .sn245-head{position:sticky;top:0;z-index:12;display:flex;align-items:center;gap:9px;background:#f4dca2f5;padding:7px 0 10px}.sn245-head h2{flex:1;margin:0;font-size:21px}.sn245-close{width:48px;height:48px;border:0;border-radius:14px;background:#66402a;color:#fff;font-size:28px;font-weight:1000;touch-action:manipulation}
@@ -322,60 +322,28 @@ function installRadiusControl(){
   const wrap=document.createElement('div');wrap.id='sn245RadiusWrap';wrap.className='sn245-radius';wrap.innerHTML=`<b>Maximale AR-zoekafstand</b><div class="sn245-radius-row"><input id="sn245MaxRadius" type="number" min="0.1" max="1000" step="0.5" inputmode="decimal" value="25"><button id="sn245SaveRadius" type="button">Opslaan</button></div><small id="sn245MaxRadiusStatus">Bepaalt hoe ver AR naar de dichtstbijzijnde nog niet gevangen Snazzle zoekt.</small>`;
   const status=$('#snArAdminStatus85');if(status)grid.insertBefore(wrap,status);else grid.appendChild(wrap);$('#sn245SaveRadius').addEventListener('click',saveRadius);loadRadius().then(v=>{const i=$('#sn245MaxRadius');if(i)i.value=String(v);});
 }
-let lastLaunchAt=0;
-function launchFromAdminTrigger(event){
-  const btn=event?.target?.closest?.('#'+BUTTON_ID);
-  if(!btn)return;
-  const now=Date.now();
-  if(now-lastLaunchAt<650||$('#'+MODAL_ID)?.classList.contains('show'))return;
-  event.preventDefault?.();
-  event.stopPropagation?.();
-  lastLaunchAt=now;
-  try{
-    toast('🗺️ Kaart openen…');
-    open();
-  }catch(err){
-    console.error('AR plaatskaart openen v276',err);
-    const status=$('#snArAdminStatus85');
-    if(status){status.classList.remove('ok');status.textContent='⚠️ '+(err?.message||'De kaart kon niet worden geopend.');}
-    toast('⚠️ Kaart kon niet openen.');
-  }
-}
-function installGlobalLaunchBridge(){
-  if(window.__snazzleArPlacementLaunchBridge276)return;
-  window.__snazzleArPlacementLaunchBridge276=true;
-  window.addEventListener('pointerup',launchFromAdminTrigger,true);
-  document.addEventListener('click',launchFromAdminTrigger,true);
-}
 function installButton(){
   const basic=$('#snArAdminPlace85');if(!basic)return false;
-  installStyle();installGlobalLaunchBridge();
-  if(basic.textContent!=='📍 Snel plaatsen op huidige GPS')basic.textContent='📍 Snel plaatsen op huidige GPS';
+  installStyle();basic.textContent='📍 Snel plaatsen op huidige GPS';
   $('#snArPlacementLaunch244')?.remove();
-  let btn=$('#'+BUTTON_ID);
-  if(!btn){
-    btn=document.createElement('button');
-    btn.id=BUTTON_ID;btn.type='button';btn.textContent='🗺️📷 Nauwkeurig via kaart + camera';
-    basic.insertAdjacentElement('afterend',btn);
+  let current=$('#'+BUTTON_ID);
+  const href='./snazzle-ar-place.html?v=277';
+  if(!current||current.tagName!=='A'){
+    const link=document.createElement('a');
+    link.id=BUTTON_ID;
+    link.href=href;
+    link.textContent='🗺️📷 Nauwkeurig via kaart + camera';
+    link.setAttribute('role','button');
+    link.setAttribute('aria-label','Open nauwkeurig AR plaatsen');
+    if(current)current.replaceWith(link);else basic.insertAdjacentElement('afterend',link);
+    current=link;
+  }else{
+    current.href=href;
+    current.textContent='🗺️📷 Nauwkeurig via kaart + camera';
   }
-  if(btn.disabled)btn.disabled=false;
-  if(btn.hasAttribute('aria-disabled'))btn.removeAttribute('aria-disabled');
-  if(btn.style.pointerEvents!=='auto')btn.style.pointerEvents='auto';
   installRadiusControl();installed=true;return true;
 }
-function boot(){
-  installGlobalLaunchBridge();
-  installButton();
-  if(window.__snazzleArPlacementButtonGuard276||!document.body)return;
-  let queued=false;
-  window.__snazzleArPlacementButtonGuard276=new MutationObserver(()=>{
-    if(queued)return;
-    if($('#'+BUTTON_ID)&&$('#sn245RadiusWrap'))return;
-    queued=true;
-    requestAnimationFrame(()=>{queued=false;installButton();});
-  });
-  window.__snazzleArPlacementButtonGuard276.observe(document.body,{childList:true,subtree:true});
-}
+function boot(){installButton();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 document.addEventListener('snazzle:admin-ui-ready',()=>{installButton();installRadiusControl();});
 window.addEventListener('orientationchange',()=>{setTimeout(()=>placementMap?.invalidateSize({pan:false,animate:false}),180);},{passive:true});
@@ -384,4 +352,4 @@ window.addEventListener('pagehide',()=>{stopCamera();locateToken++;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('#'+MODAL_ID)?.classList.contains('show')){stopCamera();if(!$('#sn245CameraSection')?.hidden){setCameraStatus('Camera gepauzeerd omdat de app naar de achtergrond ging. Tik op Camera opnieuw openen.','err');$('#sn245RetryCamera')?.classList.add('show');}}});
 
 window.SnazzleArPlacementV245={open,close,locate,refresh:installButton};
-console.info('Snazzle AR Placement v276 lusvrije kaartknop actief');
+console.info('Snazzle AR Placement v277 native plaatslink actief');
