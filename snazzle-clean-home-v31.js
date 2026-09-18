@@ -1,7 +1,7 @@
-// Snazzle Hunt v31.4 — rustige home + één betrouwbaar centraal beeldbeheer.
+// Snazzle Hunt v31.5 — rustige home + zelfherstellend compleet afbeeldingsbeheer.
 // Zichtbare home-tegels, tegel-iconen, dorpen en ondermenu zijn via Beheer → Afbeeldingen vervangbaar.
 
-const V31='31.4.0';
+const V31='31.5.0';
 const q31=(s,r=document)=>r.querySelector(s);
 const qa31=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB31='snazzleVisualAssetsV28';
@@ -312,8 +312,27 @@ async function ensureManager31(){
 function hideOldExtraManager31(){
   const old=q31('#referenceAssets');if(old)old.style.display='none';
 }
+function expectedImageCards31(){
+  return 4 + extraAssets31.length + qa31('.village').length;
+}
+async function repairImageManager31(){
+  const admin=q31('#imagesAdmin');if(!admin)return false;
+  let manager=q31('#v31ImageManager',admin);
+  const current=manager?.querySelectorAll('.v31-image-item').length||0;
+  const expected=expectedImageCards31();
+  if(!manager||current<expected){
+    manager?.remove();
+    await ensureManager31();
+    manager=q31('#v31ImageManager',admin);
+  }
+  return !!manager;
+}
 async function sync31(){
-  cleanWelcome31();structureHero31();wrapVillages31();applyLegacyImages31();hideOldExtraManager31();ensureFastBiebShell31();await applyExtraImages31();await ensureManager31();
+  cleanWelcome31();structureHero31();wrapVillages31();applyLegacyImages31();hideOldExtraManager31();ensureFastBiebShell31();
+  // Bouw Beheer → Afbeeldingen altijd eerst. Als een losse home-tegel later faalt,
+  // blijft de beheerpagina daardoor toch compleet beschikbaar.
+  await repairImageManager31();
+  await applyExtraImages31();
 }
 function queue31(){if(queued31)return;queued31=true;setTimeout(async()=>{queued31=false;try{await sync31();}catch(e){console.warn('Snazzle v31',e);}},140);}
 function observe31(){
@@ -321,11 +340,25 @@ function observe31(){
     if(mutations.every(m=>m.target?.closest?.('#v31ImageManager,#v32PageAddon')))return;
     queue31();
   }).observe(document.body,{childList:true,subtree:true});
-  document.addEventListener('click',e=>{if(e.target.closest?.('.village,#saveNameBtn,[data-tab]'))setTimeout(queue31,80);});
+  document.addEventListener('click',e=>{
+    const imageTab=e.target.closest?.('[data-tab="imagesAdmin"]');
+    if(imageTab){
+      setTimeout(()=>repairImageManager31().catch(err=>console.warn('Snazzle compleet afbeeldingsbeheer',err)),40);
+      setTimeout(()=>repairImageManager31().catch(()=>{}),450);
+      return;
+    }
+    if(e.target.closest?.('.village,#saveNameBtn,[data-tab]'))setTimeout(queue31,80);
+  });
 }
 async function init31(){
   if(window.__snazzleV31)return;window.__snazzleV31=true;ensureCss31();await sync31();observe31();console.info(`Snazzle clean home ${V31} geladen`);
 }
+document.addEventListener('snazzle:admin-ui-ready',()=>setTimeout(()=>repairImageManager31().catch(()=>{}),30));
+document.addEventListener('snazzle:visual-sync-ready',()=>setTimeout(()=>repairImageManager31().catch(()=>{}),80));
 document.addEventListener('snazzle:visual-assets-updated',()=>{cache31.clear();queue31();});
 document.addEventListener('snazzle:visual-asset-changed',event=>{const key=String(event.detail?.key||'');if(key)cache31.delete(key);setTimeout(queue31,20);});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init31,{once:true});else init31();
+setTimeout(()=>repairImageManager31().catch(()=>{}),900);
+setTimeout(()=>repairImageManager31().catch(()=>{}),2200);
+setTimeout(()=>repairImageManager31().catch(()=>{}),5000);
+window.SnazzleImageManagerV31={repair:repairImageManager31,expected:expectedImageCards31};
