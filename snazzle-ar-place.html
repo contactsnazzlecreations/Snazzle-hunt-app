@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="theme-color" content="#146b3a">
+<title>Snazzle nauwkeurig plaatsen</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#092b1e;color:#302318}
+body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-area-inset-bottom))}
+.shell{width:min(660px,100%);margin:auto;background:linear-gradient(#fff2bd,#efd18a);border:4px solid #714825;border-radius:25px;overflow:hidden;box-shadow:0 18px 48px rgba(0,0,0,.35)}
+.head{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px;padding:11px 12px;background:linear-gradient(135deg,#2f6443,#174d36);color:#fff}.head h1{flex:1;margin:0;font-size:21px;line-height:1.08}.back{border:0;border-radius:13px;padding:10px 12px;background:#fff;color:#21442f;font-weight:950;text-decoration:none}
+.body{padding:13px}.card{background:#fff9e9;border:2px solid #bd995e;border-radius:18px;padding:13px;margin-bottom:12px}.card h2{margin:0 0 8px;font-size:18px}.copy{font-size:12px;font-weight:760;line-height:1.4;color:#665036;margin:0 0 9px}
+.grid{display:grid;gap:10px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field{display:grid;gap:5px}.field label{font-size:12px;font-weight:900}.field input,.field select{width:100%;min-height:46px;border:2px solid #b89156;border-radius:12px;background:#fffdf7;padding:9px 10px;font-size:16px;color:#2f261d}
+.preview{height:115px;border:2px dashed #b89156;border-radius:14px;background:#fff;display:grid;place-items:center;overflow:hidden;text-align:center;padding:8px}.preview img{max-width:100%;max-height:100%;object-fit:contain}
+.status{padding:10px 11px;border-radius:12px;background:#fff0c8;border:2px solid #d6a341;font-size:12px;font-weight:900;line-height:1.35;margin-top:9px}.status.ok{background:#e2f1c9;border-color:#83a94a;color:#315522}.status.err{background:#f5d0c7;border-color:#c06b5d;color:#762c24}
+.mapwrap{height:310px;border:3px solid #6c5435;border-radius:16px;overflow:hidden;background:#dfe8db;position:relative;touch-action:none;overscroll-behavior:contain}.map{position:absolute;inset:0;z-index:1}.pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);font-size:40px;z-index:500;pointer-events:none;filter:drop-shadow(0 2px 2px #fff)}.maphelp{position:absolute;left:8px;right:8px;bottom:8px;z-index:550;background:#173c2ddd;color:#fff;padding:6px 8px;border-radius:10px;text-align:center;font-size:10px;font-weight:950;pointer-events:none}
+.search{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}.search input{min-width:0;min-height:46px;border:2px solid #b89156;border-radius:12px;padding:9px 10px;font-size:16px}.search button,.actions button,.actions a,.gps{border:0;border-radius:13px;padding:11px 13px;font-weight:950;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;min-height:48px}.search button{background:#3d6fc2;color:#fff}.gps{width:100%;margin-top:9px;background:#5d8f45;color:#fff}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}.primary{background:linear-gradient(#69c43a,#3b8b29);color:#fff;box-shadow:0 4px 0 #28661f}.secondary{background:#d5b36e;color:#302216}.danger{background:#c56a58;color:#fff}.actions button:disabled{opacity:.55;box-shadow:none}
+.camera{height:min(64vh,520px);min-height:370px;border:3px solid #5f4a30;border-radius:18px;overflow:hidden;background:#10261b;position:relative;touch-action:none}.camera video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 22%,transparent 74%,rgba(0,0,0,.4));pointer-events:none}.help{position:absolute;left:10px;right:10px;top:10px;z-index:4;background:#143d2fdd;color:#fff;border:2px solid #d6ef70;border-radius:12px;padding:8px;text-align:center;font-size:11px;font-weight:900;pointer-events:none}.object{position:absolute;left:50%;top:56%;width:34%;aspect-ratio:1;transform:translate(-50%,-50%);display:grid;place-items:center;z-index:3;touch-action:none;user-select:none;filter:drop-shadow(0 12px 8px rgba(0,0,0,.35))}.object img{max-width:100%;max-height:100%;object-fit:contain;pointer-events:none}.duck{font-size:clamp(72px,25vw,145px);line-height:1;pointer-events:none}.ring{position:absolute;inset:-8px;border:2px dashed #fff08a;border-radius:50%;pointer-events:none}.controls{display:grid;gap:9px;margin-top:11px}.control{display:grid;grid-template-columns:80px 1fr 48px;align-items:center;gap:8px;font-size:12px;font-weight:900}.control input{width:100%}.control output{text-align:right}
+.done{text-align:center;padding:18px}.done .big{font-size:46px}.done h2{font-size:24px;margin:5px 0}.hidden{display:none!important}
+@media(max-width:390px){.row2,.actions,.search{grid-template-columns:1fr}.mapwrap{height:270px}.control{grid-template-columns:70px 1fr 44px}.head h1{font-size:18px}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=277#beheer" id="backLink">← Beheer</a></header>
+  <div class="body">
+    <section class="card" id="authCard"><h2>Beheer controleren</h2><div class="status" id="authStatus">⏳ Inlog controleren…</div></section>
+
+    <div id="app" class="hidden">
+      <section class="card">
+        <h2>1. Snazzle instellen</h2>
+        <p class="copy">Vul hier de Snazzle in die je wilt plaatsen. Deze pagina staat los van het grote beheermenu zodat de kaart en camera niet meer door andere menu-code kunnen worden geblokkeerd.</p>
+        <div class="grid">
+          <div class="field"><label>Naam</label><input id="name" maxlength="50" value="Scout Snazzle"></div>
+          <div class="row2">
+            <div class="field"><label>Kaartnummer</label><input id="number" maxlength="12" value="001"></div>
+            <div class="field"><label>Zeldzaamheid</label><select id="rarity"><option>COMMON</option><option selected>RARE</option><option>GOLD</option><option>PLATINUM</option><option>BLACK</option><option>LEGENDARY</option></select></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Dorp</label><select id="village"><option>Algemeen</option><option selected>Montfort</option><option>Posterholt</option><option>Sint Odiliënberg</option></select></div>
+            <div class="field"><label>Vangzone</label><select id="radius"><option value="5">5 meter</option><option value="7" selected>7 meter</option><option value="10">10 meter</option><option value="15">15 meter</option></select></div>
+          </div>
+          <div class="field"><label>Afbeelding (PNG/WebP aanbevolen)</label><input id="image" type="file" accept="image/png,image/webp,image/*"><div class="preview" id="preview">🦆 Zonder afbeelding gebruiken we de test-Snazzle.</div></div>
+        </div>
+      </section>
+
+      <section class="card" id="mapSection">
+        <h2>2. Kies de vaste plek</h2>
+        <p class="copy">Gebruik GPS, zoek een adres of sleep de kaart. De pin in het midden is exact de plek die wordt opgeslagen.</p>
+        <div class="mapwrap"><div id="map" class="map"></div><div class="pin">📍</div><div class="maphelp">Sleep de kaart onder de pin · knijp om te zoomen</div></div>
+        <div class="status" id="mapStatus">Kaart klaarzetten…</div>
+        <div class="search"><input id="address" type="search" placeholder="Bijv. Markt 1, Montfort" autocomplete="street-address"><button id="search" type="button">Zoek adres</button></div>
+        <button id="gps" class="gps" type="button">🎯 Gebruik mijn huidige GPS</button>
+        <div class="actions"><button id="saveMap" class="secondary" type="button">📍 Alleen kaart opslaan</button><button id="toCamera" class="primary" type="button">📷 Plek klopt — camera</button></div>
+      </section>
+
+      <section class="card hidden" id="cameraSection">
+        <h2>3. Zet de Snazzle in beeld</h2>
+        <p class="copy">Sleep de Snazzle naar de gewenste plek en stel grootte en draaiing af.</p>
+        <div class="camera" id="camera"><video id="video" autoplay muted playsinline></video><div class="shade"></div><div class="help">Sleep de Snazzle naar de juiste plek</div><div class="object" id="object"><div class="ring"></div><div class="duck" id="duck">🦆</div><img id="cameraImage" alt="Snazzle" hidden></div></div>
+        <div class="controls"><label class="control">Grootte <input id="size" type="range" min="18" max="62" value="34"><output id="sizeOut">34%</output></label><label class="control">Draaien <input id="rotate" type="range" min="-180" max="180" value="0"><output id="rotateOut">0°</output></label></div>
+        <div class="status" id="cameraStatus">Camera klaarzetten…</div>
+        <div class="actions"><button id="backMap" class="secondary" type="button">← Terug naar kaart</button><button id="saveCamera" class="primary" type="button">🔒 Hier vastzetten</button></div>
+      </section>
+
+      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=277#beheer">Terug naar Beheer</a></div></section>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
+import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import {getFirestore,doc,getDoc,runTransaction} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import {getStorage,ref as storageRef,uploadBytes,getDownloadURL} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
+
+const firebaseConfig={apiKey:'AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4',authDomain:'snazzle-hunt.firebaseapp.com',projectId:'snazzle-hunt',storageBucket:'snazzle-hunt.firebasestorage.app',messagingSenderId:'647665502495',appId:'1:647665502495:web:686488b53db468e887482a',measurementId:'G-55G5DE19DL'};
+const app=initializeApp(firebaseConfig,'snazzle-ar-place-v277'),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
+const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1'),MAX_GPS=50;
+const $=s=>document.querySelector(s),clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+let user=null,map=null,baseLayer=null,leafletPromise=null,mapProgrammatic=false,mapGesture=false,stream=null,previewUrl='',dragging=false,pointerId=null,saving=false;
+let state={lat:51.1262,lon:5.9488,accuracy:0,source:'fallback',x:.5,y:.56,size:.34,rotation:0};
+
+const providers=[
+  {url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'© OpenStreetMap'}},
+  {url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',options:{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'}},
+  {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',options:{maxZoom:19,attribution:'Tiles © Esri'}}
+];
+
+function status(el,msg,type=''){el.className='status'+(type?' '+type:'');el.textContent=msg;}
+function form(){return{name:$('#name').value.trim(),number:$('#number').value.trim(),rarity:$('#rarity').value,village:$('#village').value,radius:Number($('#radius').value||7),file:$('#image').files?.[0]||null};}
+function makeId(){return'ar_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);}
+function stopCamera(){if(stream){try{stream.getTracks().forEach(t=>t.stop());}catch{}stream=null;}const v=$('#video');if(v){try{v.pause();}catch{}v.srcObject=null;}}
+function remember(){try{localStorage.setItem('snazzleArLastPoint',JSON.stringify({lat:state.lat,lon:state.lon}));}catch{}}
+function initial(){try{const p=JSON.parse(localStorage.getItem('snazzleArLastPoint')||'null');if(Number.isFinite(p?.lat)&&Number.isFinite(p?.lon))return[p.lat,p.lon];}catch{}return[51.1262,5.9488];}
+
+function loadLeaflet(src,ms=6500){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.async=true;let done=false;const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);ok?resolve(v):reject(v)};const timer=setTimeout(()=>{s.remove();finish(false,new Error('Kaartmodule reageert niet.'));},ms);s.onload=()=>window.L?.map?finish(true,window.L):finish(false,new Error('Kaartmodule startte niet.'));s.onerror=()=>{s.remove();finish(false,new Error('Kaartmodule kon niet laden.'));};document.head.appendChild(s);});}
+async function ensureLeaflet(){if(window.L?.map)return window.L;if(leafletPromise)return leafletPromise;leafletPromise=(async()=>{try{return await loadLeaflet('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js')}catch{return await loadLeaflet('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')}})();try{return await leafletPromise}catch(e){leafletPromise=null;throw e}}
+function addTiles(L,index=0){const i=Math.min(index,providers.length-1),p=providers[i],layer=L.tileLayer(p.url,{...p.options,keepBuffer:3,updateWhenIdle:false,updateWhenZooming:true});if(baseLayer){try{map.removeLayer(baseLayer)}catch{}}baseLayer=layer;let loaded=0,errors=0,switched=false;const next=()=>{if(switched||i>=providers.length-1)return;switched=true;addTiles(L,i+1);status($('#mapStatus'),'Kaartlaag wisselen…')};layer.on('tileload',()=>{loaded++;errors=0});layer.on('tileerror',()=>{errors++;if(errors>=4)next()});layer.addTo(map);setTimeout(()=>{if(switched)return;const visible=[...$('#map').querySelectorAll('img.leaflet-tile')].some(img=>img.complete&&img.naturalWidth>0);if(!loaded&&!visible)next()},2600)}
+async function initMap(){const L=await ensureLeaflet();const [lat,lon]=initial();state.lat=lat;state.lon=lon;map=L.map('map',{zoomControl:true,attributionControl:true,preferCanvas:true,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,keyboard:false}).setView([lat,lon],17);addTiles(L);map.on('movestart',()=>{if(!mapProgrammatic)mapGesture=true});map.on('moveend',()=>{if(mapProgrammatic){mapProgrammatic=false;return}if(!mapGesture)return;mapGesture=false;const c=map.getCenter();state.lat=c.lat;state.lon=c.lng;state.accuracy=0;state.source='manual';remember();updateMapStatus('kaart gekozen')});setTimeout(()=>map.invalidateSize({pan:false,animate:false}),80);updateMapStatus('nog bevestigen')}
+function updateMapStatus(note=''){const source=state.source==='gps'?'GPS ±'+Math.round(state.accuracy||0)+' m':state.source==='address'?'adres gekozen':state.source==='manual'?'kaart gekozen':'nog geen bevestigde plek';const ok=state.source==='address'||state.source==='manual'||(state.source==='gps'&&state.accuracy<=MAX_GPS);status($('#mapStatus'),'📍 '+state.lat.toFixed(6)+', '+state.lon.toFixed(6)+' · '+source+(note?' · '+note:''),ok?'ok':'')}
+function setMap(lat,lon,zoom=18){state.lat=Number(lat);state.lon=Number(lon);mapProgrammatic=true;map.setView([state.lat,state.lon],zoom,{animate:false});setTimeout(()=>{mapProgrammatic=false},100);remember();updateMapStatus()}
+
+function requestPos(high,timeout,maxAge){return new Promise((resolve,reject)=>navigator.geolocation?navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:high,timeout,maximumAge:maxAge}):reject(new Error('GPS wordt niet ondersteund.')))}
+async function locate(){status($('#mapStatus'),'📍 GPS zoeken…');let quick=null;try{quick=await requestPos(false,4500,10000);state.source='gps';state.accuracy=Number(quick.coords.accuracy||0);setMap(quick.coords.latitude,quick.coords.longitude,18)}catch(e){if(e?.code===1){status($('#mapStatus'),'⚠️ Locatietoegang geweigerd. Gebruik adres of kaart.','err');return}}try{const p=await requestPos(true,12000,0);state.source='gps';state.accuracy=Number(p.coords.accuracy||0);setMap(p.coords.latitude,p.coords.longitude,18);updateMapStatus(state.accuracy<=MAX_GPS?'nauwkeurig':'GPS nog te onnauwkeurig')}catch(e){if(!quick)status($('#mapStatus'),'⚠️ GPS reageert niet. Gebruik adres of kaart.','err')}}
+async function fetchJson(url,ms=6500){const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),ms);try{const r=await fetch(url,{signal:ctl.signal,headers:{Accept:'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(timer)}}
+async function geocode(q){try{const rows=await fetchJson('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=nl&accept-language=nl&q='+encodeURIComponent(q),6000);const h=rows?.[0];if(h)return{lat:Number(h.lat),lon:Number(h.lon)}}catch{}try{const data=await fetchJson('https://photon.komoot.io/api/?limit=1&lang=nl&q='+encodeURIComponent(q),6000),c=data?.features?.[0]?.geometry?.coordinates;if(Array.isArray(c))return{lat:Number(c[1]),lon:Number(c[0])}}catch{}return null}
+async function searchAddress(){const q=$('#address').value.trim(),b=$('#search');if(q.length<4){status($('#mapStatus'),'⚠️ Vul straat + huisnummer + plaats in.','err');return}b.disabled=true;status($('#mapStatus'),'🔎 Adres zoeken…');try{const h=await geocode(q);if(!h||!Number.isFinite(h.lat)||!Number.isFinite(h.lon))throw new Error('Adres niet gevonden.');state.source='address';state.accuracy=0;setMap(h.lat,h.lon,18);updateMapStatus('adres gevonden')}catch(e){status($('#mapStatus'),'⚠️ '+e.message,'err')}finally{b.disabled=false}}
+
+function preview(){if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl=''}const file=form().file,p=$('#preview'),img=$('#cameraImage'),duck=$('#duck');if(!file){p.textContent='🦆 Zonder afbeelding gebruiken we de test-Snazzle.';img.hidden=true;duck.hidden=false;return}previewUrl=URL.createObjectURL(file);p.innerHTML='<img src="'+previewUrl+'" alt="Voorbeeld">';img.src=previewUrl;img.hidden=false;duck.hidden=true}
+function applyObject(){const o=$('#object');o.style.left=(state.x*100)+'%';o.style.top=(state.y*100)+'%';o.style.width=(state.size*100)+'%';const c=$('#cameraImage').hidden?$('#duck'):$('#cameraImage');c.style.transform='rotate('+state.rotation+'deg)';$('#sizeOut').textContent=Math.round(state.size*100)+'%';$('#rotateOut').textContent=Math.round(state.rotation)+'°'}
+async function openCamera(){stopCamera();preview();applyObject();status($('#cameraStatus'),'📷 Camera openen…');try{if(!window.isSecureContext)throw new Error('Camera vereist HTTPS.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});$('#video').srcObject=stream;await $('#video').play().catch(()=>{});status($('#cameraStatus'),'✅ Camera actief. Sleep de Snazzle naar de juiste plek.','ok')}catch(e){stopCamera();status($('#cameraStatus'),'⚠️ '+(e?.name==='NotAllowedError'?'Cameratoegang geweigerd.':e.message||'Camera kon niet openen.'),'err')}}
+function sourcePlacement(){const v=$('#video'),frame=$('#camera');if(!v.videoWidth||!v.videoHeight)return null;const r=frame.getBoundingClientRect(),scale=Math.max(r.width/v.videoWidth,r.height/v.videoHeight),rw=v.videoWidth*scale,rh=v.videoHeight*scale,cx=Math.max(0,(rw-r.width)/2),cy=Math.max(0,(rh-r.height)/2);return{sourceX:Number(clamp((state.x*r.width+cx)/rw,0,1).toFixed(5)),sourceY:Number(clamp((state.y*r.height+cy)/rh,0,1).toFixed(5)),sourceSize:Number(clamp((state.size*r.width)/rw,.02,1.5).toFixed(5)),videoAspect:Number((v.videoWidth/v.videoHeight).toFixed(5))}}
+
+function validate(mode){const f=form();if(f.name.length<2)throw new Error('Vul eerst een naam in.');if(!['gps','address','manual'].includes(state.source))throw new Error('Kies eerst een echte plek via GPS, adres of kaart.');if(state.source==='gps'&&state.accuracy>MAX_GPS)throw new Error('GPS is nog te onnauwkeurig (±'+Math.round(state.accuracy)+' m).');if(mode==='camera-composed'&&!stream)throw new Error('Open eerst de camera.')}
+async function upload(file,id){if(!file)return'';if(file.size>8*1024*1024)throw new Error('Afbeelding is groter dan 8 MB.');const safe=(file.name||'snazzle.png').replace(/[^a-zA-Z0-9._-]+/g,'-'),r=storageRef(storage,'listen-stories/images/'+user.uid+'/ar-'+id+'-'+safe);await uploadBytes(r,file,{contentType:file.type||'image/png'});return getDownloadURL(r)}
+async function save(mode){if(saving)return;saving=true;const btn=mode==='camera-composed'?$('#saveCamera'):$('#saveMap');btn.disabled=true;const s=mode==='camera-composed'?$('#cameraStatus'):$('#mapStatus');status(s,'☁️ Snazzle veilig opslaan…');try{validate(mode);const f=form(),id=makeId(),imageUrl=await upload(f.file,id),now=new Date().toISOString(),src=mode==='camera-composed'?sourcePlacement():null,placement=mode==='camera-composed'?{version:7,mode:'camera-composed',x:Number(state.x.toFixed(4)),y:Number(state.y.toFixed(4)),size:Number(state.size.toFixed(4)),rotation:Number(state.rotation.toFixed(1)),...(src||{}),placedAt:now}:{version:7,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now},point={id,name:f.name,number:f.number||'—',rarity:f.rarity,village:f.village,radius:Math.max(4,f.radius),lat:state.lat,lon:state.lon,accuracy:Number(state.accuracy||0),imageUrl,active:true,placement,createdAt:now,updatedAt:now,createdBy:user.uid};await runTransaction(db,async tx=>{const snap=await tx.get(WORLD_DOC),data=snap.exists()?snap.data():{},points=Array.isArray(data.points)?data.points:[];tx.set(WORLD_DOC,{_snazzleInternalType:'arWorld',title:'[SYSTEEM] AR-WERELD',village:'snazzle-internal',description:'Interne opslag voor permanente Snazzle AR-punten',rule:'',hint:'',foundMessage:'',imageUrl:'',start:'',end:'',mode:'draft',version:9,points:[...points,point],updatedAt:now,updatedBy:user.uid},{merge:true})});stopCamera();$('#mapSection').classList.add('hidden');$('#cameraSection').classList.add('hidden');$('#doneSection').classList.remove('hidden');$('#doneText').innerHTML='<b>'+point.name.replace(/[<>]/g,'')+'</b> staat nu opgeslagen op '+point.lat.toFixed(6)+', '+point.lon.toFixed(6)+'.'}catch(e){console.error(e);status(s,'⚠️ '+(e?.message||'Opslaan is mislukt.'),'err')}finally{saving=false;btn.disabled=false}}
+
+function resetFlow(){stopCamera();state.x=.5;state.y=.56;state.size=.34;state.rotation=0;$('#size').value='34';$('#rotate').value='0';applyObject();$('#doneSection').classList.add('hidden');$('#cameraSection').classList.add('hidden');$('#mapSection').classList.remove('hidden');setTimeout(()=>map?.invalidateSize({pan:false,animate:false}),80)}
+$('#image').addEventListener('change',preview);$('#gps').addEventListener('click',locate);$('#search').addEventListener('click',searchAddress);$('#address').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchAddress()}});$('#saveMap').addEventListener('click',()=>save('map-only'));$('#toCamera').addEventListener('click',()=>{try{validate('map-only');$('#mapSection').classList.add('hidden');$('#cameraSection').classList.remove('hidden');openCamera()}catch(e){status($('#mapStatus'),'⚠️ '+e.message,'err')}});$('#backMap').addEventListener('click',()=>{stopCamera();$('#cameraSection').classList.add('hidden');$('#mapSection').classList.remove('hidden');setTimeout(()=>map.invalidateSize({pan:false,animate:false}),80)});$('#saveCamera').addEventListener('click',()=>save('camera-composed'));$('#another').addEventListener('click',resetFlow);
+$('#object').addEventListener('pointerdown',e=>{dragging=true;pointerId=e.pointerId;$('#object').setPointerCapture?.(e.pointerId)});$('#object').addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==pointerId)return;const r=$('#camera').getBoundingClientRect();state.x=clamp((e.clientX-r.left)/r.width,.06,.94);state.y=clamp((e.clientY-r.top)/r.height,.12,.9);applyObject();e.preventDefault()});['pointerup','pointercancel'].forEach(ev=>$('#object').addEventListener(ev,e=>{if(e.pointerId===pointerId){dragging=false;pointerId=null}}));$('#size').addEventListener('input',e=>{state.size=Number(e.target.value)/100;applyObject()});$('#rotate').addEventListener('input',e=>{state.rotation=Number(e.target.value);applyObject()});
+$('#backLink').addEventListener('click',e=>{if(history.length>1){e.preventDefault();history.back()}});window.addEventListener('pagehide',stopCamera);document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera()});
+
+let authTimer=setTimeout(()=>status($('#authStatus'),'⚠️ Inlogcontrole duurt te lang. Open Beheer opnieuw en log in.','err'),7000);
+onAuthStateChanged(auth,async u=>{if(!u)return;clearTimeout(authTimer);try{const snap=await getDoc(doc(db,'adminUsers',u.uid)),p=snap.exists()?snap.data():null;if(!(p?.active===true&&p?.role==='superadmin'))throw new Error('Alleen de hoofdbeheerder kan AR-punten plaatsen.');user=u;$('#authCard').classList.add('hidden');$('#app').classList.remove('hidden');await initMap();preview();applyObject()}catch(e){status($('#authStatus'),'⚠️ '+(e?.message||'Beheercontrole mislukt.'),'err')}});
+</script>
+</body>
+</html>
