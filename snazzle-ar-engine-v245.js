@@ -324,9 +324,9 @@ function ensureIntroClose(){
 }
 function ensureZoneLink(){
   const existing=$('#snArZoneNativeOpen');
-  if(existing){existing.href='./snazzle-zones.html?v=274';existing.textContent='🗺️ Bekijk alle Snazzle-zones';return;}
+  if(existing){existing.href='./snazzle-zones.html?v=287';existing.textContent='🗺️ Bekijk alle Snazzle-zones';return;}
   const old=$('#snArZoneOpen');if(!old)return;
-  const a=document.createElement('a');a.id='snArZoneNativeOpen';a.className=old.className||'sn-ar-zone-btn';a.href='./snazzle-zones.html?v=274';a.textContent='🗺️ Bekijk alle Snazzle-zones';a.setAttribute('role','button');old.replaceWith(a);
+  const a=document.createElement('a');a.id='snArZoneNativeOpen';a.className=old.className||'sn-ar-zone-btn';a.href='./snazzle-zones.html?v=287';a.textContent='🗺️ Bekijk alle Snazzle-zones';a.setAttribute('role','button');old.replaceWith(a);
 }
 async function refreshIntro(){
   const status=$('#snArStatus');
