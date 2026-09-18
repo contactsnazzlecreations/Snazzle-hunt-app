@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           node --check snazzle-world-hub-v47.js
-          for f in app.js app-runtime-v245.js snazzle-admin-shell-v268.js snazzle-ar-admin-display-v84.js snazzle-ar-admin-v245.js snazzle-ar-engine-v245.js snazzle-ar-placement-v245.js; do
+          for f in app.js app-runtime-v245.js app-core.js snazzle-admin-mfa-v141.js snazzle-admin-shell-v268.js snazzle-ar-admin-display-v84.js snazzle-ar-admin-v245.js snazzle-ar-engine-v245.js snazzle-ar-placement-v245.js; do
             cp "$f" "/tmp/$(basename "$f" .js).mjs"
             node --check "/tmp/$(basename "$f" .js).mjs"
           done
@@ -29,6 +29,7 @@ jobs:
         shell: bash
         run: |
           grep -Eq "app-runtime-v245\\.js\\?v=[0-9]+" app.js
+          grep -q "snazzle-admin-mfa-v141.js" app-runtime-v245.js
           grep -q "snazzle-admin-shell-v268.js" app-runtime-v245.js
           grep -q "snazzle-ar-engine-v245.js" app-runtime-v245.js
           grep -q "snazzle-ar-admin-v245.js" app-runtime-v245.js
