@@ -1,6 +1,6 @@
-// Snazzle Hunt v264 — compleet vervangbare home-afbeeldingen en centrale beeldsync.
+// Snazzle Hunt v265 — stabiele beheerlogin zonder conflicterende legacy-login.
 
-const runtimeVersion='20260917-v264-home-visuals';
+const runtimeVersion='20260918-v265-admin-login';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -118,7 +118,7 @@ const backgroundBundles=[
   ['./snazzle-card-system-v2.js','./snazzle-card-worlds-v78.js','./snazzle-card-world-prompt-v79.js','./snazzle-hunt-code-v2.js','./snazzle-unlock.js','./snazzle-ar-collection-bridge-v125.js','./snazzle-ar-findings-bridge-v126.js','./snazzle-ar-card-unlock-v127.js'],
   ['./snazzle-world.js','./village-access.js','./snazzle-characters.js','./snazzle-v32-guard.js','./snazzle-image-control-v32.js','./snazzle-village-admin-v33.js','./snazzle-secret-characters-v34.js','./snazzle-idle-hunt-duck-v35.js','./snazzle-home-hunt-image-v36.js','./snazzle-click-secrets-v37.js','./snazzle-world-adventure-v38.js','./snazzle-season-theme-v38.js','./snazzle-world-theme-v39.js','./snazzle-world-hub-v47.js','./snazzle-game-menu-v62.js'],
   ['./image-fit.js','./snazzle-home-magic.js','./snazzle-home-magic-fix.js','./snazzle-central-visuals-v54.js?v=264','./snazzle-public-visual-publish-v64.js','./snazzle-image-recovery-v60.js','./snazzle-professional-v53.js','./snazzle-final-polish-v59.js','./snazzle-star-rewards-v67.js','./snazzle-quiet-psst-v68.js','./snazzle-input-visibility-v69.js','./snazzle-top-stability-v70.js'],
-  ['./snazzle-admin-reset-v49.js','./snazzle-admin-backup-v50.js','./snazzle-admin-close-v61.js','./snazzle-admin-access-v55.js','./snazzle-admin-access-v56.js','./snazzle-safe-admin-v58.js']
+  ['./snazzle-admin-reset-v49.js','./snazzle-admin-backup-v50.js','./snazzle-admin-close-v61.js','./snazzle-admin-access-v55.js','./snazzle-admin-access-v56.js']
 ];
 fastLoadPromise.then(()=>idle()).then(()=>loadBundlesSequentially(backgroundBundles)).then(async()=>{
   refreshLocalStyles();
