@@ -5,6 +5,7 @@ const $=s=>document.querySelector(s);
 let map=null,zoneLayer=null,baseLayer=null,leafletPromise=null,opening=false;
 
 const rarityRank={COMMON:1,UNCOMMON:2,RARE:3,EPIC:4,GOLD:5,PLATINUM:6,BLACK:7,LEGENDARY:8,SECRET:9};
+const ZONE_VISUAL_SCALE=2.5; // Alleen de zichtbare zoekcirkel; vangzone blijft gelijk.
 const rarityInfo={
   COMMON:{label:'COMMON',emoji:'🟢',color:'#4f9b4f',radius:90},
   UNCOMMON:{label:'UNCOMMON',emoji:'🔵',color:'#3b82c4',radius:100},
@@ -208,7 +209,7 @@ function renderZones(L,zones){
   const bounds=[];
   zones.forEach(z=>{
     const info=rarityInfo[z.top]||rarityInfo.COMMON;
-    const circle=L.circle([z.lat,z.lon],{radius:info.radius,color:info.color,fillColor:info.color,fillOpacity:.18,weight:3,opacity:.9}).addTo(zoneLayer);
+    const circle=L.circle([z.lat,z.lon],{radius:info.radius*ZONE_VISUAL_SCALE,color:info.color,fillColor:info.color,fillOpacity:.18,weight:3,opacity:.9}).addTo(zoneLayer);
     circle.bindPopup(`<div class="sn-ar-zone-popup"><strong>${info.emoji} ${info.label}-signaal</strong><br>${z.count===1?'Er zit een Snazzle in deze zoekzone.':`Er zitten ${z.count} Snazzle-signalen in deze zoekzone.`}<small>${zoneSummary(z)}<br>De exacte plek blijft geheim.</small></div>`);
     bounds.push([z.lat,z.lon]);
   });
@@ -259,7 +260,7 @@ function installNativeZoneLink(){
   const link=document.createElement('a');
   link.id='snArZoneNativeOpen';
   link.className=current.className||'sn-ar-zone-btn';
-  link.href='./snazzle-zones.html?v=174';
+  link.href='./snazzle-zones.html?v=287';
   link.textContent='🗺️ Bekijk Snazzle-zones';
   link.setAttribute('role','button');
   link.setAttribute('aria-label','Bekijk Snazzle-zones');
