@@ -327,7 +327,7 @@ function installButton(){
   installStyle();basic.textContent='📍 Snel plaatsen op huidige GPS';
   $('#snArPlacementLaunch244')?.remove();
   let current=$('#'+BUTTON_ID);
-  const href='./snazzle-ar-place.html?v=286';
+  const href='./snazzle-ar-place.html?v=287';
   if(!current||current.tagName!=='A'){
     const link=document.createElement('a');
     link.id=BUTTON_ID;
