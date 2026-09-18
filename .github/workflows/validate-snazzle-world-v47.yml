@@ -75,11 +75,13 @@ jobs:
           grep -q "sourceX" snazzle-ar-placement-v245.js
           grep -q "mappedPlacement" snazzle-ar-engine-v245.js
           grep -q "TILE_PROVIDERS" snazzle-zones.html
-          grep -q "snazzle-ar-place.html?v=286" snazzle-ar-placement-v245.js
+          grep -q "snazzle-ar-place.html?v=287" snazzle-ar-placement-v245.js
           grep -q "Nauwkeurig AR plaatsen" snazzle-ar-place.html
           grep -q "runTransaction" snazzle-ar-place.html
           grep -q "Satelliet" snazzle-ar-place.html
           grep -q "Google Maps" snazzle-ar-place.html
+          grep -q "ZONE_VISUAL_SCALE=2.5" snazzle-zones.html
+          grep -q "ZONE_VISUAL_SCALE=2.5" snazzle-zone-map-v169.js
           grep -q "confirmPlace" snazzle-ar-place.html
           grep -q "rode pin zelf is de bron van waarheid" snazzle-ar-place.html
           grep -q "draggable:true" snazzle-ar-place.html
