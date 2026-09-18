@@ -1,4 +1,4 @@
-// Snazzle AR Placement v283 — duidelijke opslaan-en-klaar flow.
+// Snazzle AR Placement v284 — zichtbare betrouwbare afbeelding-upload.
 // Kaartgebaren blijven binnen de kaart: slepen verplaatst de plaatsing, knijpen zoomt de kaart en niet de pagina.
 
 import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -327,7 +327,7 @@ function installButton(){
   installStyle();basic.textContent='📍 Snel plaatsen op huidige GPS';
   $('#snArPlacementLaunch244')?.remove();
   let current=$('#'+BUTTON_ID);
-  const href='./snazzle-ar-place.html?v=283';
+  const href='./snazzle-ar-place.html?v=284';
   if(!current||current.tagName!=='A'){
     const link=document.createElement('a');
     link.id=BUTTON_ID;
@@ -352,4 +352,4 @@ window.addEventListener('pagehide',()=>{stopCamera();locateToken++;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('#'+MODAL_ID)?.classList.contains('show')){stopCamera();if(!$('#sn245CameraSection')?.hidden){setCameraStatus('Camera gepauzeerd omdat de app naar de achtergrond ging. Tik op Camera opnieuw openen.','err');$('#sn245RetryCamera')?.classList.add('show');}}});
 
 window.SnazzleArPlacementV245={open,close,locate,refresh:installButton};
-console.info('Snazzle AR Placement v283 opslaan-en-klaar actief');
+console.info('Snazzle AR Placement v284 uploadstatus actief');
