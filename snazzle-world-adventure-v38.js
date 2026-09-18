@@ -1,7 +1,7 @@
 // Snazzle Hunt v38 — interactieve Snazzle Wereld.
 // Thema: Het Snazzle Ontdekkersbos — kijken, denken, bewegen en goed zorgen voor buiten.
 
-const V38WORLD='38.5.0';
+const V38WORLD='38.6.0';
 const q38=(s,r=document)=>r.querySelector(s);
 const qa38=(s,r=document)=>[...r.querySelectorAll(s)];
 const WORLD_PROGRESS_KEY='snazzleWorldAdventureProgressV38';
@@ -159,5 +159,7 @@ async function buildWorldAdmin38(){const parent=q38('#v32ImageManager')||q38('#i
 async function syncWorld38(){ensureStyles38();ensureWorldSheet38();bindWorldEntry38();addWorldMenu38();await buildWorldAdmin38();}
 function queueWorld38(){clearTimeout(timer38);timer38=setTimeout(()=>syncWorld38().catch(e=>console.warn('Snazzle Wereld v38',e)),120);}
 function observeWorld38(){new MutationObserver(m=>{if(m.some(x=>x.type==='childList'))queueWorld38();}).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{if(e.target.closest?.('[data-tab],.bottom button,.quick-menu-list button'))setTimeout(queueWorld38,100);});}
+document.addEventListener('snazzle:visual-assets-updated',()=>{cache38.clear();queueWorld38();if(q38('#v38WorldSheet')?.classList.contains('show'))renderWorld38();});
+document.addEventListener('snazzle:visual-asset-changed',event=>{const key=String(event.detail?.key||'');if(key.startsWith('world')){cache38.delete(key);queueWorld38();if(q38('#v38WorldSheet')?.classList.contains('show'))renderWorld38();}});
 async function initWorld38(){if(window.__snazzleWorldV38)return;window.__snazzleWorldV38=true;await syncWorld38();observeWorld38();console.info(`Snazzle Wereld avontuur ${V38WORLD} geladen`);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initWorld38,{once:true});else initWorld38();
