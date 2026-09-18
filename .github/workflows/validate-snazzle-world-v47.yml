@@ -71,6 +71,10 @@ jobs:
           grep -q "sn245MapCanvas" snazzle-ar-placement-v245.js
           grep -q "touch-action:none" snazzle-ar-placement-v245.js
           ! grep -q "sn245MapFrame" snazzle-ar-placement-v245.js
+          grep -q "MAP_TILE_PROVIDERS" snazzle-ar-placement-v245.js
+          grep -q "sourceX" snazzle-ar-placement-v245.js
+          grep -q "mappedPlacement" snazzle-ar-engine-v245.js
+          grep -q "TILE_PROVIDERS" snazzle-zones.html
 
       - name: Check AR data and public shell invariants
         shell: bash
@@ -78,6 +82,6 @@ jobs:
           grep -q "snazzle_ar_world_v1" snazzle-ar-engine-v245.js
           grep -q "snazzle_ar_world_v1" snazzle-ar-admin-v245.js
           grep -q "snazzle_ar_world_v1" snazzle-ar-placement-v245.js
-          grep -q "snazzle-zones.html?v=245" snazzle-ar-engine-v245.js
+          grep -Eq "snazzle-zones\.html\?v=[0-9]+" snazzle-ar-engine-v245.js
           grep -q "playsinline" snazzle-ar-v80.js
           grep -Eq 'src="./app\.js\?v=[0-9]+"' index.html
