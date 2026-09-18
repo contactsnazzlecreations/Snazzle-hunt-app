@@ -26,7 +26,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
 </head>
 <body>
 <main class="shell">
-  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=285#beheer" id="backLink">← Beheer</a></header>
+  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=286#beheer" id="backLink">← Beheer</a></header>
   <div class="body">
     <section class="card" id="authCard"><h2>Beheer controleren 🔐</h2><div class="status" id="authStatus">⏳ Beheerlogin controleren…</div></section>
 
@@ -50,7 +50,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
 
       <section class="card" id="mapSection">
         <h2>2. Kies de vaste plek</h2>
-        <p class="copy"><b>Tik op de kaart</b> waar de Snazzle moet staan, of <b>sleep de rode pin</b>. Druk daarna op <b>“Plek vastzetten”</b>.</p>
+        <p class="copy"><b>Zet de rode pin op de juiste plek</b> en druk daarna op <b>“Plek vastzetten”</b>. Adres en GPS zijn alleen extra hulpmiddelen en niet verplicht.</p>
         <div class="mapmodes"><button id="streetMode" class="on" type="button">🗺️ Straatkaart</button><button id="satelliteMode" type="button">🛰️ Satelliet</button></div>
         <div class="mapwrap"><div id="map" class="map"></div><div class="maphelp">Tik op de kaart of sleep de rode pin · knijp om te zoomen</div></div>
         <div class="status" id="mapStatus">📍 Kies eerst een plek op de kaart.</div>
@@ -79,7 +79,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
         </div>
       </section>
 
-      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=285#beheer">Terug naar Beheer</a></div></section>
+      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=286#beheer">Terug naar Beheer</a></div></section>
     </div>
   </div>
 </main>
@@ -149,9 +149,16 @@ function choosePoint(lat,lon,source='manual',accuracy=0,center=false){
   remember();syncConfirmUi();updateMapStatus('nog niet vastgezet');
 }
 function confirmPoint(){
-  if(!['gps','address','manual'].includes(state.source)){status($('#mapStatus'),'⚠️ Tik eerst op de kaart, sleep de pin, gebruik GPS of zoek een adres.','err');return}
-  if(state.source==='gps'&&state.accuracy>MAX_GPS){status($('#mapStatus'),'⚠️ GPS is nog te onnauwkeurig (±'+Math.round(state.accuracy)+' m).','err');return}
-  state.confirmed=true;syncConfirmUi();updateMapStatus('✅ plek vastgezet');
+  // De rode pin zelf is de bron van waarheid. Adres of GPS zijn alleen hulpmiddelen.
+  if(!['gps','address','manual'].includes(state.source)){
+    const p=placeMarker?.getLatLng?.();
+    if(p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lng))){
+      state.lat=Number(p.lat);state.lon=Number(p.lng);
+    }
+    state.source='manual';state.accuracy=0;remember();
+  }
+  if(state.source==='gps'&&state.accuracy>MAX_GPS){status($('#mapStatus'),'⚠️ GPS is nog te onnauwkeurig (±'+Math.round(state.accuracy)+' m). Sleep de pin naar de juiste plek of gebruik kaart/adres.','err');return}
+  state.confirmed=true;syncConfirmUi();updateMapStatus('✅ plek vastgezet — je kunt nu opslaan');
   try{navigator.vibrate?.(50)}catch{}
 }
 async function initMap(){
@@ -196,7 +203,7 @@ function applyObject(){const o=$('#object');o.style.left=(state.x*100)+'%';o.sty
 async function openCamera(){stopCamera();preview();applyObject();status($('#cameraStatus'),'📷 Camera openen…');try{if(!window.isSecureContext)throw new Error('Camera vereist HTTPS.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});$('#video').srcObject=stream;await $('#video').play().catch(()=>{});status($('#cameraStatus'),'✅ Camera actief. Sleep de Snazzle naar de juiste plek.','ok')}catch(e){stopCamera();status($('#cameraStatus'),'⚠️ '+(e?.name==='NotAllowedError'?'Cameratoegang geweigerd.':e.message||'Camera kon niet openen.'),'err')}}
 function sourcePlacement(){const v=$('#video'),frame=$('#camera');if(!v.videoWidth||!v.videoHeight)return null;const r=frame.getBoundingClientRect(),scale=Math.max(r.width/v.videoWidth,r.height/v.videoHeight),rw=v.videoWidth*scale,rh=v.videoHeight*scale,cx=Math.max(0,(rw-r.width)/2),cy=Math.max(0,(rh-r.height)/2);return{sourceX:Number(clamp((state.x*r.width+cx)/rw,0,1).toFixed(5)),sourceY:Number(clamp((state.y*r.height+cy)/rh,0,1).toFixed(5)),sourceSize:Number(clamp((state.size*r.width)/rw,.02,1.5).toFixed(5)),videoAspect:Number((v.videoWidth/v.videoHeight).toFixed(5))}}
 
-function validate(mode){const f=form();if(f.name.length<2)throw new Error('Vul eerst een naam in.');if(!['gps','address','manual'].includes(state.source))throw new Error('Kies eerst een echte plek via GPS, adres of kaart.');if(!state.confirmed)throw new Error('Druk eerst op “Plek vastzetten”.');if(state.source==='gps'&&state.accuracy>MAX_GPS)throw new Error('GPS is nog te onnauwkeurig (±'+Math.round(state.accuracy)+' m).');if(mode==='camera-composed'&&!stream)throw new Error('Open eerst de camera.')}
+function validate(mode){const f=form();if(f.name.length<2)throw new Error('Vul eerst een naam in.');if(!state.confirmed)throw new Error('Druk eerst op “Plek vastzetten”.');if(!['gps','address','manual'].includes(state.source))state.source='manual';if(state.source==='gps'&&state.accuracy>MAX_GPS)throw new Error('GPS is nog te onnauwkeurig (±'+Math.round(state.accuracy)+' m).');if(mode==='camera-composed'&&!stream)throw new Error('Open eerst de camera.')}
 function setSaveBusy(on){
   for(const el of ['#saveMap','#saveCamera','#finishSave','#finishCamera']){const b=$(el);if(b)b.disabled=!!on}
 }
