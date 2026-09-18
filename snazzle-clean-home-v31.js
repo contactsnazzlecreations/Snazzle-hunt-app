@@ -216,8 +216,8 @@ async function saveCentralKey31(key,data){
     const api=window.SnazzleVisualSyncV54;
     api?.markDirty?.(key);
     try{
-      if(api?.saveKey)return await api.saveKey(key,data);
-      if(api?.save)return await api.save(key,data);
+      if(api?.saveKey){const ok=await api.saveKey(key,data);if(ok===true)return true;}
+      else if(api?.save){const ok=await api.save(key,data);if(ok===true)return true;}
     }catch(err){
       console.warn('Snazzle centrale beeldsync',key,err);
       return false;
@@ -230,7 +230,7 @@ async function saveMainCentral31(key,data){
   for(let i=0;i<80;i++){
     const api=window.SnazzleCentralAssets;
     try{
-      if(api?.saveData)return await api.saveData(key,data);
+      if(api?.saveData){const ok=await api.saveData(key,data);if(ok===true)return true;}
     }catch(err){
       console.warn('Snazzle hoofdbeeld sync',key,err);
       return false;
@@ -243,7 +243,7 @@ async function clearMainCentral31(key){
   for(let i=0;i<80;i++){
     const api=window.SnazzleCentralAssets;
     try{
-      if(api?.clear)return await api.clear(key);
+      if(api?.clear){const ok=await api.clear(key);if(ok===true)return true;}
     }catch(err){
       console.warn('Snazzle hoofdbeeld verwijderen',key,err);
       return false;
