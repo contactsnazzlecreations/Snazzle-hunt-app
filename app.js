@@ -1,4 +1,4 @@
-// Snazzle Hunt v288 — stabiele opstart + extra hint GPS/tijd-poort.
+// Snazzle Hunt v289 — Shop-link direct naar werkende www-shop.
 // Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -34,25 +34,25 @@ function releaseStableBoot(){
 }
 function preloadCriticalAssets(){
   const moduleHrefs=[
-    './app-runtime-v245.js?v=288',
-    './snazzle-runtime-stability-v71.js?fresh=20260918-v288-hint-60m-200m',
-    './snazzle-image-stability-v72.js?fresh=20260918-v288-hint-60m-200m',
-    './snazzle-leaflet-isolation-v190.js?fresh=20260918-v288-hint-60m-200m',
-    './app-core.js?fresh=20260918-v288-hint-60m-200m',
-    './snazzle-core-performance-v248.js?fresh=20260918-v288-hint-60m-200m',
-    './snazzle-adventure-ui-v28.js?fresh=20260918-v288-hint-60m-200m',
-    './snazzle-clean-home-v31.js?v=288',
-    './snazzle-home-card-backgrounds-v75.js?v=288'
-    ,'./snazzle-central-visuals-v54.js?fresh=20260918-v288-hint-60m-200m'
-    ,'./snazzle-bieb-v73.js?fresh=20260918-v288-hint-60m-200m'
-    ,'./snazzle-news-card-bg-v49.js?fresh=20260918-v288-hint-60m-200m'
-    ,'./snazzle-image-manager-v272.js?fresh=20260918-v288-hint-60m-200m'
+    './app-runtime-v245.js?v=289',
+    './snazzle-runtime-stability-v71.js?fresh=20260918-v289-shop-link',
+    './snazzle-image-stability-v72.js?fresh=20260918-v289-shop-link',
+    './snazzle-leaflet-isolation-v190.js?fresh=20260918-v289-shop-link',
+    './app-core.js?fresh=20260918-v289-shop-link',
+    './snazzle-core-performance-v248.js?fresh=20260918-v289-shop-link',
+    './snazzle-adventure-ui-v28.js?fresh=20260918-v289-shop-link',
+    './snazzle-clean-home-v31.js?v=289',
+    './snazzle-home-card-backgrounds-v75.js?v=289'
+    ,'./snazzle-central-visuals-v54.js?fresh=20260918-v289-shop-link'
+    ,'./snazzle-bieb-v73.js?fresh=20260918-v289-shop-link'
+    ,'./snazzle-news-card-bg-v49.js?fresh=20260918-v289-shop-link'
+    ,'./snazzle-image-manager-v272.js?fresh=20260918-v289-shop-link'
   ];
   moduleHrefs.forEach(href=>{
     if(document.head.querySelector(`link[rel="modulepreload"][href="${href}"]`))return;
     const link=document.createElement('link');link.rel='modulepreload';link.href=href;document.head.appendChild(link);
   });
-  ['./snazzle-reference-layout.css?v=288','./snazzle-clean-home-v31.css?v=288'].forEach(href=>{
+  ['./snazzle-reference-layout.css?v=289','./snazzle-clean-home-v31.css?v=289'].forEach(href=>{
     if(document.head.querySelector(`link[rel="preload"][href="${href}"]`))return;
     const link=document.createElement('link');link.rel='preload';link.as='style';link.href=href;document.head.appendChild(link);
   });
@@ -70,7 +70,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=288`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=289`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -83,13 +83,13 @@ async function pacedImports(entries){
 
 // Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
 // kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
-await import('./app-runtime-v245.js?v=288');
+await import('./app-runtime-v245.js?v=289');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
 // De Hunt-app heeft geen eigen winkelpagina meer. De vaste Shop-knop blijft staan
 // en brengt bezoekers rechtstreeks naar de webshop op snazzle.nl.
-const EXTERNAL_SHOP_URL='https://snazzle.nl/#shop';
+const EXTERNAL_SHOP_URL='https://www.snazzle.nl/shop/';
 function installExternalShopLink(){
   const shopButton=document.getElementById('navShop');
   if(shopButton){
