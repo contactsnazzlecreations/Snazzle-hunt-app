@@ -89,7 +89,7 @@ function compressFile(file,max=800,quality=.72){
 }
 async function saveCentralValue(key,src,extra={}){
   const user=auth.currentUser;
-  if(!user||!currentIsSuperAdmin||!src) return false;
+  if(!user||!currentIsSuperAdmin||!src||!ASSETS.includes(key)) return false;
   await setDoc(assetRef(key),{
     active:false,
     system:true,
@@ -101,6 +101,9 @@ async function saveCentralValue(key,src,extra={}){
     updatedBy:user.uid,
     ...extra
   },{merge:true});
+  const check=await getDoc(assetRef(key));
+  const saved=String(check.data()?.dataUrl||'');
+  if(!check.exists()||saved!==src||check.data()?.cleared===true) throw new Error('Centrale afbeelding kon niet worden bevestigd');
   applyAsset(key,src,{persist:true});
   return true;
 }
@@ -117,13 +120,21 @@ async function saveCentralAsset(key,file){
 async function clearCentralAsset(key){
   try{
     const user=auth.currentUser;
-    if(!user||!currentIsSuperAdmin){toast('Alleen de hoofdbeheerder kan deze afbeelding verwijderen');return;}
+    if(!user||!currentIsSuperAdmin||!ASSETS.includes(key)){toast('Alleen de hoofdbeheerder kan deze afbeelding verwijderen');return false;}
     await setDoc(assetRef(key),{
       active:false,system:true,purpose:'snazzleAppAsset',key,dataUrl:'',cleared:true,
       updatedAt:new Date().toISOString(),updatedBy:user.uid||''
     },{merge:true});
-  }catch(err){console.warn(err);}
-  mirrorLocal(key,'');applyAsset(key,'',{persist:false});toast(key==='introImage'?'Intro-afbeelding verwijderd':'Afbeelding verwijderd');
+    const check=await getDoc(assetRef(key));
+    if(!check.exists()||check.data()?.cleared!==true||String(check.data()?.dataUrl||'')!=='') throw new Error('Centrale verwijdering kon niet worden bevestigd');
+    mirrorLocal(key,'');applyAsset(key,'',{persist:false});
+    toast(key==='introImage'?'Intro-afbeelding verwijderd':'Afbeelding verwijderd');
+    return true;
+  }catch(err){
+    console.warn('Centrale afbeelding verwijderen',key,err);
+    toast('Verwijderen is niet centraal bevestigd');
+    return false;
+  }
 }
 function ensureIntroAdmin(){
   const section=document.getElementById('imagesAdmin');
@@ -194,6 +205,8 @@ onAuthStateChanged(auth,async user=>{
 installAdminHandlers();
 window.SnazzleCentralAssets={
   reapply(){ASSETS.forEach(key=>{if(key in central) applyAsset(key,central[key],{persist:false});});},
+  saveData:async(key,src)=>saveCentralValue(key,String(src||'')),
+  clear:async key=>clearCentralAsset(key),
   recover:async()=>{const user=auth.currentUser;if(!user||user.isAnonymous) return 0;return recoverLocalAssets(user);},
   localStatus:()=>Object.fromEntries(ASSETS.map(key=>[key,!!readLocal(key)]))
 };
