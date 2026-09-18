@@ -1,4 +1,4 @@
-name: Manual Snazzle cache activation v284
+name: Manual Snazzle cache activation v285
 
 on:
   workflow_dispatch:
@@ -13,14 +13,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Activate fresh v284 assets
+      - name: Activate fresh v285 assets
         run: |
           python - <<'PY'
           from pathlib import Path
           import re, json
 
-          version='284'
-          runtime='20260918-v284-ar-maps-stability'
+          version='285'
+          runtime='20260918-v285-ar-maps-stability'
 
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
@@ -68,5 +68,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html app.js app-runtime-v245.js manifest.json
-          git commit -m "Activate Snazzle cache v284"
+          git commit -m "Activate Snazzle cache v285"
           git push
