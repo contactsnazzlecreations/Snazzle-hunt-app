@@ -1,4 +1,4 @@
-// Snazzle v54.3 — centrale synchronisatie voor alle vervangbare visuele assets.
+// Snazzle v54.4 — centrale synchronisatie met publicatiecontrole voor alle vervangbare visuele assets.
 // Lokale beheerwijzigingen worden gemarkeerd als 'dirty' zodat een oudere remote snapshot
 // ze nooit kan terug overschrijven terwijl de nieuwe afbeelding nog naar de cloud wordt gezet.
 
@@ -62,6 +62,8 @@ async function readRemoteOnce(){
 async function saveRemote(key,raw,user,extra={}){
   const dataUrl=await cloudSafe(raw);
   await setDoc(visualRef(key),{active:false,system:true,purpose:PURPOSE,key,dataUrl,cleared:false,updatedAt:new Date().toISOString(),updatedBy:user.uid,...extra},{merge:true});
+  const check=await getDoc(visualRef(key));
+  if(!check.exists()||String(check.data()?.dataUrl||'')!==dataUrl||check.data()?.cleared===true) throw new Error('Centrale publicatie kon niet worden bevestigd');
   remoteMap.set(String(key),{dataUrl,cleared:false});
   return dataUrl;
 }
@@ -89,6 +91,8 @@ async function clearRemote(key){
   dirtyKeys.add(normalized);
   try{
     await setDoc(visualRef(normalized),{active:false,system:true,purpose:PURPOSE,key:normalized,dataUrl:'',cleared:true,updatedAt:new Date().toISOString(),updatedBy:user.uid},{merge:true});
+    const check=await getDoc(visualRef(normalized));
+    if(!check.exists()||check.data()?.cleared!==true||String(check.data()?.dataUrl||'')!=='') throw new Error('Centrale verwijdering kon niet worden bevestigd');
     try{await deleteLocal(normalized);}catch{}
     remoteMap.set(normalized,{dataUrl:'',cleared:true});
     dirtyKeys.delete(normalized);
