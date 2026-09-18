@@ -211,17 +211,46 @@ function ensureFastBiebShell31(){
   return button;
 }
 
-function saveCentralKey31(key,data){
-  let tries=0;
-  const run=()=>{
+async function saveCentralKey31(key,data){
+  for(let i=0;i<80;i++){
     const api=window.SnazzleVisualSyncV54;
     api?.markDirty?.(key);
-    if(api?.saveKey){Promise.resolve(api.saveKey(key,data)).catch(()=>{});return;}
-    if(api?.save){Promise.resolve(api.save(key,data)).catch(()=>{});return;}
-    if(api?.push){Promise.resolve(api.push()).catch(()=>{});return;}
-    if(++tries<120)setTimeout(run,500);
-  };
-  setTimeout(run,60);
+    try{
+      if(api?.saveKey)return await api.saveKey(key,data);
+      if(api?.save)return await api.save(key,data);
+    }catch(err){
+      console.warn('Snazzle centrale beeldsync',key,err);
+      return false;
+    }
+    await new Promise(resolve=>setTimeout(resolve,125));
+  }
+  return false;
+}
+async function saveMainCentral31(key,data){
+  for(let i=0;i<80;i++){
+    const api=window.SnazzleCentralAssets;
+    try{
+      if(api?.saveData)return await api.saveData(key,data);
+    }catch(err){
+      console.warn('Snazzle hoofdbeeld sync',key,err);
+      return false;
+    }
+    await new Promise(resolve=>setTimeout(resolve,125));
+  }
+  return false;
+}
+async function clearMainCentral31(key){
+  for(let i=0;i<80;i++){
+    const api=window.SnazzleCentralAssets;
+    try{
+      if(api?.clear)return await api.clear(key);
+    }catch(err){
+      console.warn('Snazzle hoofdbeeld verwijderen',key,err);
+      return false;
+    }
+    await new Promise(resolve=>setTimeout(resolve,125));
+  }
+  return false;
 }
 async function clearCentral31(key){
   for(let i=0;i<120;i++){
