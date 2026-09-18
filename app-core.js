@@ -614,7 +614,13 @@ function startCentralListeners(){
 async function ensureAuth(){
   onAuthStateChanged(auth,async user=>{
     currentUser=user;
-    if(!user){ try{ await signInAnonymously(auth); }catch(e){ toast('Verbinding met Firebase lukt niet'); console.error(e); } return; }
+    if(!user){
+      // Tijdens een beheerlogin mag de gewone anonieme sessie niet tussendoor
+      // opnieuw inloggen. Dat kon op mobiel met de Firebase beheerlogin racen.
+      if(window.__snazzleAdminLoginInProgress)return;
+      try{ await signInAnonymously(auth); }catch(e){ toast('Verbinding met Firebase lukt niet'); console.error(e); }
+      return;
+    }
     await refreshAdminProfile();
     await syncNickname();
     await loadUserParticipation();
