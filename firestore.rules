@@ -16,10 +16,14 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/adminUsers/$(request.auth.uid));
     }
 
-    function isSuperAdmin() {
-      return hasAdminMfa() && adminExists() &&
+    function isActiveSuperAdmin() {
+      return signedIn() && adminExists() &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.active == true &&
         get(/databases/$(database)/documents/adminUsers/$(request.auth.uid)).data.role == "superadmin";
+    }
+
+    function isSuperAdmin() {
+      return hasAdminMfa() && isActiveSuperAdmin();
     }
 
     function isVillageAdmin(village) {
@@ -48,8 +52,10 @@ service cloud.firestore {
 
     match /hunts/{huntId} {
       allow read: if signedIn();
-      allow create, delete: if isSuperAdmin();
+      allow create, delete: if isSuperAdmin() ||
+        (huntId == "snazzle_ar_world_v1" && isActiveSuperAdmin());
       allow update: if isSuperAdmin() ||
+        (huntId == "snazzle_ar_world_v1" && isActiveSuperAdmin()) ||
         (
           isVillageAdmin(resource.data.village) &&
           request.resource.data.village == resource.data.village &&
