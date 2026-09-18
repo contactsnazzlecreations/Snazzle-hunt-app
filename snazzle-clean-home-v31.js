@@ -1,7 +1,7 @@
-// Snazzle Hunt v31.5 — rustige home + zelfherstellend compleet afbeeldingsbeheer.
+// Snazzle Hunt v31.6 — overzichtelijk compleet afbeeldingsbeheer met directe publieke sync.
 // Zichtbare home-tegels, tegel-iconen, dorpen en ondermenu zijn via Beheer → Afbeeldingen vervangbaar.
 
-const V31='31.5.0';
+const V31='31.6.0';
 const q31=(s,r=document)=>r.querySelector(s);
 const qa31=(s,r=document)=>[...r.querySelectorAll(s)];
 const DB31='snazzleVisualAssetsV28';
@@ -23,7 +23,7 @@ const extraAssets31=[
   ['biebTileIcon','Icoon De Bieb'],
   ['collectionCard','Achtergrond Mijn Snazzles'],
   ['collectionTileIcon','Icoon Mijn Snazzles'],
-  ['newsCard','Achtergrond Snazzle Nieuws'],
+  ['newsCard','Snazzle Nieuws afbeelding'],
   ['newsTileIcon','Icoon Snazzle Nieuws'],
   ['guideCharacter','Snazzle gids / menu'],
   ['secretCharacter','Geheime bewegende Snazzle'],
@@ -38,7 +38,7 @@ const extraAssets31=[
 
 function ensureCss31(){
   if(q31('#snazzleCleanHomeV31'))return;
-  const l=document.createElement('link');l.id='snazzleCleanHomeV31';l.rel='stylesheet';l.href='./snazzle-clean-home-v31.css?v=31.4';document.head.appendChild(l);
+  const l=document.createElement('link');l.id='snazzleCleanHomeV31';l.rel='stylesheet';l.href='./snazzle-clean-home-v31.css?v=31.6';document.head.appendChild(l);
 }
 function db31(){
   if(db31Promise)return db31Promise;
