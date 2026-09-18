@@ -1,6 +1,6 @@
-// Snazzle Hunt v286 — definitief centraal afbeeldingsbeheer.
+// Snazzle Hunt v287 — definitief centraal afbeeldingsbeheer.
 
-const runtimeVersion='20260918-v286-ar-pin-confirm';
+const runtimeVersion='20260918-v287-zone-scale';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -66,7 +66,7 @@ const earlyNewsCardBgPromise=safeImport('./snazzle-news-card-bg-v49.js');
 void earlyVisualSyncPromise;void earlyBiebPromise;void earlyNewsCardBgPromise;
 
 await safeImport('./snazzle-adventure-ui-v28.js');
-await safeImport('./snazzle-clean-home-v31.js?v=286');
+await safeImport('./snazzle-clean-home-v31.js?v=287');
 await safeImport('./snazzle-home-card-backgrounds-v75.js');
 for(let i=0;i<50;i++){
   const passport=document.getElementById('snazzlePassport'),heroCopy=document.querySelector('.v31-hero-copy'),adventureCss=document.getElementById('snazzleAdventureThemeV28'),cleanCss=document.getElementById('snazzleCleanHomeV31');
@@ -119,7 +119,7 @@ window.__snazzleFastFeaturesReady=fastLoadPromise;
 const backgroundBundles=[
   ['./snazzle-card-system-v2.js','./snazzle-card-worlds-v78.js','./snazzle-card-world-prompt-v79.js','./snazzle-hunt-code-v2.js','./snazzle-unlock.js','./snazzle-ar-collection-bridge-v125.js','./snazzle-ar-findings-bridge-v126.js','./snazzle-ar-card-unlock-v127.js'],
   ['./snazzle-world.js','./village-access.js','./snazzle-characters.js','./snazzle-v32-guard.js','./snazzle-image-control-v32.js','./snazzle-village-admin-v33.js','./snazzle-secret-characters-v34.js','./snazzle-idle-hunt-duck-v35.js','./snazzle-home-hunt-image-v36.js','./snazzle-click-secrets-v37.js','./snazzle-world-adventure-v38.js','./snazzle-season-theme-v38.js','./snazzle-world-theme-v39.js','./snazzle-world-hub-v47.js','./snazzle-game-menu-v62.js'],
-  ['./image-fit.js','./snazzle-home-magic.js','./snazzle-home-magic-fix.js','./snazzle-central-visuals-v54.js?v=286','./snazzle-public-visual-publish-v64.js','./snazzle-image-recovery-v60.js','./snazzle-professional-v53.js','./snazzle-final-polish-v59.js','./snazzle-star-rewards-v67.js','./snazzle-quiet-psst-v68.js','./snazzle-input-visibility-v69.js','./snazzle-top-stability-v70.js'],
+  ['./image-fit.js','./snazzle-home-magic.js','./snazzle-home-magic-fix.js','./snazzle-central-visuals-v54.js?v=287','./snazzle-public-visual-publish-v64.js','./snazzle-image-recovery-v60.js','./snazzle-professional-v53.js','./snazzle-final-polish-v59.js','./snazzle-star-rewards-v67.js','./snazzle-quiet-psst-v68.js','./snazzle-input-visibility-v69.js','./snazzle-top-stability-v70.js'],
   ['./snazzle-admin-reset-v49.js','./snazzle-admin-backup-v50.js','./snazzle-admin-close-v61.js','./snazzle-admin-access-v55.js','./snazzle-admin-access-v56.js']
 ];
 fastLoadPromise.then(()=>idle()).then(()=>loadBundlesSequentially(backgroundBundles)).then(async()=>{
