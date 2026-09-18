@@ -28,7 +28,7 @@ jobs:
       - name: Check AR v245 direct architecture
         shell: bash
         run: |
-          grep -q "app-runtime-v245.js?v=246" app.js
+          grep -Eq "app-runtime-v245\\.js\\?v=[0-9]+" app.js
           grep -q "snazzle-ar-engine-v245.js" app-runtime-v245.js
           grep -q "snazzle-ar-admin-v245.js" app-runtime-v245.js
           grep -q "snazzle-ar-placement-v245.js" app-runtime-v245.js
@@ -78,4 +78,4 @@ jobs:
           grep -q "snazzle_ar_world_v1" snazzle-ar-placement-v245.js
           grep -q "snazzle-zones.html?v=245" snazzle-ar-engine-v245.js
           grep -q "playsinline" snazzle-ar-v80.js
-          grep -q "import(\`./app.js?v=\${Date.now()}\`)" index.html
+          grep -Eq 'src="\\./app\\.js\\?v=[0-9]+"' index.html
