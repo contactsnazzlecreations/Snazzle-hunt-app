@@ -26,7 +26,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
 </head>
 <body>
 <main class="shell">
-  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=284#beheer" id="backLink">← Beheer</a></header>
+  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=285#beheer" id="backLink">← Beheer</a></header>
   <div class="body">
     <section class="card" id="authCard"><h2>Beheer controleren 🔐</h2><div class="status" id="authStatus">⏳ Beheerlogin controleren…</div></section>
 
@@ -79,7 +79,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
         </div>
       </section>
 
-      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=284#beheer">Terug naar Beheer</a></div></section>
+      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=285#beheer">Terug naar Beheer</a></div></section>
     </div>
   </div>
 </main>
@@ -87,11 +87,10 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
-import {getFirestore,doc,getDoc,runTransaction} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
-import {getStorage,ref as storageRef,uploadBytesResumable,getDownloadURL} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
+import {getFirestore,doc,getDoc,setDoc,deleteDoc,runTransaction} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
 const firebaseConfig={apiKey:'AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4',authDomain:'snazzle-hunt.firebaseapp.com',projectId:'snazzle-hunt',storageBucket:'snazzle-hunt.firebasestorage.app',messagingSenderId:'647665502495',appId:'1:647665502495:web:686488b53db468e887482a',measurementId:'G-55G5DE19DL'};
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1'),MAX_GPS=50;
 const $=s=>document.querySelector(s),clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 let user=null,map=null,baseLayer=null,placeMarker=null,leafletPromise=null,stream=null,previewUrl='',dragging=false,pointerId=null,saving=false,mapMode='street';
@@ -131,7 +130,7 @@ function syncFinishBar(){
   const bar=$('#finishBar'),note=$('#finishNote'),locked=state.confirmed===true,file=form().file;
   if(!bar)return;
   bar.classList.toggle('hidden',!locked);
-  if(note)note.textContent=locked?(file?'🖼️ Afbeelding gekozen en plek vastgezet. Bij opslaan wordt de afbeelding echt geüpload.':'🦆 Plek vastgezet. Zonder afbeelding wordt de test-Snazzle gebruikt.'):'Zet eerst de plek vast.';
+  if(note)note.textContent=locked?(file?'🖼️ Afbeelding gekozen en plek vastgezet. Bij opslaan wordt de afbeelding veilig gekoppeld.':'🦆 Plek vastgezet. Zonder afbeelding wordt de test-Snazzle gebruikt.'):'Zet eerst de plek vast.';
   if($('#finishSave'))$('#finishSave').disabled=!locked;
   if($('#finishCamera'))$('#finishCamera').disabled=!locked;
 }
@@ -201,44 +200,67 @@ function validate(mode){const f=form();if(f.name.length<2)throw new Error('Vul e
 function setSaveBusy(on){
   for(const el of ['#saveMap','#saveCamera','#finishSave','#finishCamera']){const b=$(el);if(b)b.disabled=!!on}
 }
-function timeoutPromise(promise,ms,message,onTimeout){
+function timeoutPromise(promise,ms,message){
   let timer;
   return Promise.race([
     Promise.resolve(promise).finally(()=>clearTimeout(timer)),
-    new Promise((_,reject)=>{timer=setTimeout(()=>{try{onTimeout?.()}catch{}reject(new Error(message))},ms)})
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms)})
   ])
 }
-async function upload(file,id,statusEl){
+function fileToArImage(file){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Afbeelding kon niet worden gelezen.'))};
+    img.src=url;
+  })
+}
+async function compressArImage(file,statusEl){
   if(!file)return'';
-  if(file.size>8*1024*1024)throw new Error('Afbeelding is groter dan 8 MB.');
-  if(!navigator.onLine)throw new Error('Geen internetverbinding. Probeer opnieuw zodra je online bent.');
-  const safe=(file.name||'snazzle.png').replace(/[^a-zA-Z0-9._-]+/g,'-');
-  const r=storageRef(storage,'listen-stories/images/'+user.uid+'/ar-'+id+'-'+safe);
-  const task=uploadBytesResumable(r,file,{contentType:file.type||'image/png'});
-  const done=new Promise((resolve,reject)=>{
-    task.on('state_changed',
-      snap=>{const pct=snap.totalBytes?Math.round((snap.bytesTransferred/snap.totalBytes)*100):0;status(statusEl,'🖼️ Afbeelding uploaden… '+pct+'%')},
-      reject,
-      ()=>resolve(task.snapshot)
-    )
-  });
-  await timeoutPromise(done,45000,'Afbeelding uploaden duurt te lang. Controleer internet en probeer opnieuw.',()=>task.cancel());
-  status(statusEl,'🖼️ Afbeelding geüpload · koppeling maken…');
-  return timeoutPromise(getDownloadURL(r),12000,'Afbeelding is geüpload, maar de downloadlink kwam niet terug.');
+  if(file.size>12*1024*1024)throw new Error('Afbeelding is groter dan 12 MB.');
+  status(statusEl,'🖼️ Afbeelding voorbereiden…');
+  const img=await fileToArImage(file);
+  let maxSide=900,quality=.84,data='';
+  for(let attempt=0;attempt<7;attempt++){
+    const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+    const scale=Math.min(1,maxSide/Math.max(iw,ih));
+    const w=Math.max(1,Math.round(iw*scale)),h=Math.max(1,Math.round(ih*scale));
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d',{alpha:true});
+    ctx.clearRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+    data=canvas.toDataURL('image/webp',quality);
+    if(data.startsWith('data:image/webp')&&data.length<=680000)return data;
+    quality=Math.max(.5,quality-.07);maxSide=Math.max(520,Math.round(maxSide*.86));
+  }
+  if(!data||data.length>730000)throw new Error('Afbeelding blijft te groot. Kies een kleinere afbeelding.');
+  return data;
+}
+async function saveImageDocument(file,id,statusEl){
+  if(!file)return'';
+  const dataUrl=await compressArImage(file,statusEl);
+  status(statusEl,'🖼️ Afbeelding veilig opslaan…');
+  const now=new Date().toISOString();
+  await timeoutPromise(
+    setDoc(doc(db,'snazzleArImages',id),{ownerUid:user.uid,dataUrl,mimeType:'image/webp',createdAt:now,updatedAt:now}),
+    12000,
+    'Afbeelding opslaan duurt te lang. Controleer internet en probeer opnieuw.'
+  );
+  return id;
 }
 async function save(mode){
   if(saving)return;
+  let imageDocId='';
   saving=true;setSaveBusy(true);
   const s=mode==='camera-composed'?$('#cameraStatus'):$('#mapStatus');
   status(s,'☁️ Opslaan starten…');
   try{
     validate(mode);
     const f=form(),id=makeId();
-    const imageUrl=await upload(f.file,id,s);
+    if(f.file)imageDocId=await saveImageDocument(f.file,id,s);
     status(s,'📍 AR-punt opslaan…');
     const now=new Date().toISOString(),src=mode==='camera-composed'?sourcePlacement():null;
     const placement=mode==='camera-composed'?{version:7,mode:'camera-composed',x:Number(state.x.toFixed(4)),y:Number(state.y.toFixed(4)),size:Number(state.size.toFixed(4)),rotation:Number(state.rotation.toFixed(1)),...(src||{}),placedAt:now}:{version:7,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now};
-    const point={id,name:f.name,number:f.number||'—',rarity:f.rarity,village:f.village,radius:Math.max(4,f.radius),lat:state.lat,lon:state.lon,accuracy:Number(state.accuracy||0),imageUrl,active:true,placement,createdAt:now,updatedAt:now,createdBy:user.uid};
+    const point={id,name:f.name,number:f.number||'—',rarity:f.rarity,village:f.village,radius:Math.max(4,f.radius),lat:state.lat,lon:state.lon,accuracy:Number(state.accuracy||0),imageUrl:'',imageDocId,active:true,placement,createdAt:now,updatedAt:now,createdBy:user.uid};
     await timeoutPromise(runTransaction(db,async tx=>{
       const snap=await tx.get(WORLD_DOC),data=snap.exists()?snap.data():{},points=Array.isArray(data.points)?data.points:[];
       if(points.some(p=>p?.id===id))throw new Error('Dit AR-punt bestaat al.');
@@ -249,14 +271,13 @@ async function save(mode){
       },{merge:true});
     }),15000,'AR-punt opslaan duurt te lang. Probeer opnieuw.');
     stopCamera();$('#finishBar').classList.add('hidden');$('#mapSection').classList.add('hidden');$('#cameraSection').classList.add('hidden');$('#doneSection').classList.remove('hidden');
-    $('#doneText').innerHTML='<b>'+point.name.replace(/[<>]/g,'')+'</b> staat nu opgeslagen op '+point.lat.toFixed(6)+', '+point.lon.toFixed(6)+'.<br><br>'+(imageUrl?'🖼️ <b>Afbeelding is opgeslagen en gekoppeld aan deze AR-Snazzle.</b>':'🦆 Geen eigen afbeelding gekozen; de test-Snazzle wordt gebruikt.');
+    $('#doneText').innerHTML='<b>'+point.name.replace(/[<>]/g,'')+'</b> staat nu opgeslagen op '+point.lat.toFixed(6)+', '+point.lon.toFixed(6)+'.<br><br>'+(imageDocId?'🖼️ <b>Afbeelding is opgeslagen en gekoppeld aan deze AR-Snazzle.</b>':'🦆 Geen eigen afbeelding gekozen; de test-Snazzle wordt gebruikt.');
   }catch(e){
     console.error(e);
+    if(imageDocId){try{await deleteDoc(doc(db,'snazzleArImages',imageDocId))}catch{}}
     const code=String(e?.code||'').toLowerCase();
     let msg=e?.message||'Opslaan is mislukt.';
-    if(code.includes('storage/unauthorized')||code.includes('permission-denied'))msg='Geen upload- of schrijfrecht. Open Beheer opnieuw en probeer nogmaals.';
-    else if(code.includes('storage/canceled'))msg='Afbeelding uploaden is gestopt omdat het te lang duurde.';
-    else if(code.includes('storage/retry-limit-exceeded'))msg='Uploadverbinding is weggevallen. Controleer internet en probeer opnieuw.';
+    if(code.includes('permission-denied'))msg='Geen schrijfrecht voor deze AR-afbeelding. Open Beheer opnieuw en probeer nogmaals.';
     status(s,'⚠️ '+msg,'err')
   }finally{saving=false;setSaveBusy(false);syncConfirmUi()}
 }
