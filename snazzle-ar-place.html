@@ -26,14 +26,14 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
 </head>
 <body>
 <main class="shell">
-  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=280#beheer" id="backLink">← Beheer</a></header>
+  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=281#beheer" id="backLink">← Beheer</a></header>
   <div class="body">
     <section class="card" id="authCard"><h2>Beheer controleren 🔐</h2><div class="status" id="authStatus">⏳ Beheerlogin controleren…</div></section>
 
     <div id="app" class="hidden">
       <section class="card">
         <h2>1. Snazzle instellen</h2>
-        <p class="copy">Vul hier de Snazzle in die je wilt plaatsen. Je bent al via Beheer aangemeld. Voor AR-plaatsen is geen extra e-mailcode meer nodig.</p>
+        <p class="copy">Vul hier de Snazzle in die je wilt plaatsen. Je bent al via Beheer aangemeld. Voor AR-plaatsen is geen extra e-mailcode nodig.</p>
         <div class="grid">
           <div class="field"><label>Naam</label><input id="name" maxlength="50" value="Scout Snazzle"></div>
           <div class="row2">
@@ -69,7 +69,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
         <div class="actions"><button id="backMap" class="secondary" type="button">← Terug naar kaart</button><button id="saveCamera" class="primary" type="button">🔒 Hier vastzetten</button></div>
       </section>
 
-      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=280#beheer">Terug naar Beheer</a></div></section>
+      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=281#beheer">Terug naar Beheer</a></div></section>
     </div>
   </div>
 </main>
@@ -77,14 +77,12 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
-import {getFirestore,doc,getDoc} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import {getFirestore,doc,getDoc,runTransaction} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 import {getStorage,ref as storageRef,uploadBytes,getDownloadURL} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
-import {getFunctions,httpsCallable} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js';
 
 const firebaseConfig={apiKey:'AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4',authDomain:'snazzle-hunt.firebaseapp.com',projectId:'snazzle-hunt',storageBucket:'snazzle-hunt.firebasestorage.app',messagingSenderId:'647665502495',appId:'1:647665502495:web:686488b53db468e887482a',measurementId:'G-55G5DE19DL'};
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app),fn=getFunctions(app,'europe-west1');
-const saveArPointFn=httpsCallable(fn,'saveArPoint');
-const MAX_GPS=50;
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
+const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1'),MAX_GPS=50;
 const $=s=>document.querySelector(s),clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 let user=null,map=null,baseLayer=null,leafletPromise=null,mapProgrammatic=false,mapGesture=false,stream=null,previewUrl='',dragging=false,pointerId=null,saving=false,mapMode='street';
 let state={lat:51.1262,lon:5.9488,accuracy:0,source:'fallback',x:.5,y:.56,size:.34,rotation:0};
@@ -149,17 +147,24 @@ async function save(mode){
   const s=mode==='camera-composed'?$('#cameraStatus'):$('#mapStatus');status(s,'☁️ Snazzle veilig opslaan…');
   try{
     validate(mode);
-    const f=form(),id=makeId(),imageUrl=await upload(f.file,id),src=mode==='camera-composed'?sourcePlacement():null;
-    const placement=mode==='camera-composed'?{version:7,mode:'camera-composed',x:Number(state.x.toFixed(4)),y:Number(state.y.toFixed(4)),size:Number(state.size.toFixed(4)),rotation:Number(state.rotation.toFixed(1)),...(src||{})}:{version:7,mode:'map-only',x:.5,y:.5,size:.34,rotation:0};
-    const point={id,name:f.name,number:f.number||'—',rarity:f.rarity,village:f.village,radius:Math.max(4,f.radius),lat:state.lat,lon:state.lon,accuracy:Number(state.accuracy||0),imageUrl,placement};
-    const result=await saveArPointFn({point});
-    if(result?.data?.ok!==true)throw new Error('Server bevestigde de plaatsing niet.');
+    const f=form(),id=makeId(),imageUrl=await upload(f.file,id),now=new Date().toISOString(),src=mode==='camera-composed'?sourcePlacement():null;
+    const placement=mode==='camera-composed'?{version:7,mode:'camera-composed',x:Number(state.x.toFixed(4)),y:Number(state.y.toFixed(4)),size:Number(state.size.toFixed(4)),rotation:Number(state.rotation.toFixed(1)),...(src||{}),placedAt:now}:{version:7,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now};
+    const point={id,name:f.name,number:f.number||'—',rarity:f.rarity,village:f.village,radius:Math.max(4,f.radius),lat:state.lat,lon:state.lon,accuracy:Number(state.accuracy||0),imageUrl,active:true,placement,createdAt:now,updatedAt:now,createdBy:user.uid};
+    await runTransaction(db,async tx=>{
+      const snap=await tx.get(WORLD_DOC),data=snap.exists()?snap.data():{},points=Array.isArray(data.points)?data.points:[];
+      if(points.some(p=>p?.id===id))throw new Error('Dit AR-punt bestaat al.');
+      tx.set(WORLD_DOC,{
+        _snazzleInternalType:'arWorld',title:'[SYSTEEM] AR-WERELD',village:'snazzle-internal',
+        description:'Interne opslag voor permanente Snazzle AR-punten',rule:'',hint:'',foundMessage:'',imageUrl:'',start:'',end:'',mode:'draft',
+        version:10,points:[...points,point],updatedAt:now,updatedBy:user.uid
+      },{merge:true});
+    });
     stopCamera();$('#mapSection').classList.add('hidden');$('#cameraSection').classList.add('hidden');$('#doneSection').classList.remove('hidden');
     $('#doneText').innerHTML='<b>'+point.name.replace(/[<>]/g,'')+'</b> staat nu opgeslagen op '+point.lat.toFixed(6)+', '+point.lon.toFixed(6)+'.';
   }catch(e){
     console.error(e);
     const code=String(e?.code||'').toLowerCase();
-    const msg=code.includes('unauthenticated')?'Open Beheer opnieuw en log in.':code.includes('permission-denied')?'Dit account heeft geen hoofdbeheerrechten.':(e?.message||'Opslaan is mislukt.');
+    const msg=code.includes('permission-denied')?'Je beheerlogin heeft geen schrijfrecht voor AR. Open Beheer opnieuw.':(e?.message||'Opslaan is mislukt.');
     status(s,'⚠️ '+msg,'err')
   }finally{saving=false;btn.disabled=false}
 }
