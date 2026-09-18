@@ -75,7 +75,7 @@ jobs:
           grep -q "sourceX" snazzle-ar-placement-v245.js
           grep -q "mappedPlacement" snazzle-ar-engine-v245.js
           grep -q "TILE_PROVIDERS" snazzle-zones.html
-          grep -q "snazzle-ar-place.html?v=283" snazzle-ar-placement-v245.js
+          grep -q "snazzle-ar-place.html?v=284" snazzle-ar-placement-v245.js
           grep -q "Nauwkeurig AR plaatsen" snazzle-ar-place.html
           grep -q "runTransaction" snazzle-ar-place.html
           grep -q "Satelliet" snazzle-ar-place.html
@@ -84,6 +84,8 @@ jobs:
           grep -q "draggable:true" snazzle-ar-place.html
           grep -q "finishSave" snazzle-ar-place.html
           grep -q "Afbeelding is opgeslagen en gekoppeld" snazzle-ar-place.html
+          grep -q "uploadBytesResumable" snazzle-ar-place.html
+          grep -q "Afbeelding uploaden" snazzle-ar-place.html
           grep -q "isActiveSuperAdmin" firestore.rules
           grep -q "snazzle_ar_world_v1" firestore.rules
 
