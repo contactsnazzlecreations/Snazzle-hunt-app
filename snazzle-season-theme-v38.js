@@ -1,7 +1,7 @@
 // Snazzle Hunt v38 — seizoenssfeer voor de hoofdpagina.
 // Presets wijzigen alleen presentatie; bestaande functies, hunts en menu's blijven intact.
 
-const V38SEASON='38.1.0';
+const V38SEASON='38.2.0';
 const qs38=(s,r=document)=>r.querySelector(s);
 const SEASON_KEY38='snazzleSeasonThemeV38';
 const DBSEASON38='snazzleVisualAssetsV28';
@@ -30,5 +30,7 @@ async function buildSeasonAdmin38(){const manager=qs38('#v31ImageManager'),paren
 async function syncSeason38(){ensureSeasonStyles38();await applySeason38();await buildSeasonAdmin38();}
 function queueSeason38(){clearTimeout(seasonTimer38);seasonTimer38=setTimeout(()=>syncSeason38().catch(e=>console.warn('Snazzle seizoen v38',e)),130);}
 function observeSeason38(){new MutationObserver(m=>{if(m.some(x=>x.type==='childList'))queueSeason38();}).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{if(e.target.closest?.('[data-tab],.quick-menu-list button,.bottom button'))setTimeout(queueSeason38,100);});}
+document.addEventListener('snazzle:visual-assets-updated',()=>{cacheSeason38.clear();queueSeason38();});
+document.addEventListener('snazzle:visual-asset-changed',event=>{const key=String(event.detail?.key||'');if(key.startsWith('season')){cacheSeason38.delete(key);queueSeason38();}});
 async function initSeason38(){if(window.__snazzleSeasonV38)return;window.__snazzleSeasonV38=true;await syncSeason38();observeSeason38();console.info(`Snazzle seizoen ${V38SEASON} geladen`);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSeason38,{once:true});else initSeason38();
