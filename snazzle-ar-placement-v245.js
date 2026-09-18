@@ -1,4 +1,4 @@
-// Snazzle AR Placement v246 — interactieve Leaflet-kaart + stabiele GPS/camera/opslag.
+// Snazzle AR Placement v274 — robuuste kaartlagen + consistente camera-plaatsing.
 // Kaartgebaren blijven binnen de kaart: slepen verplaatst de plaatsing, knijpen zoomt de kaart en niet de pagina.
 
 import { getAuth } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -50,23 +50,68 @@ function initialCenter(){
 }
 function rememberPoint(){try{localStorage.setItem('snazzleArLastPoint',JSON.stringify({lat:state.lat,lon:state.lon}));}catch{}}
 let placementMap=null;
+let placementBaseLayer=null;
 let leafletPromise=null;
 let mapProgrammatic=false;
 let mapGesture=false;
-
-function ensureLeaflet(){
-  if(window.L?.map)return Promise.resolve(window.L);
-  if(leafletPromise)return leafletPromise;
-  if(!document.querySelector('link[data-sn245-leaflet]')){
-    const css=document.createElement('link');css.rel='stylesheet';css.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';css.dataset.sn245Leaflet='1';document.head.appendChild(css);
-  }
-  leafletPromise=new Promise((resolve,reject)=>{
-    const ready=()=>window.L?.map?resolve(window.L):reject(new Error('Kaartmodule kon niet starten.'));
-    let script=document.querySelector('script[data-sn245-leaflet]');
-    if(script){if(window.L?.map)return resolve(window.L);script.addEventListener('load',ready,{once:true});script.addEventListener('error',()=>reject(new Error('Kaartmodule kon niet laden.')),{once:true});return;}
-    script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';script.dataset.sn245Leaflet='1';script.onload=ready;script.onerror=()=>reject(new Error('Kaartmodule kon niet laden.'));document.head.appendChild(script);
+let mapSyncToken=0;
+let placementProviderIndex=0;
+let placementTileFailures=0;
+const MAP_TILE_PROVIDERS=[
+  {url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',options:{maxZoom:19,attribution:'© OpenStreetMap'}},
+  {url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',options:{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap © CARTO'}},
+  {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',options:{maxZoom:19,attribution:'Tiles © Esri'}}
+];
+function loadLeafletScript(src,timeout=6500){
+  return new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src=src;script.async=true;script.dataset.sn245Leaflet='1';
+    let settled=false;
+    const finish=(ok,value)=>{if(settled)return;settled=true;clearTimeout(timer);ok?resolve(value):reject(value);};
+    const timer=setTimeout(()=>{script.remove();finish(false,new Error('Kaartmodule reageert niet.'));},timeout);
+    script.onload=()=>window.L?.map?finish(true,window.L):finish(false,new Error('Kaartmodule is niet gestart.'));
+    script.onerror=()=>{script.remove();finish(false,new Error('Kaartmodule kon niet laden.'));};
+    document.head.appendChild(script);
   });
-  return leafletPromise;
+}
+async function ensureLeaflet(){
+  if(window.L?.map)return window.L;
+  if(leafletPromise)return leafletPromise;
+  if(!document.querySelector('link[href*="leaflet.css"]')){
+    const css=document.createElement('link');css.rel='stylesheet';css.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';css.dataset.sn245LeafletCss='1';
+    css.onerror=()=>{if(!document.querySelector('link[data-sn245-leaflet-css-fallback]')){const fallback=document.createElement('link');fallback.rel='stylesheet';fallback.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';fallback.dataset.sn245LeafletCssFallback='1';document.head.appendChild(fallback);}};
+    document.head.appendChild(css);
+  }
+  leafletPromise=(async()=>{
+    try{return await loadLeafletScript('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js');}
+    catch{return await loadLeafletScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');}
+  })();
+  try{return await leafletPromise;}catch(err){leafletPromise=null;throw err;}
+}
+function installPlacementBaseLayer(L,index=0){
+  if(!placementMap)return;
+  const nextIndex=Math.max(0,Math.min(index,MAP_TILE_PROVIDERS.length-1));
+  if(placementBaseLayer){try{placementMap.removeLayer(placementBaseLayer);}catch{}}
+  placementProviderIndex=nextIndex;placementTileFailures=0;
+  const provider=MAP_TILE_PROVIDERS[nextIndex];
+  const layer=L.tileLayer(provider.url,{...provider.options,keepBuffer:3,updateWhenIdle:false,updateWhenZooming:true});
+  placementBaseLayer=layer;
+  let loaded=0,switched=false;
+  const switchNext=()=>{
+    if(switched||placementBaseLayer!==layer||nextIndex>=MAP_TILE_PROVIDERS.length-1)return;
+    switched=true;
+    installPlacementBaseLayer(L,nextIndex+1);
+    updateMapStatus(`kaartlaag ${nextIndex+2}/${MAP_TILE_PROVIDERS.length} actief`);
+  };
+  layer.on('tileload',()=>{loaded++;placementTileFailures=0;});
+  layer.on('tileerror',()=>{placementTileFailures++;if(placementTileFailures>=4)switchNext();});
+  layer.addTo(placementMap);
+  setTimeout(()=>{
+    if(placementBaseLayer!==layer||switched)return;
+    const canvas=$('#sn245MapCanvas');
+    const visible=[...(canvas?.querySelectorAll('img.leaflet-tile')||[])].some(img=>img.complete&&img.naturalWidth>0);
+    if(!loaded&&!visible)switchNext();
+  },2600);
 }
 function updateMapStatus(note=''){
   const source=state.source==='gps'?`GPS ±${Math.round(state.accuracy||0)} m`:state.source==='address'?'adres gekozen':state.source==='manual'?'kaart/pijltjes handmatig':'nog geen bevestigde plek';
@@ -76,17 +121,17 @@ function updateMapStatus(note=''){
 }
 function syncMapToState(zoom=null){
   if(!placementMap)return;
-  mapProgrammatic=true;
+  const token=++mapSyncToken;mapProgrammatic=true;
   const z=Number.isFinite(Number(zoom))?Number(zoom):placementMap.getZoom();
   placementMap.setView([state.lat,state.lon],z,{animate:false});
-  requestAnimationFrame(()=>{mapProgrammatic=false;});
+  setTimeout(()=>{if(token===mapSyncToken)mapProgrammatic=false;},90);
 }
 async function ensureInteractiveMap(){
   const canvas=$('#sn245MapCanvas');if(!canvas)return null;
   const L=await ensureLeaflet();
   if(!placementMap){
-    placementMap=L.map(canvas,{zoomControl:true,attributionControl:true,preferCanvas:true,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false}).setView([state.lat,state.lon],17);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(placementMap);
+    placementMap=L.map(canvas,{zoomControl:true,attributionControl:true,preferCanvas:true,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,bounceAtZoomLimits:false}).setView([state.lat,state.lon],17);
+    installPlacementBaseLayer(L,0);
     placementMap.on('movestart',()=>{if(!mapProgrammatic)mapGesture=true;});
     placementMap.on('moveend',()=>{
       if(mapProgrammatic){mapProgrammatic=false;return;}
@@ -102,7 +147,7 @@ async function ensureInteractiveMap(){
     });
     canvas.addEventListener('contextmenu',e=>e.preventDefault());
   }
-  setTimeout(()=>placementMap?.invalidateSize(false),20);
+  setTimeout(()=>placementMap?.invalidateSize({pan:false,animate:false}),20);
   return placementMap;
 }
 function updateMap(note='',zoom=null){
@@ -218,6 +263,21 @@ function dragStart(e){dragging=true;pointerId=e.pointerId;$('#sn245Object')?.set
 function dragMove(e){if(!dragging||e.pointerId!==pointerId)return;const r=$('#sn245Camera')?.getBoundingClientRect();if(!r)return;state.x=clamp((e.clientX-r.left)/r.width,.06,.94);state.y=clamp((e.clientY-r.top)/r.height,.12,.9);applyPlacement();e.preventDefault();}
 function dragEnd(e){if(e.pointerId!==pointerId)return;dragging=false;pointerId=null;}
 
+function sourcePlacement(){
+  const video=$('#sn245Video'),frame=$('#sn245Camera');
+  if(!video||!frame||!video.videoWidth||!video.videoHeight)return null;
+  const r=frame.getBoundingClientRect();if(!r.width||!r.height)return null;
+  const scale=Math.max(r.width/video.videoWidth,r.height/video.videoHeight);
+  const renderedWidth=video.videoWidth*scale,renderedHeight=video.videoHeight*scale;
+  const cropX=Math.max(0,(renderedWidth-r.width)/2),cropY=Math.max(0,(renderedHeight-r.height)/2);
+  return{
+    sourceX:Number(clamp((state.x*r.width+cropX)/renderedWidth,0,1).toFixed(5)),
+    sourceY:Number(clamp((state.y*r.height+cropY)/renderedHeight,0,1).toFixed(5)),
+    sourceSize:Number(clamp((state.size*r.width)/renderedWidth,.02,1.5).toFixed(5)),
+    videoAspect:Number((video.videoWidth/video.videoHeight).toFixed(5))
+  };
+}
+
 function validatePlacementSource(mode){
   if(!['gps','address','manual'].includes(state.source))throw new Error('Kies eerst een echte plek via GPS, adres of de pijltjes. Het startpunt wordt nooit automatisch opgeslagen.');
   if(state.source==='gps'&&Number(state.accuracy||Infinity)>MAX_GPS_SAVE_ACCURACY)throw new Error(`GPS is nog te onnauwkeurig (±${Math.round(state.accuracy)} m). Tik GPS opnieuw of gebruik adres/pijltjes.`);
@@ -232,7 +292,8 @@ async function persistPoint(mode){
   const f=formData();if(f.name.length<2)throw new Error('Vul eerst een naam voor de Snazzle in.');if(!auth.currentUser)throw new Error('Je bent niet meer ingelogd als beheerder.');
   if(!Number.isFinite(state.lat)||!Number.isFinite(state.lon))throw new Error('Er is geen geldige locatie gekozen.');validatePlacementSource(mode);
   const id=makeId(),imageUrl=await uploadImage(f.file,id),now=new Date().toISOString();
-  const placement=mode==='camera-composed'?{version:6,mode:'camera-composed',x:Number(state.x.toFixed(4)),y:Number(state.y.toFixed(4)),size:Number(state.size.toFixed(4)),rotation:Number(state.rotation.toFixed(1)),placedAt:now}:{version:6,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now};
+  const source=mode==='camera-composed'?sourcePlacement():null;
+  const placement=mode==='camera-composed'?{version:7,mode:'camera-composed',x:Number(state.x.toFixed(4)),y:Number(state.y.toFixed(4)),size:Number(state.size.toFixed(4)),rotation:Number(state.rotation.toFixed(1)),...(source||{}),placedAt:now}:{version:7,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now};
   const point={id,name:f.name,number:f.number||'—',rarity:f.rarity,village:f.village,radius:Math.max(4,Number(f.radius||7)),lat:Number(state.lat),lon:Number(state.lon),accuracy:Number(state.accuracy||0),imageUrl,active:true,placement,createdAt:now,updatedAt:now,createdBy:auth.currentUser.uid};
   await runTransaction(db,async tx=>{const snap=await tx.get(WORLD_DOC),data=snap.exists()?snap.data():{},existing=Array.isArray(data.points)?data.points:[];tx.set(WORLD_DOC,{_snazzleInternalType:'arWorld',title:'[SYSTEEM] AR-WERELD',village:'snazzle-internal',description:'Interne opslag voor permanente Snazzle AR-punten',rule:'',hint:'',foundMessage:'',imageUrl:'',start:'',end:'',mode:'draft',version:9,points:[...existing,point],updatedAt:now,updatedBy:auth.currentUser.uid},{merge:true});});
   return point;
@@ -270,6 +331,8 @@ function installButton(){
 function boot(){if(installButton())return;const ob=new MutationObserver(()=>{if(installButton())ob.disconnect();});if(document.body)ob.observe(document.body,{childList:true,subtree:true});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 document.addEventListener('snazzle:admin-ui-ready',()=>{installButton();installRadiusControl();});
+window.addEventListener('orientationchange',()=>{setTimeout(()=>placementMap?.invalidateSize({pan:false,animate:false}),180);},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('#'+MODAL_ID)?.classList.contains('show'))setTimeout(()=>placementMap?.invalidateSize({pan:false,animate:false}),100);});
 window.addEventListener('pagehide',()=>{stopCamera();locateToken++;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('#'+MODAL_ID)?.classList.contains('show')){stopCamera();if(!$('#sn245CameraSection')?.hidden){setCameraStatus('Camera gepauzeerd omdat de app naar de achtergrond ging. Tik op Camera opnieuw openen.','err');$('#sn245RetryCamera')?.classList.add('show');}}});
 
