@@ -1,4 +1,4 @@
-// Snazzle AR Engine v274 — centrale eigenaar van camera, GPS, werelddata en vangen.
+// Snazzle AR Engine v285 — AR-afbeeldingen uit beveiligde Firestore-opslag.
 // Tweede systematische stabiliteitspass: sessie-races afgevangen, verse GPS-start en reeds gevangen punten overslaan.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -26,9 +26,26 @@ let sessionToken=0;
 let lifecycleInstalled=false;
 let originalDuckHtml='';
 let originalResultHtml='';
+const arImageCache=new Map();
 
 function setText(el,text){if(el&&el.textContent!==text)el.textContent=text;}
 function activePoints(points){return(Array.isArray(points)?points:[]).filter(p=>p&&p.active!==false&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon)));}
+async function resolveArImage(point){
+  if(!point||point.imageUrl||!point.imageDocId)return point;
+  const id=String(point.imageDocId);
+  if(arImageCache.has(id))return{...point,imageUrl:arImageCache.get(id)||''};
+  try{
+    const snap=await Promise.race([getDoc(doc(db,'snazzleArImages',id)),timeout(4500,'AR-afbeelding laden duurt te lang.')]);
+    const dataUrl=snap.exists()?String(snap.data()?.dataUrl||''):'';
+    arImageCache.set(id,dataUrl);
+    return{...point,imageUrl:dataUrl};
+  }catch{
+    arImageCache.set(id,'');
+    return point;
+  }
+}
+async function resolveArImages(points){return Promise.all((Array.isArray(points)?points:[]).map(resolveArImage))}
+
 function point(pos){return{lat:Number(pos.coords.latitude),lon:Number(pos.coords.longitude)};}
 function dist(a,b){
   const R=6371000,p1=toRad(a.lat),p2=toRad(b.lat),dp=toRad(b.lat-a.lat),dl=toRad(b.lon-a.lon);
@@ -59,7 +76,7 @@ async function loadWorld(force=false){
     await waitForUser();
     const snap=await Promise.race([getDoc(WORLD_DOC),timeout(6500,'AR-punten laden duurt te lang.')]);
     const data=snap.exists()?snap.data():{};
-    world=activePoints(data.points);
+    world=await resolveArImages(activePoints(data.points));
     maxRadiusKm=clampSearchRadius(data.arMaxSearchRadiusKm??DEFAULT_MAX_RADIUS_KM);
     worldLoadedAt=Date.now();
     return world;
