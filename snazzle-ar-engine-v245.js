@@ -1,4 +1,4 @@
-// Snazzle AR Engine v245 — centrale eigenaar van camera, GPS, werelddata en vangen.
+// Snazzle AR Engine v274 — centrale eigenaar van camera, GPS, werelddata en vangen.
 // Tweede systematische stabiliteitspass: sessie-races afgevangen, verse GPS-start en reeds gevangen punten overslaan.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -121,26 +121,38 @@ function isCameraPlacement(p){
   const mode=String(p?.placement?.mode||'').toLowerCase();
   return ['camera-composed','direct-map-camera','camera-v244','camera-v245','camera'].includes(mode);
 }
+function mappedPlacement(){
+  const p=target?.placement||{};
+  let x=clamp(Number(p.x||.5),.06,.94),y=clamp(Number(p.y||.48),.12,.9),size=clamp(Number(p.size||.34),.18,.62);
+  const sourceX=Number(p.sourceX),sourceY=Number(p.sourceY),sourceSize=Number(p.sourceSize);
+  const video=$('#snArCamera'),stage=$('#snArOverlay');
+  if(Number.isFinite(sourceX)&&Number.isFinite(sourceY)&&Number.isFinite(sourceSize)&&video?.videoWidth&&video?.videoHeight&&stage){
+    const r=stage.getBoundingClientRect();
+    if(r.width&&r.height){
+      const scale=Math.max(r.width/video.videoWidth,r.height/video.videoHeight);
+      const renderedWidth=video.videoWidth*scale,renderedHeight=video.videoHeight*scale;
+      const cropX=Math.max(0,(renderedWidth-r.width)/2),cropY=Math.max(0,(renderedHeight-r.height)/2);
+      x=clamp((sourceX*renderedWidth-cropX)/r.width,.04,.96);
+      y=clamp((sourceY*renderedHeight-cropY)/r.height,.08,.92);
+      size=clamp((sourceSize*renderedWidth)/r.width,.14,.68);
+    }
+  }
+  return{x,y,size,rotation:clamp(Number(p.rotation||0),-180,180)};
+}
 function resetPlacementVisual(){
   const duck=$('#snArDuck'),catchBtn=$('#snArCatchDuck');
-  if(duck){duck.style.left='';duck.style.top='';duck.style.width='';duck.style.height='';}
+  if(duck){duck.style.left='';duck.style.top='';duck.style.width='';duck.style.height='';duck.style.aspectRatio='';}
   if(catchBtn)catchBtn.style.transform='';
 }
 function applySavedPlacement(){
   resetPlacementVisual();
   if(!target?.placement||!isCameraPlacement(target))return;
-  const duck=$('#snArDuck'),catchBtn=$('#snArCatchDuck');
-  if(!duck)return;
-  const x=clamp(Number(target.placement.x||.5),.06,.94);
-  const y=clamp(Number(target.placement.y||.48),.12,.9);
-  const size=clamp(Number(target.placement.size||.34),.18,.62);
-  const rotation=clamp(Number(target.placement.rotation||0),-180,180);
-  duck.style.left=`${x*100}%`;
-  duck.style.top=`${y*100}%`;
-  duck.style.width=`${size*100}vw`;
-  duck.style.height=`${size*100}vw`;
+  const duck=$('#snArDuck'),catchBtn=$('#snArCatchDuck');if(!duck)return;
+  const {x,y,size,rotation}=mappedPlacement();
+  duck.style.left=`${x*100}%`;duck.style.top=`${y*100}%`;duck.style.width=`${size*100}%`;duck.style.height='auto';duck.style.aspectRatio='1 / 1';
   if(catchBtn)catchBtn.style.transform=`rotate(${rotation}deg)`;
 }
+
 function setTargetVisual(){
   const catchBtn=$('#snArCatchDuck');
   if(!catchBtn||!target)return;
@@ -149,6 +161,8 @@ function setTargetVisual(){
     ? `<img src="${String(target.imageUrl).replace(/"/g,'&quot;')}" alt="${String(target.name||'Snazzle').replace(/"/g,'&quot;')}" style="width:100%;height:100%;object-fit:contain">`
     : originalDuckHtml;
   applySavedPlacement();
+  const video=$('#snArCamera');
+  if(video&&!video.dataset.snPlacementMap274){video.dataset.snPlacementMap274='1';video.addEventListener('loadedmetadata',()=>{if(target)applySavedPlacement();});}
 }
 function setVisible(on){
   if(revealed===on&&armed===on)return;
@@ -293,9 +307,9 @@ function ensureIntroClose(){
 }
 function ensureZoneLink(){
   const existing=$('#snArZoneNativeOpen');
-  if(existing){existing.href='./snazzle-zones.html?v=245';existing.textContent='🗺️ Bekijk alle Snazzle-zones';return;}
+  if(existing){existing.href='./snazzle-zones.html?v=274';existing.textContent='🗺️ Bekijk alle Snazzle-zones';return;}
   const old=$('#snArZoneOpen');if(!old)return;
-  const a=document.createElement('a');a.id='snArZoneNativeOpen';a.className=old.className||'sn-ar-zone-btn';a.href='./snazzle-zones.html?v=245';a.textContent='🗺️ Bekijk alle Snazzle-zones';a.setAttribute('role','button');old.replaceWith(a);
+  const a=document.createElement('a');a.id='snArZoneNativeOpen';a.className=old.className||'sn-ar-zone-btn';a.href='./snazzle-zones.html?v=274';a.textContent='🗺️ Bekijk alle Snazzle-zones';a.setAttribute('role','button');old.replaceWith(a);
 }
 async function refreshIntro(){
   const status=$('#snArStatus');
@@ -331,6 +345,8 @@ function repair(){
   if(!lifecycleInstalled){
     lifecycleInstalled=true;
     window.addEventListener('pagehide',()=>stopSession());
+    window.addEventListener('resize',()=>{if(target&&$('#snArOverlay')?.classList.contains('show'))requestAnimationFrame(applySavedPlacement);},{passive:true});
+    window.addEventListener('orientationchange',()=>{if(target&&$('#snArOverlay')?.classList.contains('show'))setTimeout(applySavedPlacement,160);},{passive:true});
     document.addEventListener('visibilitychange',()=>{if(document.hidden&&$('#snArOverlay')?.classList.contains('show'))stopSession({showIntro:true});});
   }
   refreshIntro();return true;
