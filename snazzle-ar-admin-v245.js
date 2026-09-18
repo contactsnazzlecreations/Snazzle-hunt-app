@@ -1,11 +1,10 @@
-// Snazzle AR Admin v245 — vaste dorpselectie en transactionele AR-puntmutaties.
+// Snazzle AR Admin v285 — AR-afbeeldingen via beveiligde Firestore-opslag.
 // Voorkomt dat gelijktijdige beheeracties elkaars punten overschrijven.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, runTransaction } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
-const auth=getAuth(),db=getFirestore(),storage=getStorage();
+const auth=getAuth(),db=getFirestore();
 const WORLD_ID='snazzle_ar_world_v1';
 const WORLD_DOC=doc(db,'hunts',WORLD_ID);
 const MAX_QUICK_GPS_ACCURACY=50;
@@ -16,6 +15,7 @@ const AR_VILLAGES=[
   {value:'Sint Odiliënberg',label:'Sint Odiliënberg'}
 ];
 let points=[],superAdmin=false,adminUid='',installObserver=null,hideObserver=null,previewObjectUrl='';
+const arImageCache=new Map();
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const makeId=()=>`ar_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
@@ -59,10 +59,57 @@ function previewImage(e){
   if(!file){box.textContent='🦆 Optioneel — zonder afbeelding gebruiken we de test-Snazzle.';return;}previewObjectUrl=URL.createObjectURL(file);box.innerHTML=`<img src="${previewObjectUrl}" alt="Voorbeeld Snazzle">`;
 }
 function currentPosition(){return new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('GPS wordt niet ondersteund op dit toestel.'));navigator.geolocation.getCurrentPosition(resolve,err=>reject(new Error(err.code===1?'Locatietoestemming is geweigerd.':'Locatie kon niet worden bepaald.')),{enableHighAccuracy:true,timeout:16000,maximumAge:0});});}
-async function uploadImage(file,pointId){if(!file)return'';if(file.size>8*1024*1024)throw new Error('Afbeelding is groter dan 8 MB.');const safe=(file.name||'snazzle.png').replace(/[^a-zA-Z0-9._-]+/g,'-');const target=storageRef(storage,`listen-stories/images/${adminUid}/ar-${pointId}-${safe}`);await uploadBytes(target,file,{contentType:file.type||'image/png'});return getDownloadURL(target);}
-async function readWorld(){const snap=await getDoc(WORLD_DOC),data=snap.exists()?snap.data():{};return Array.isArray(data.points)?data.points:[];}
+function fileToArImage(file){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Afbeelding kon niet worden gelezen.'))};
+    img.src=url;
+  })
+}
+async function compressArImage(file,statusEl){
+  if(!file)return'';
+  if(file.size>12*1024*1024)throw new Error('Afbeelding is groter dan 12 MB.');
+  if(statusEl)statusEl.textContent='🖼️ Afbeelding voorbereiden…';
+  const img=await fileToArImage(file);
+  let maxSide=900,quality=.84,data='';
+  for(let attempt=0;attempt<7;attempt++){
+    const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+    const scale=Math.min(1,maxSide/Math.max(iw,ih));
+    const w=Math.max(1,Math.round(iw*scale)),h=Math.max(1,Math.round(ih*scale));
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d',{alpha:true});ctx.clearRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+    data=canvas.toDataURL('image/webp',quality);
+    if(data.startsWith('data:image/webp')&&data.length<=680000)return data;
+    quality=Math.max(.5,quality-.07);maxSide=Math.max(520,Math.round(maxSide*.86));
+  }
+  if(!data||data.length>730000)throw new Error('Afbeelding blijft te groot. Kies een kleinere afbeelding.');
+  return data;
+}
+async function saveArImage(file,pointId,statusEl){
+  if(!file)return'';
+  const dataUrl=await compressArImage(file,statusEl),now=new Date().toISOString();
+  if(statusEl)statusEl.textContent='🖼️ Afbeelding veilig opslaan…';
+  await setDoc(doc(db,'snazzleArImages',pointId),{ownerUid:adminUid,dataUrl,mimeType:'image/webp',createdAt:now,updatedAt:now});
+  arImageCache.set(pointId,dataUrl);
+  return pointId;
+}
+async function resolveAdminImage(point){
+  if(!point||point.imageUrl||!point.imageDocId)return point;
+  const id=String(point.imageDocId);
+  if(arImageCache.has(id))return{...point,imageUrl:arImageCache.get(id)||''};
+  try{
+    const snap=await getDoc(doc(db,'snazzleArImages',id)),dataUrl=snap.exists()?String(snap.data()?.dataUrl||''):'';
+    arImageCache.set(id,dataUrl);
+    return{...point,imageUrl:dataUrl};
+  }catch{return point}
+}
+async function readWorld(){
+  const snap=await getDoc(WORLD_DOC),data=snap.exists()?snap.data():{},raw=Array.isArray(data.points)?data.points:[];
+  return Promise.all(raw.map(resolveAdminImage));
+}
 async function mutateWorld(mutator){
-  let next=[];await runTransaction(db,async tx=>{const snap=await tx.get(WORLD_DOC),data=snap.exists()?snap.data():{},current=Array.isArray(data.points)?data.points:[];next=mutator(current);if(!Array.isArray(next))throw new Error('Ongeldige AR-mutatie.');const now=new Date().toISOString();tx.set(WORLD_DOC,{_snazzleInternalType:'arWorld',title:'[SYSTEEM] AR-WERELD',village:'snazzle-internal',description:'Interne opslag voor permanente Snazzle AR-punten',rule:'',hint:'',foundMessage:'',imageUrl:'',start:'',end:'',mode:'draft',version:9,points:next,updatedAt:now,updatedBy:adminUid},{merge:true});});points=next;renderList();hideSystemHunt();return next;
+  let next=[];await runTransaction(db,async tx=>{const snap=await tx.get(WORLD_DOC),data=snap.exists()?snap.data():{},current=Array.isArray(data.points)?data.points:[];next=mutator(current);if(!Array.isArray(next))throw new Error('Ongeldige AR-mutatie.');const cleanNext=next.map(p=>p?.imageDocId?{...p,imageUrl:''}:p);const now=new Date().toISOString();tx.set(WORLD_DOC,{_snazzleInternalType:'arWorld',title:'[SYSTEEM] AR-WERELD',village:'snazzle-internal',description:'Interne opslag voor permanente Snazzle AR-punten',rule:'',hint:'',foundMessage:'',imageUrl:'',start:'',end:'',mode:'draft',version:10,points:cleanNext,updatedAt:now,updatedBy:adminUid},{merge:true});});points=await Promise.all(next.map(resolveAdminImage));renderList();hideSystemHunt();return points;
 }
 
 async function placeHere(){
@@ -71,9 +118,9 @@ async function placeHere(){
   btn.disabled=true;status.classList.remove('ok');status.textContent='📍 GPS nauwkeurig bepalen…';
   try{
     const pos=await currentPosition(),accuracy=Math.round(Number(pos.coords.accuracy||0));if(!Number.isFinite(accuracy)||accuracy>MAX_QUICK_GPS_ACCURACY)throw new Error(`GPS is nog te onnauwkeurig (±${accuracy||'?'} m). Probeer opnieuw of gebruik Nauwkeurig via kaart + camera.`);
-    status.textContent=`✅ GPS gevonden (±${accuracy} m). Opslaan…`;const pointId=makeId(),file=$('#snArAdminImage85')?.files?.[0]||null,imageUrl=await uploadImage(file,pointId),now=new Date().toISOString();
+    status.textContent=`✅ GPS gevonden (±${accuracy} m). Opslaan…`;const pointId=makeId(),file=$('#snArAdminImage85')?.files?.[0]||null,imageDocId=await saveArImage(file,pointId,status),now=new Date().toISOString();
     const selectedVillage=$('#snArAdminVillage85')?.value||'Algemeen',village=AR_VILLAGES.some(item=>item.value===selectedVillage)?selectedVillage:'Algemeen';
-    const point={id:pointId,name,number:number||'—',rarity:$('#snArAdminRarity85')?.value||'COMMON',village,radius:Number($('#snArAdminRadius85')?.value||7),lat:Number(pos.coords.latitude),lon:Number(pos.coords.longitude),accuracy,imageUrl,active:true,placement:{version:6,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now},createdAt:now,updatedAt:now,createdBy:adminUid};
+    const point={id:pointId,name,number:number||'—',rarity:$('#snArAdminRarity85')?.value||'COMMON',village,radius:Number($('#snArAdminRadius85')?.value||7),lat:Number(pos.coords.latitude),lon:Number(pos.coords.longitude),accuracy,imageUrl:'',imageDocId,active:true,placement:{version:7,mode:'map-only',x:.5,y:.5,size:.34,rotation:0,placedAt:now},createdAt:now,updatedAt:now,createdBy:adminUid};
     await mutateWorld(current=>[...current,point]);status.classList.add('ok');status.textContent=`🎉 ${name} staat permanent op deze plek · GPS ±${accuracy} m`;try{navigator.vibrate?.([60,40,100]);}catch{}
     const input=$('#snArAdminImage85');if(input)input.value='';if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl='';}const preview=$('#snArAdminPreview85');if(preview)preview.textContent='🦆 Optioneel — zonder afbeelding gebruiken we de test-Snazzle.';window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});
   }catch(err){status.classList.remove('ok');status.textContent='⚠️ '+friendlyError(err);}finally{btn.disabled=false;}
@@ -89,7 +136,7 @@ function renderList(){
   list.querySelectorAll('[data-ar-toggle]').forEach(b=>b.addEventListener('click',()=>togglePoint(b.dataset.arToggle)));list.querySelectorAll('[data-ar-delete]').forEach(b=>b.addEventListener('click',()=>deletePoint(b.dataset.arDelete)));
 }
 async function togglePoint(id){if(!superAdmin)return;try{await mutateWorld(current=>current.map(p=>p.id===id?{...p,active:!p.active,updatedAt:new Date().toISOString()}:p));window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});}catch(err){const s=$('#snArAdminStatus85');if(s)s.textContent='⚠️ '+friendlyError(err);}}
-async function deletePoint(id){if(!superAdmin||!confirm('Deze AR Snazzle definitief van deze plek verwijderen?'))return;try{await mutateWorld(current=>current.filter(p=>p.id!==id));window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});}catch(err){const s=$('#snArAdminStatus85');if(s)s.textContent='⚠️ '+friendlyError(err);}}
+async function deletePoint(id){if(!superAdmin||!confirm('Deze AR Snazzle definitief van deze plek verwijderen?'))return;try{const point=points.find(p=>p.id===id);await mutateWorld(current=>current.filter(p=>p.id!==id));if(point?.imageDocId){try{await deleteDoc(doc(db,'snazzleArImages',String(point.imageDocId)));arImageCache.delete(String(point.imageDocId));}catch{}}window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});}catch(err){const s=$('#snArAdminStatus85');if(s)s.textContent='⚠️ '+friendlyError(err);}}
 
 onAuthStateChanged(auth,async user=>{adminUid=user?.uid||'';superAdmin=false;if(user){try{const snap=await getDoc(doc(db,'adminUsers',user.uid)),p=snap.exists()?snap.data():null;superAdmin=!!(p?.active===true&&p?.role==='superadmin');}catch{}}watchInstall();applyVisibility();if(superAdmin)refreshWorld();});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchInstall,{once:true});else watchInstall();
