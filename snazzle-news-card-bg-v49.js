@@ -41,18 +41,27 @@
     return dbPromise;
   }
 
+  function legacyNewsImage(){
+    try{
+      const settings=JSON.parse(localStorage.getItem('snazzleSettings')||'{}');
+      const src=String(settings?.homeImage1||'');
+      return src.startsWith('data:image/')?src:'';
+    }catch{return '';}
+  }
+
   async function readNewsCard(){
     try{
       const db=await openDb();
-      return await new Promise((resolve,reject)=>{
+      const current=await new Promise((resolve,reject)=>{
         const tx=db.transaction(STORE,'readonly');
         const req=tx.objectStore(STORE).get(KEY);
         req.onsuccess=()=>resolve(typeof req.result==='string'?req.result:'');
         req.onerror=()=>reject(req.error);
       });
+      return current||legacyNewsImage();
     }catch(err){
       console.warn('Snazzle Nieuws achtergrond lezen',err);
-      return '';
+      return legacyNewsImage();
     }
   }
 
