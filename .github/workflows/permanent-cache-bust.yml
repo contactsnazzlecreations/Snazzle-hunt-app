@@ -1,4 +1,4 @@
-name: Manual Snazzle cache activation v271
+name: Manual Snazzle cache activation v272
 
 on:
   workflow_dispatch:
@@ -13,14 +13,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Activate fresh v271 assets
+      - name: Activate fresh v272 assets
         run: |
           python - <<'PY'
           from pathlib import Path
           import re, json
 
-          version='271'
-          runtime='20260918-v271-image-menu'
+          version='272'
+          runtime='20260918-v272-image-manager'
 
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
@@ -68,5 +68,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html app.js app-runtime-v245.js manifest.json
-          git commit -m "Activate Snazzle cache v271"
+          git commit -m "Activate Snazzle cache v272"
           git push
