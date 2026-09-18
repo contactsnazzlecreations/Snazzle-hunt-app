@@ -75,12 +75,11 @@ jobs:
           grep -q "sourceX" snazzle-ar-placement-v245.js
           grep -q "mappedPlacement" snazzle-ar-engine-v245.js
           grep -q "TILE_PROVIDERS" snazzle-zones.html
-          grep -q "snazzle-ar-place.html?v=279" snazzle-ar-placement-v245.js
+          grep -q "snazzle-ar-place.html?v=280" snazzle-ar-placement-v245.js
           grep -q "Nauwkeurig AR plaatsen" snazzle-ar-place.html
-          grep -q "snazzle_ar_world_v1" snazzle-ar-place.html
-          grep -q "requestAdminLoginCode" snazzle-ar-place.html
-          grep -q "verifyAdminLoginCode" snazzle-ar-place.html
-          grep -q "snazzle_admin_mfa" snazzle-ar-place.html
+          grep -q "saveArPoint" snazzle-ar-place.html
+          grep -q "Satelliet" snazzle-ar-place.html
+          grep -q "Google Maps" snazzle-ar-place.html
 
       - name: Check AR data and public shell invariants
         shell: bash
