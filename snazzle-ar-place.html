@@ -26,7 +26,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
 </head>
 <body>
 <main class="shell">
-  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=277#beheer" id="backLink">← Beheer</a></header>
+  <header class="head"><h1>Nauwkeurig AR plaatsen 🗺️📷</h1><a class="back" href="./?v=278#beheer" id="backLink">← Beheer</a></header>
   <div class="body">
     <section class="card" id="authCard"><h2>Beheer controleren</h2><div class="status" id="authStatus">⏳ Inlog controleren…</div></section>
 
@@ -67,7 +67,7 @@ body{padding:calc(10px + env(safe-area-inset-top)) 10px calc(18px + env(safe-are
         <div class="actions"><button id="backMap" class="secondary" type="button">← Terug naar kaart</button><button id="saveCamera" class="primary" type="button">🔒 Hier vastzetten</button></div>
       </section>
 
-      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=277#beheer">Terug naar Beheer</a></div></section>
+      <section class="card done hidden" id="doneSection"><div class="big">✅</div><h2>Snazzle geplaatst</h2><p id="doneText"></p><div class="actions"><button id="another" class="secondary" type="button">Nog één plaatsen</button><a class="primary" href="./?v=278#beheer">Terug naar Beheer</a></div></section>
     </div>
   </div>
 </main>
@@ -79,7 +79,7 @@ import {getFirestore,doc,getDoc,runTransaction} from 'https://www.gstatic.com/fi
 import {getStorage,ref as storageRef,uploadBytes,getDownloadURL} from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js';
 
 const firebaseConfig={apiKey:'AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4',authDomain:'snazzle-hunt.firebaseapp.com',projectId:'snazzle-hunt',storageBucket:'snazzle-hunt.firebasestorage.app',messagingSenderId:'647665502495',appId:'1:647665502495:web:686488b53db468e887482a',measurementId:'G-55G5DE19DL'};
-const app=initializeApp(firebaseConfig,'snazzle-ar-place-v277'),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),storage=getStorage(app);
 const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1'),MAX_GPS=50;
 const $=s=>document.querySelector(s),clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 let user=null,map=null,baseLayer=null,leafletPromise=null,mapProgrammatic=false,mapGesture=false,stream=null,previewUrl='',dragging=false,pointerId=null,saving=false;
