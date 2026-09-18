@@ -157,38 +157,71 @@ async function loginWithMfa(){
   const email=$('#adminEmail')?.value.trim()||'';
   const password=$('#adminPassword')?.value||'';
   if(!email||!password)return toast('Vul e-mail en wachtwoord in');
+
   busy=true;
   window.__snazzleAdminLoginInProgress=true;
   setLoginButton('Bezig met inloggen…',true);
-  let verifiedAdmin=null;
+
   let keepAdminSession=false;
+  let signedInUser=null;
+
   try{
     const credential=await signInRobust(email,password);
-    setLoginButton('Beheerrechten controleren…',true);
-    verifiedAdmin=await checkAdmin(credential.user.uid);
-    if(!verifiedAdmin){await restoreAnonymous();throw new Error('geen-beheer');}
+    signedInUser=credential?.user||auth.currentUser;
+    if(!signedInUser||signedInUser.isAnonymous)throw timeoutError('auth');
+
+    // De Cloud Function controleert zelf of deze Firebase-gebruiker een actieve
+    // Snazzle-beheerder is. Daardoor hoeft de app niet eerst op een extra
+    // Firestore-read te wachten — dat was op sommige Android-toestellen de hang.
     setLoginButton('Beveiligingscode sturen…',true);
-    const result=await withTimeout(requestCode({}),12000,'mfa-request');
-    maskedEmail=result.data?.maskedEmail||email;
-    if($('#adminPassword'))$('#adminPassword').value='';
-    $('#adminLogin')?.classList.remove('show');
-    showOverlay();
-    keepAdminSession=true;
-    toast('Extra beveiligingscode verstuurd 🔐');
-  }catch(e){
-    console.warn('Snazzle MFA login',e);
-    const code=String(e?.code||'');
-    if(verifiedAdmin&&backendNotPublished(e)){
-      keepAdminSession=true;
-      await openExistingAdminTemporarily();
-    }else if(verifiedAdmin&&code.includes('resource-exhausted')){
-      keepAdminSession=true;
-      maskedEmail=email;
+    try{
+      const result=await withTimeout(requestCode({}),12000,'mfa-request');
+      maskedEmail=result.data?.maskedEmail||email;
       if($('#adminPassword'))$('#adminPassword').value='';
       $('#adminLogin')?.classList.remove('show');
       showOverlay();
-      $('#snMfaMessage').textContent='Er is net al een code verstuurd. Gebruik de code uit je e-mail.';
-    }else if(String(e?.message||'').includes('geen-beheer')){
+      keepAdminSession=true;
+      toast('Extra beveiligingscode verstuurd 🔐');
+      return;
+    }catch(requestError){
+      const requestCodeValue=String(requestError?.code||'').toLowerCase();
+
+      // resource-exhausted komt pas NADAT de backend de beheerder heeft gecontroleerd.
+      // Er ligt dan al een geldige code klaar.
+      if(requestCodeValue.includes('resource-exhausted')){
+        maskedEmail=email;
+        if($('#adminPassword'))$('#adminPassword').value='';
+        $('#adminLogin')?.classList.remove('show');
+        showOverlay();
+        $('#snMfaMessage').textContent='Er is net al een code verstuurd. Gebruik de code uit je e-mail.';
+        keepAdminSession=true;
+        return;
+      }
+
+      if(requestCodeValue.includes('permission-denied')||requestCodeValue.includes('unauthenticated')){
+        await restoreAnonymous();
+        throw new Error('geen-beheer');
+      }
+
+      // Alleen als de MFA-backend aantoonbaar niet bereikbaar/gepubliceerd is,
+      // doen we een lokale rolcheck en openen we de bestaande beveiligde beheerroute.
+      if(backendNotPublished(requestError)){
+        setLoginButton('Beheerrechten controleren…',true);
+        const verifiedAdmin=await checkAdmin(signedInUser.uid);
+        if(!verifiedAdmin){
+          await restoreAnonymous();
+          throw new Error('geen-beheer');
+        }
+        keepAdminSession=true;
+        await openExistingAdminTemporarily();
+        return;
+      }
+
+      throw requestError;
+    }
+  }catch(e){
+    console.warn('Snazzle MFA login',e);
+    if(String(e?.message||'').includes('geen-beheer')){
       toast('Dit account heeft geen beheerdersrechten');
     }else if(isTimeout(e)){
       toast('De beheerverbinding reageerde te langzaam. Probeer opnieuw.');
@@ -269,4 +302,4 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 document.addEventListener('snazzle:admin-ui-ready',bind);
 setTimeout(bind,1200);
 window.SnazzleAdminMfaV141={login:loginWithMfa,rebind:bind};
-console.info('Snazzle admin 2-stapsverificatie v141/v269 geladen');
+console.info('Snazzle admin 2-stapsverificatie v141/v270 geladen');
