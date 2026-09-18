@@ -45,6 +45,7 @@ jobs:
           node --check functions/hunt-codes.js
           node --check functions/meetups.js
           node --check functions/admin-mfa.js
+          node --check functions/ar-admin.js
           node --check functions/card-progress.js
           node --check functions/card-state.js
           test -f firestore.rules
