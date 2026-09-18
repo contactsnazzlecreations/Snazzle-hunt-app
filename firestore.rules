@@ -74,6 +74,22 @@ service cloud.firestore {
         isVillageAdmin(resource.data.village);
     }
 
+    // Afbeeldingen voor AR-Snazzles. Geen Firebase Storage nodig.
+    // Ingelogde spelers mogen ze laden; alleen een actieve hoofdbeheerder mag ze wijzigen.
+    match /snazzleArImages/{imageId} {
+      allow read: if signedIn();
+      allow create, update: if isActiveSuperAdmin() &&
+        request.resource.data.keys().hasOnly(["ownerUid", "dataUrl", "mimeType", "createdAt", "updatedAt"]) &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.dataUrl is string &&
+        request.resource.data.dataUrl.size() >= 20 &&
+        request.resource.data.dataUrl.size() <= 750000 &&
+        request.resource.data.mimeType == "image/webp" &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.updatedAt is string;
+      allow delete: if isActiveSuperAdmin();
+    }
+
     // Anonieme AR-vondstenteller. Dezelfde ingelogde speler kan per AR-punt maar één document maken.
     // Er worden geen naam, e-mail of GPS-gegevens van de speler opgeslagen.
     match /snazzleArFindings/{findingId} {
