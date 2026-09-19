@@ -5,6 +5,7 @@ import { getFirestore, doc, getDoc, onSnapshot } from 'https://www.gstatic.com/f
 const auth=getAuth();
 const db=getFirestore();
 const LOCAL_KEY='snazzleARCollection';
+const PLACE_CACHE_KEY='snazzleARPlaceNamesV292';
 const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1');
 const $=(s,r=document)=>r.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,7 +19,17 @@ let sheetObserver=null;
 let renderTimer=null;
 let rendering=false;
 let activeTab='';
+let placeCache=loadPlaceCache();
 
+function loadPlaceCache(){
+  try{
+    const x=JSON.parse(localStorage.getItem(PLACE_CACHE_KEY)||'{}');
+    return x&&typeof x==='object'&&!Array.isArray(x)?x:{};
+  }catch{return{};}
+}
+function savePlaceCache(){
+  try{localStorage.setItem(PLACE_CACHE_KEY,JSON.stringify(placeCache));}catch{}
+}
 function localItems(){
   try{
     const x=JSON.parse(localStorage.getItem(LOCAL_KEY)||'[]');
@@ -38,6 +49,9 @@ function normalize(item){
     name:String(item?.name||world.name||'Snazzle').slice(0,60),
     rarity:String(item?.rarity||world.rarity||'SPECIAL').toUpperCase().slice(0,20),
     village:cleanVillage(item?.village||world.village),
+    placeName:String(item?.placeName||world.placeName||'').slice(0,80),
+    lat:Number(world.lat??item?.lat),
+    lon:Number(world.lon??item?.lon),
     caughtAt:String(item?.caughtAt||new Date().toISOString()),
     edition:String(item?.edition||'Special Snazzle').slice(0,60)
   };
@@ -54,6 +68,43 @@ function mergedItems(){
 function fmtDate(value){
   const d=new Date(value||0);
   return Number.isNaN(d.getTime())?'Datum onbekend':d.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'});
+}
+function bestLocality(address={}){
+  return String(address.city||address.town||address.village||address.hamlet||address.municipality||address.county||'').trim();
+}
+async function reversePlace(item){
+  if(item.placeName)return item.placeName;
+  const cached=String(placeCache[item.id]||'').trim();
+  if(cached)return cached;
+  if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return item.village==='Algemeen'?'Onbekende plaats':item.village;
+  try{
+    const url='https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=nl&lat='+encodeURIComponent(item.lat)+'&lon='+encodeURIComponent(item.lon);
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(),4500);
+    const response=await fetch(url,{signal:ctl.signal,headers:{Accept:'application/json'}});
+    clearTimeout(timer);
+    if(response.ok){
+      const data=await response.json();
+      const place=bestLocality(data?.address||{});
+      if(place){
+        placeCache[item.id]=place;
+        savePlaceCache();
+        return place;
+      }
+    }
+  }catch{}
+  const fallback=item.village==='Algemeen'?'Algemene locatie':item.village;
+  placeCache[item.id]=fallback;
+  savePlaceCache();
+  return fallback;
+}
+async function enrichPlaces(items){
+  const out=[];
+  for(const item of items){
+    const placeName=await reversePlace(item);
+    out.push({...item,placeName});
+  }
+  return out;
 }
 function huntCount(){
   const list=$('#findsList');
@@ -165,7 +216,7 @@ function openDetail(item){
   const img=$('#snSpecialDetailImg291'),src=visualFor(item);
   img.innerHTML=src?'<img src="'+esc(src)+'" alt="'+esc(item.name)+'">':'🦆';
   $('#snSpecialDetailTitle291').textContent=item.name;
-  $('#snSpecialDetailInfo291').innerHTML='<b>✨ Algemene Special Snazzle</b><br>📍 Gevonden in '+esc(item.village)+'<br>📅 '+esc(fmtDate(item.caughtAt))+'<br>🏷️ '+esc(item.rarity)+(item.number&&item.number!=='—'?'<br>🔢 #'+esc(item.number):'');
+  $('#snSpecialDetailInfo291').innerHTML='<b>✨ Algemene Special Snazzle</b><br>📍 Gevonden in '+esc(item.placeName||item.village)+'<br>📅 '+esc(fmtDate(item.caughtAt))+'<br>🏷️ '+esc(item.rarity)+(item.number&&item.number!=='—'?'<br>🔢 #'+esc(item.number):'');
   detail.classList.add('show');
 }
 async function render(){
@@ -176,7 +227,7 @@ async function render(){
     if(!ensureLayout())return;
     const list=$('#findsList');
     list?.querySelectorAll('.sn-ar-find126').forEach(el=>el.remove());
-    const items=mergedItems();
+    const items=await enrichPlaces(mergedItems());
     const hCount=huntCount();
     const hc=$('#snHuntCount291'),sc=$('#snSpecialCount291');
     if(hc)hc.textContent=String(hCount);
@@ -191,7 +242,7 @@ async function render(){
           const src=visualFor(item);
           const card=document.createElement('button');
           card.type='button';card.className='sn-special-card291';card.dataset.specialId=item.id;
-          card.innerHTML='<div class="sn-special-img291">'+(src?'<img src="'+esc(src)+'" alt="'+esc(item.name)+'">':'🦆')+'</div><div class="sn-special-copy291"><strong>'+esc(item.name)+'</strong><span class="where">📍 Gevonden in '+esc(item.village)+'</span><span class="meta">📅 '+esc(fmtDate(item.caughtAt))+' · '+esc(item.rarity)+(item.number&&item.number!=='—'?' · #'+esc(item.number):'')+'</span></div><span class="sn-special-badge291">SPECIAL</span><span class="sn-special-arrow291">›</span>';
+          card.innerHTML='<div class="sn-special-img291">'+(src?'<img src="'+esc(src)+'" alt="'+esc(item.name)+'">':'🦆')+'</div><div class="sn-special-copy291"><strong>'+esc(item.name)+'</strong><span class="where">📍 Gevonden in '+esc(item.placeName||item.village)+'</span><span class="meta">📅 '+esc(fmtDate(item.caughtAt))+' · '+esc(item.rarity)+(item.number&&item.number!=='—'?' · #'+esc(item.number):'')+'</span></div><span class="sn-special-badge291">SPECIAL</span><span class="sn-special-arrow291">›</span>';
           card.addEventListener('click',()=>openDetail(item));
           grid.appendChild(card);
         });
@@ -254,4 +305,4 @@ onAuthStateChanged(auth,bindUser);
 if(auth.currentUser)bindUser(auth.currentUser);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchUi,{once:true});else watchUi();
 window.SnazzleSpecialFindingsV291={render,openSpecial:()=>{activeTab='special';setTab('special',true);schedule(0);}};
-console.info('Snazzle Special Findings v291 actief');
+console.info('Snazzle Special Findings v292 plaatsnamen actief');
