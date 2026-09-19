@@ -1,4 +1,4 @@
-// Snazzle Special Findings v291 — aparte, betrouwbare verzameling voor algemene AR Special Snazzles.
+// Snazzle Special Findings v293 — aparte, betrouwbare verzameling voor algemene AR Special Snazzles.
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
 
@@ -72,39 +72,60 @@ function fmtDate(value){
 function bestLocality(address={}){
   return String(address.city||address.town||address.village||address.hamlet||address.municipality||address.county||'').trim();
 }
-async function reversePlace(item){
-  if(item.placeName)return item.placeName;
-  const cached=String(placeCache[item.id]||'').trim();
-  if(cached)return cached;
-  if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return item.village==='Algemeen'?'Onbekende plaats':item.village;
+async function fetchJson(url,ms=5000){
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),ms);
   try{
-    const url='https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&accept-language=nl&lat='+encodeURIComponent(item.lat)+'&lon='+encodeURIComponent(item.lon);
-    const ctl=new AbortController();
-    const timer=setTimeout(()=>ctl.abort(),4500);
     const response=await fetch(url,{signal:ctl.signal,headers:{Accept:'application/json'}});
-    clearTimeout(timer);
-    if(response.ok){
-      const data=await response.json();
-      const place=bestLocality(data?.address||{});
-      if(place){
-        placeCache[item.id]=place;
-        savePlaceCache();
-        return place;
-      }
-    }
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    return await response.json();
+  }finally{clearTimeout(timer);}
+}
+async function reversePlace(item){
+  const explicit=String(item.placeName||'').trim();
+  if(explicit&&!/^algemeen(?:\s*\/\s*overal)?$/i.test(explicit))return explicit;
+
+  const cached=String(placeCache[item.id]||'').trim();
+  if(cached&&!/^algemeen|algemene locatie$/i.test(cached))return cached;
+
+  if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon)){
+    const fallback=item.village==='Algemeen'?'Plaats onbekend':item.village;
+    return fallback;
+  }
+
+  const lat=Number(item.lat),lon=Number(item.lon);
+  let place='';
+
+  try{
+    const data=await fetchJson('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&addressdetails=1&accept-language=nl&lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lon),5200);
+    place=bestLocality(data?.address||{});
   }catch{}
-  const fallback=item.village==='Algemeen'?'Algemene locatie':item.village;
-  placeCache[item.id]=fallback;
-  savePlaceCache();
-  return fallback;
+
+  if(!place){
+    try{
+      const data=await fetchJson('https://photon.komoot.io/reverse?lat='+encodeURIComponent(lat)+'&lon='+encodeURIComponent(lon)+'&lang=nl',5200);
+      const p=data?.features?.[0]?.properties||{};
+      place=String(p.city||p.locality||p.name||p.county||'').trim();
+    }catch{}
+  }
+
+  if(!place){
+    try{
+      const data=await fetchJson('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&distance=1500&langCode=nl&location='+encodeURIComponent(lon+','+lat),5200);
+      const a=data?.address||{};
+      place=String(a.City||a.District||a.Subregion||a.Region||'').trim();
+    }catch{}
+  }
+
+  if(place){
+    placeCache[item.id]=place;
+    savePlaceCache();
+    return place;
+  }
+  return item.village==='Algemeen'?'Plaats wordt bepaald…':item.village;
 }
 async function enrichPlaces(items){
-  const out=[];
-  for(const item of items){
-    const placeName=await reversePlace(item);
-    out.push({...item,placeName});
-  }
-  return out;
+  return Promise.all(items.map(async item=>({...item,placeName:await reversePlace(item)})));
 }
 function huntCount(){
   const list=$('#findsList');
@@ -305,4 +326,4 @@ onAuthStateChanged(auth,bindUser);
 if(auth.currentUser)bindUser(auth.currentUser);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchUi,{once:true});else watchUi();
 window.SnazzleSpecialFindingsV291={render,openSpecial:()=>{activeTab='special';setTab('special',true);schedule(0);}};
-console.info('Snazzle Special Findings v292 plaatsnamen actief');
+console.info('Snazzle Special Findings v293 plaatsnamen actief');
