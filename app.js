@@ -1,4 +1,4 @@
-// Snazzle Hunt v294 — Special Snazzles bepalen plaatsnamen lokaal uit de AR-locatie.
+// Snazzle Hunt v295 — Special Snazzles bepalen plaatsnamen lokaal uit de AR-locatie.
 // Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -89,7 +89,7 @@ document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
 // De Hunt-app heeft geen eigen winkelpagina meer. De vaste Shop-knop blijft staan
 // en brengt bezoekers rechtstreeks naar de webshop op snazzle.nl.
-const EXTERNAL_SHOP_URL='https://snazzle-magical-world-lgs0y8.v2.appdeploy.ai/shop/';
+const EXTERNAL_SHOP_URL='https://www.snazzle.nl/shop/';
 function installExternalShopLink(){
   const shopButton=document.getElementById('navShop');
   if(shopButton){
