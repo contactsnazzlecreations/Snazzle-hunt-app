@@ -1,4 +1,4 @@
-// Snazzle AR Engine v285 — AR-afbeeldingen uit beveiligde Firestore-opslag.
+// Snazzle AR Engine v293 — AR-afbeeldingen uit beveiligde Firestore-opslag.
 // Tweede systematische stabiliteitspass: sessie-races afgevangen, verse GPS-start en reeds gevangen punten overslaan.
 
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -289,7 +289,7 @@ function catchSnazzle(e){
   const caught=target,list=caughtList();
   armed=false;
   if(!list.some(x=>String(x.id)===String(caught.id))){
-    list.push({id:caught.id,number:caught.number||'—',name:caught.name||'Snazzle',rarity:caught.rarity||'COMMON',village:areaLabel(caught.village),caughtAt:new Date().toISOString(),edition:'Snazzle AR'});
+    list.push({id:caught.id,number:caught.number||'—',name:caught.name||'Snazzle',rarity:caught.rarity||'COMMON',village:areaLabel(caught.village),lat:Number(caught.lat),lon:Number(caught.lon),placeName:String(caught.placeName||''),caughtAt:new Date().toISOString(),edition:'Snazzle AR'});
     localStorage.setItem('snazzleARCollection',JSON.stringify(list));
   }
   try{navigator.vibrate?.([80,50,120]);}catch{}
