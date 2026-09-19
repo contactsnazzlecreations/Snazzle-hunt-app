@@ -141,6 +141,14 @@ function openArFromMenu(){
   );
 }
 
+function openFindsFromMenu(){
+  waitForTarget(
+    ()=>document.getElementById('findsBtn'),
+    target=>target.click(),
+    'Mijn vondsten'
+  );
+}
+
 function collectionSource(){
   return document.querySelector('#quickMenuPanel .quick-menu-list > [data-snazzle-collection]') ||
     document.querySelector('.collection-home-card');
@@ -172,6 +180,11 @@ function ensureFixedEntries(root){
   }
 
   const collection=root?.querySelector('[data-options="collection"]');
+  if(collection&&!document.getElementById('snFindsMenuV291')){
+    insertRanked(collection,makeFixedButton({
+      id:'snFindsMenuV291',icon:'🏆',title:'Mijn vondsten',sub:'Hunts & Speciale Snazzles',rank:20,onClick:openFindsFromMenu
+    }),20);
+  }
   if(collection&&!document.getElementById('snCardsMenuV129')){
     insertRanked(collection,makeFixedButton({
       id:'snCardsMenuV129',icon:'🃏',title:'Mijn kaarten',sub:'Bekijk je Snazzle Cards en ontgrendelingen',rank:10,onClick:()=>openCollectionTab('cards')
@@ -185,6 +198,10 @@ function ensureFixedEntries(root){
 
   // De algemene collectie-ingang blijft technisch bestaan als bron, maar in het menu
   // tonen we de duidelijkere aparte keuzes "Mijn kaarten" en "Mijn beloningen".
+  root.querySelectorAll('[data-options="collection"] .sn-main-proxy').forEach(proxy=>{
+    if(/vondst|finding/i.test(buttonText(proxy)))proxy.remove();
+  });
+
   const generic=document.querySelector('#quickMenuPanel .quick-menu-list > [data-snazzle-collection]');
   if(generic?.__snMainKey){
     root.querySelector(`.sn-main-proxy[data-source-key="${generic.__snMainKey}"]`)?.remove();
