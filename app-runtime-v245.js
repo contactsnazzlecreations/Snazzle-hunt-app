@@ -1,6 +1,6 @@
 // Snazzle Hunt v291 — Special Snazzles direct zichtbaar in Mijn vondsten.
 
-const runtimeVersion='20260919-v293-special-city-fix';
+const runtimeVersion='20260919-v294-local-city-map';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -79,7 +79,7 @@ await safeImport('./snazzle-ar-v80.js');
 await safeImport('./snazzle-zone-button-v176.js');
 await safeImport('./snazzle-ar-engine-v245.js');
 await safeImport('./snazzle-ar-collection-bridge-v125.js');
-await safeImport('./snazzle-special-findings-v291.js');
+await safeImport('./snazzle-special-findings-v294.js');
 
 function syncArPriority(){window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show');}
 const arPriorityObserver=new MutationObserver(syncArPriority);if(document.body)arPriorityObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});syncArPriority();
