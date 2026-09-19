@@ -1,6 +1,6 @@
 // Snazzle Hunt v291 — Special Snazzles direct zichtbaar in Mijn vondsten.
 
-const runtimeVersion='20260919-v291-special-findings';
+const runtimeVersion='20260919-v292-special-place-names';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
