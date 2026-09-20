@@ -371,6 +371,7 @@ function updateFoundButton(){
   else { b.disabled=true; b.className='found'; b.textContent='Foto nodig 📸'; }
 }
 function renderFindings(){
+  saveCachedFindings(findings);
   const list=$('#findsList'); list.innerHTML='';
   if(!findings.length){ list.innerHTML='<div class="listitem"><strong>Nog niets gevonden</strong></div>'; return; }
   findings.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).forEach(f=>{
@@ -995,7 +996,7 @@ $('#startBtn').onclick=joinActiveHunt;
 $('#proofBtn').onclick=()=>$('#proofInput').click();
 $('#proofInput').onchange=async e=>{ try{ proofPhoto=await compressFile(e.target.files[0],520,.6); $('#proofImg').src=proofPhoto; $('#proofPreview').style.display='block'; updateFoundButton(); toast('Foto toegevoegd ✅'); } catch(err){ toast(err.message); } };
 $('#foundBtn').onclick=markFound;
-$('#adminBtn').onclick=()=>{ if(adminProfile) openSheet('adminSheet'); else openSheet('adminLogin'); };
+$('#adminBtn').onclick=()=>{ if(adminProfile) openSheet('adminSheet'); else location.assign('./beheer.html?v=296'); };
 $('#adminLoginBtn').onclick=adminLogin; $('#adminLogoutBtn').onclick=adminLogout;
 $('#newHuntBtn').onclick=()=>openHuntEditor(null); $('#cancelHuntEditor').onclick=()=>$('#huntEditor').style.display='none'; $('#saveHuntBtn').onclick=saveHunt;
 $('#huntImageInput').onchange=async e=>{ try{ editingHuntImage=await compressFile(e.target.files[0],720,.65); setImg($('#huntImagePreview'),$('#huntImageFallback'),editingHuntImage); }catch(err){toast(err.message);} };
