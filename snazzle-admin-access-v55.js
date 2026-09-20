@@ -13,7 +13,8 @@ function hideHeaderAdminV55(){
 function openAdminV55(){
   const role=(document.getElementById('adminRole')?.textContent||'').trim();
   const isAdmin=role && role!=='Niet ingelogd';
-  const target=document.getElementById(isAdmin ? 'adminSheet' : 'adminLogin');
+  if(!isAdmin){ location.assign('./beheer.html?v=296'); return true; }
+  const target=document.getElementById('adminSheet');
   if(!target) return false;
   target.classList.add('show');
   target.setAttribute('aria-hidden','false');
