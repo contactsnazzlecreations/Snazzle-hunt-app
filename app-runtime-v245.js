@@ -1,6 +1,6 @@
-// Snazzle Hunt v291 — Special Snazzles direct zichtbaar in Mijn vondsten.
+// Snazzle Hunt v296 — stabiele beheerlogin en vondstenherstel.
 
-const runtimeVersion='20260919-v294-local-city-map';
+const runtimeVersion='20260920-v296-admin-findings-repair';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -87,6 +87,7 @@ const arPriorityObserver=new MutationObserver(syncArPriority);if(document.body)a
 await Promise.all([
   safeImport('./snazzle-admin-mfa-v141.js'),
   safeImport('./snazzle-admin-shell-v268.js'),
+  safeImport('./snazzle-admin-route-v296.js'),
   safeImport('./snazzle-image-manager-v272.js'),
   safeImport('./snazzle-ar-admin-display-v84.js'),
   safeImport('./snazzle-village-visibility-v120.js'),
