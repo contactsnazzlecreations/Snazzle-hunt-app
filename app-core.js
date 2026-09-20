@@ -37,7 +37,9 @@ const localDefaults = { profileImage:'', heroImage:'', homeImage1:'', homeImage2
 let localSettings = loadLocalSettings();
 let villages = [...fallbackVillages];
 let hunts = [];
-let findings = [];
+const FINDINGS_CACHE_KEY='snazzleHuntFindingsV296';
+const PLAYER_UID_BEFORE_ADMIN_KEY='snazzlePlayerUidBeforeAdmin';
+let findings = loadCachedFindings();
 let publicProfiles = [];
 let selectedVillage = localStorage.getItem('snazzleVillage') || 'Montfort';
 let proofPhoto = '';
@@ -57,6 +59,42 @@ function loadLocalSettings(){
 function loadLegacyHunts(){
   try { return JSON.parse(localStorage.getItem('snazzleHunts') || '[]'); }
   catch { return []; }
+}
+function findingKey(f){
+  return String(f?.huntId||f?.id||[f?.title,f?.village,f?.createdAt].filter(Boolean).join('|')||'');
+}
+function mergeFindings(...groups){
+  const map=new Map();
+  groups.flat().filter(Boolean).forEach(raw=>{
+    const key=findingKey(raw); if(!key)return;
+    const item={...raw};
+    const prev=map.get(key);
+    if(!prev || String(item.createdAt||'')>String(prev.createdAt||'')) map.set(key,item);
+  });
+  return [...map.values()];
+}
+function loadCachedFindings(){
+  try{
+    const data=JSON.parse(localStorage.getItem(FINDINGS_CACHE_KEY)||'[]');
+    return Array.isArray(data)?data.filter(x=>findingKey(x)):[];
+  }catch{return[];}
+}
+function saveCachedFindings(items=findings){
+  const safe=Array.isArray(items)?items.filter(x=>findingKey(x)):[];
+  try{
+    localStorage.setItem(FINDINGS_CACHE_KEY,JSON.stringify(safe.slice(0,80)));
+  }catch{
+    try{
+      const compact=safe.slice(0,80).map(({photoData,...rest})=>rest);
+      localStorage.setItem(FINDINGS_CACHE_KEY,JSON.stringify(compact));
+    }catch{}
+  }
+}
+function rememberPlayerBeforeAdmin(user=currentUser){
+  try{
+    if(user?.isAnonymous&&user.uid)localStorage.setItem(PLAYER_UID_BEFORE_ADMIN_KEY,user.uid);
+  }catch{}
+  saveCachedFindings(findings);
 }
 function userName(){ return (localStorage.getItem('snazzleName') || '').trim(); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c])); }
@@ -703,11 +741,28 @@ async function checkFoundHunts(nextHunts){
 }
 async function loadOwnFindings(){
   if(!currentUser) return;
+  const cached=loadCachedFindings();
   try {
-    const snap=await getDocs(query(collection(db,'findings'),where('userId','==',currentUser.uid)));
-    findings=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const userIds=[currentUser.uid];
+    if(adminProfile){
+      try{
+        const prior=localStorage.getItem(PLAYER_UID_BEFORE_ADMIN_KEY)||'';
+        if(prior&&prior!==currentUser.uid)userIds.push(prior);
+      }catch{}
+    }
+    const cloud=[];
+    for(const uid of [...new Set(userIds)]){
+      const snap=await getDocs(query(collection(db,'findings'),where('userId','==',uid)));
+      snap.docs.forEach(d=>cloud.push({id:d.id,...d.data()}));
+    }
+    findings=mergeFindings(cloud,cached);
+    saveCachedFindings(findings);
     renderFindings(); updateFoundButton();
-  } catch(e){ console.warn('findings',e); }
+  } catch(e){
+    console.warn('findings',e);
+    findings=mergeFindings(cached,findings);
+    renderFindings(); updateFoundButton();
+  }
 }
 function startCentralListeners(){
   if(listenersStarted || !currentUser) return; listenersStarted=true;
@@ -740,6 +795,8 @@ function startCentralListeners(){
 }
 async function ensureAuth(){
   onAuthStateChanged(auth,async user=>{
+    const previousUser=currentUser;
+    if(user&&!user.isAnonymous&&previousUser?.isAnonymous)rememberPlayerBeforeAdmin(previousUser);
     currentUser=user;
     if(!user){
       // Tijdens een beheerlogin mag de gewone anonieme sessie niet tussendoor
@@ -789,6 +846,7 @@ async function seedCentralIfEmpty(){
 async function adminLogin(){
   const email=$('#adminEmail').value.trim(), password=$('#adminPassword').value;
   if(!email || !password) return toast('Vul e-mail en wachtwoord in');
+  rememberPlayerBeforeAdmin();
   try {
     await signInWithEmailAndPassword(auth,email,password);
     currentUser=auth.currentUser; await refreshAdminProfile();
@@ -917,6 +975,7 @@ async function markFound(){
     batch.update(doc(db,'hunts',h.id),{found:true,foundAt:now,foundByUserId:currentUser.uid,foundByNickname:item.nickname});
     await batch.commit();
     findings.unshift({id:h.id,...item});
+    saveCachedFindings(findings);
     proofPhoto=''; resetProof(); renderFindings();
     toast(h.foundMessage||'Gevonden! 🏆');
   }
