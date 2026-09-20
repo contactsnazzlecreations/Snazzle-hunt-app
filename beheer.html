@@ -14,14 +14,15 @@ body{min-height:100dvh;display:grid;place-items:center;padding:20px;background:r
 .card{width:min(440px,100%);background:#fff4cf;color:#2e2419;border:4px solid #82552d;border-radius:26px;padding:22px;box-shadow:0 12px 0 #432817,0 26px 60px rgba(0,0,0,.35)}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:16px}.mark{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#ffe273,#f3ae2d);border:4px solid #7c4e21;box-shadow:0 5px 0 #4c2e18;font-size:30px}.brand h1{margin:0;color:#175934;font-size:25px}.brand p{margin:3px 0 0;color:#7a6241;font-size:12px;font-weight:750}
 label{display:block;margin:14px 0 6px;font-weight:900;font-size:13px}input{width:100%;min-height:52px;border:2px solid #b79058;border-radius:14px;padding:12px 13px;background:white;color:#231b14;font-size:16px;outline:none}input:focus{border-color:#4f9236;box-shadow:0 0 0 3px rgba(79,146,54,.18)}
-button{width:100%;min-height:54px;margin-top:16px;border:0;border-radius:15px;background:linear-gradient(#69b93e,#438d2d);color:white;font-size:17px;font-weight:1000;box-shadow:0 5px 0 #2d6820;touch-action:manipulation}button:active{transform:translateY(2px);box-shadow:0 3px 0 #2d6820}button:disabled{opacity:.6;transform:none}
+button{width:100%;min-height:54px;margin-top:16px;border:0;border-radius:15px;background:linear-gradient(#69b93e,#438d2d);color:white;font-size:17px;font-weight:1000;box-shadow:0 5px 0 #2d6820;touch-action:manipulation}button:active{transform:translateY(2px);box-shadow:0 3px 0 #2d6820}button:disabled{opacity:.6;transform:none}.secondary{background:#77583c;box-shadow:0 5px 0 #4c3524;margin-top:10px}
 .status{min-height:42px;margin-top:14px;padding:11px 12px;border-radius:13px;background:#f2dfaa;color:#5d482e;font-size:12px;font-weight:800;line-height:1.35}.status.error{background:#ffd7cf;color:#842d24}.status.ok{background:#d7f1bd;color:#2e5c25}
 .back{display:block;margin-top:14px;text-align:center;color:#5e492d;font-size:12px;font-weight:850;text-decoration:underline}
+.mfa{display:none;margin-top:12px;padding-top:4px}.mfa.show{display:block}.mfa-note{font-size:12px;line-height:1.45;color:#654d30;font-weight:780}.code{font-size:28px;text-align:center;letter-spacing:8px;font-weight:1000}
 </style>
 </head>
 <body>
 <main class="card">
-  <div class="brand"><div class="mark">🔒</div><div><h1>Snazzle Beheer</h1><p>Veilige directe beheerlogin</p></div></div>
+  <div class="brand"><div class="mark">🔒</div><div><h1>Snazzle Beheer</h1><p>Veilige beheerlogin</p></div></div>
   <form id="loginForm" novalidate>
     <label for="email">E-mailadres</label>
     <input id="email" type="email" autocomplete="username" required>
@@ -29,13 +30,22 @@ button{width:100%;min-height:54px;margin-top:16px;border:0;border-radius:15px;ba
     <input id="password" type="password" autocomplete="current-password" required>
     <button id="loginBtn" type="submit">Inloggen bij Beheer</button>
   </form>
+  <section id="mfaBox" class="mfa" aria-live="polite">
+    <p class="mfa-note" id="mfaNote">Vul de 6-cijferige beveiligingscode uit je e-mail in.</p>
+    <label for="code">Beveiligingscode</label>
+    <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+    <button id="verifyBtn" type="button">Beheer veilig openen</button>
+    <button id="resendBtn" type="button" class="secondary">Nieuwe code sturen</button>
+    <button id="cancelBtn" type="button" class="secondary">Annuleren</button>
+  </section>
   <div id="status" class="status">Vul je beheergegevens in.</div>
-  <a class="back" href="./">Terug naar Snazzle Hunt</a>
+  <a class="back" href="./?v=296">Terug naar Snazzle Hunt</a>
 </main>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signInWithCustomToken, signOut } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js';
 
 const firebaseConfig={
  apiKey:'AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4',
@@ -46,42 +56,138 @@ const firebaseConfig={
  appId:'1:647665502495:web:686488b53db468e887482a',
  measurementId:'G-55G5DE19DL'
 };
-const app=initializeApp(firebaseConfig); const auth=getAuth(app); const db=getFirestore(app);
-const form=document.getElementById('loginForm'), email=document.getElementById('email'), password=document.getElementById('password'), btn=document.getElementById('loginBtn'), status=document.getElementById('status');
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app), db=getFirestore(app), fn=getFunctions(app,'europe-west1');
+const requestCode=httpsCallable(fn,'requestAdminLoginCode');
+const verifyCode=httpsCallable(fn,'verifyAdminLoginCode');
+const form=document.getElementById('loginForm'), email=document.getElementById('email'), password=document.getElementById('password');
+const loginBtn=document.getElementById('loginBtn'), mfaBox=document.getElementById('mfaBox'), code=document.getElementById('code');
+const verifyBtn=document.getElementById('verifyBtn'), resendBtn=document.getElementById('resendBtn'), cancelBtn=document.getElementById('cancelBtn'), status=document.getElementById('status');
+let busy=false, signedInAdmin=null;
+
 try{email.value=localStorage.getItem('snazzleAdminEmail')||'';}catch{}
 function setStatus(text,type=''){status.textContent=text;status.className='status'+(type?' '+type:'');}
-async function adminProfile(user){ if(!user || user.isAnonymous) return null; const s=await getDoc(doc(db,'adminUsers',user.uid)); return s.exists()?s.data():null; }
-async function enterIfAdmin(user){
-  const profile=await adminProfile(user);
-  if(profile?.active===true){
-    try{localStorage.setItem('snazzleAdminEmail',user.email||email.value.trim());}catch{}
-    setStatus('Inloggen gelukt. Beheer wordt geopend…','ok');
-    // Gebruik de auth-bewuste eenmalige beheerroute. Deze ruimt zichzelf daarna op,
-    // zodat een volgende start gewoon op Home uitkomt.
-    setTimeout(()=>location.replace('./?veiligbeheer=1'),450);
-    return true;
-  }
-  return false;
+function withTimeout(promise,ms,label){
+  let timer;
+  return Promise.race([
+    Promise.resolve(promise).finally(()=>clearTimeout(timer)),
+    new Promise((_,reject)=>{timer=setTimeout(()=>{const e=new Error(label+'-timeout');e.code='snazzle/timeout';reject(e);},ms);})
+  ]);
+}
+async function adminProfile(user){
+  if(!user||user.isAnonymous)return null;
+  const s=await withTimeout(getDoc(doc(db,'adminUsers',user.uid)),8000,'profile');
+  const data=s.exists()?s.data():null;
+  return data?.active===true&&['superadmin','village_admin'].includes(data.role)?data:null;
+}
+async function hasMfaClaim(user){
+  if(!user||user.isAnonymous)return false;
+  try{return (await user.getIdTokenResult(false)).claims?.snazzle_admin_mfa===true;}catch{return false;}
+}
+function rememberPlayer(user){
+  try{
+    if(user?.isAnonymous&&user.uid)localStorage.setItem('snazzlePlayerUidBeforeAdmin',user.uid);
+  }catch{}
+}
+function showCodeStep(masked){
+  form.style.display='none';
+  mfaBox.classList.add('show');
+  document.getElementById('mfaNote').textContent='We hebben een 6-cijferige beveiligingscode gestuurd naar '+(masked||'je beheerdersmail')+'.';
+  setTimeout(()=>code.focus(),80);
+}
+function resetLogin(){
+  mfaBox.classList.remove('show');
+  form.style.display='';
+  password.value='';
+  code.value='';
+  signedInAdmin=null;
+  loginBtn.disabled=false;
+  loginBtn.textContent='Inloggen bij Beheer';
+}
+function goAdmin(){
+  setStatus('Inloggen gelukt. Beheer wordt geopend…','ok');
+  location.replace('./?veiligbeheer=1&v=296');
+}
+async function sendCode(){
+  const result=await withTimeout(requestCode({}),10000,'mfa');
+  showCodeStep(result.data?.maskedEmail||email.value.trim());
+  setStatus('Beveiligingscode verstuurd. Controleer je e-mail.','ok');
 }
 form.addEventListener('submit',async e=>{
- e.preventDefault();
- const mail=email.value.trim(), pass=password.value;
- if(!mail||!pass){setStatus('Vul e-mailadres en wachtwoord in.','error');return;}
- btn.disabled=true; btn.textContent='Even controleren…'; setStatus('Beheergegevens worden gecontroleerd…');
- try{
-   const cred=await signInWithEmailAndPassword(auth,mail,pass);
-   if(!(await enterIfAdmin(cred.user))){ await signOut(auth); throw new Error('Dit account heeft geen actieve beheerrechten.'); }
- }catch(err){
-   console.error(err);
-   let msg='Inloggen lukt niet. Controleer e-mailadres en wachtwoord.';
-   if(String(err?.message||'').includes('geen actieve beheerrechten')) msg='Dit account heeft geen actieve beheerrechten.';
-   setStatus(msg,'error'); btn.disabled=false; btn.textContent='Inloggen bij Beheer';
- }
+  e.preventDefault();
+  if(busy)return;
+  const mail=email.value.trim(),pass=password.value;
+  if(!mail||!pass){setStatus('Vul e-mailadres en wachtwoord in.','error');return;}
+  busy=true;loginBtn.disabled=true;loginBtn.textContent='Bezig met inloggen…';
+  setStatus('Beheergegevens worden gecontroleerd…');
+  try{
+    rememberPlayer(auth.currentUser);
+    const cred=await withTimeout(signInWithEmailAndPassword(auth,mail,pass),10000,'auth');
+    const profile=await adminProfile(cred.user);
+    if(!profile)throw new Error('geen-beheerrechten');
+    signedInAdmin=cred.user;
+    try{localStorage.setItem('snazzleAdminEmail',mail);}catch{}
+    try{
+      await sendCode();
+    }catch(err){
+      const c=String(err?.code||'').toLowerCase();
+      if(c.includes('resource-exhausted')){
+        showCodeStep(mail);
+        setStatus('Er is net al een code verstuurd. Gebruik die code uit je e-mail.','ok');
+      }else throw err;
+    }
+  }catch(err){
+    console.error(err);
+    if(String(err?.message||'').includes('geen-beheerrechten'))setStatus('Dit account heeft geen actieve beheerrechten.','error');
+    else if(String(err?.code||'').includes('snazzle/timeout'))setStatus('De verbinding reageerde niet. Probeer nogmaals; de knop blijft beschikbaar.','error');
+    else setStatus('Inloggen lukt niet. Controleer e-mailadres en wachtwoord.','error');
+    loginBtn.disabled=false;loginBtn.textContent='Inloggen bij Beheer';
+  }finally{busy=false;}
 });
+verifyBtn.addEventListener('click',async()=>{
+  if(busy)return;
+  const value=String(code.value||'').replace(/\D/g,'').slice(0,6);
+  if(value.length!==6){setStatus('Vul alle 6 cijfers van de beveiligingscode in.','error');return;}
+  busy=true;verifyBtn.disabled=true;setStatus('Beveiligingscode wordt gecontroleerd…');
+  try{
+    const result=await withTimeout(verifyCode({code:value}),10000,'verify');
+    const token=result.data?.customToken;
+    if(!token)throw new Error('geen-token');
+    const cred=await withTimeout(signInWithCustomToken(auth,token),10000,'custom-auth');
+    if(!(await hasMfaClaim(cred.user)))throw new Error('geen-mfa-claim');
+    goAdmin();
+  }catch(err){
+    console.error(err);
+    const c=String(err?.code||'').toLowerCase();
+    if(c.includes('permission-denied'))setStatus('De beveiligingscode klopt niet.','error');
+    else if(c.includes('deadline-exceeded'))setStatus('De code is verlopen. Vraag een nieuwe code aan.','error');
+    else if(c.includes('resource-exhausted'))setStatus('Te veel pogingen. Vraag een nieuwe code aan.','error');
+    else if(c.includes('snazzle/timeout'))setStatus('De controle reageerde te langzaam. Probeer nogmaals.','error');
+    else setStatus('De beveiligingscode kon niet worden gecontroleerd.','error');
+  }finally{busy=false;verifyBtn.disabled=false;}
+});
+resendBtn.addEventListener('click',async()=>{
+  if(busy)return;busy=true;resendBtn.disabled=true;setStatus('Nieuwe code wordt verstuurd…');
+  try{await sendCode();code.value='';}
+  catch(err){
+    const c=String(err?.code||'').toLowerCase();
+    setStatus(c.includes('resource-exhausted')?'Er is minder dan een minuut geleden al een code verstuurd.':'Nieuwe code versturen lukte niet.','error');
+  }finally{busy=false;resendBtn.disabled=false;}
+});
+cancelBtn.addEventListener('click',async()=>{
+  if(busy)return;
+  try{await signOut(auth);}catch{}
+  resetLogin();setStatus('Beheerlogin geannuleerd.');
+});
+code.addEventListener('input',()=>{code.value=String(code.value||'').replace(/\D/g,'').slice(0,6);});
+code.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();verifyBtn.click();}});
 
 onAuthStateChanged(auth,async user=>{
- if(!user || user.isAnonymous) return;
- try{ await enterIfAdmin(user); }catch(e){ console.warn(e); }
+  if(!user||user.isAnonymous)return;
+  try{
+    const profile=await adminProfile(user);
+    if(profile&&await hasMfaClaim(user))goAdmin();
+  }catch{}
 });
 </script>
 </body>
