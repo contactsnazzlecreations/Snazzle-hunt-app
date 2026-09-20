@@ -76,5 +76,31 @@ async function run(){
   }
   openSheet(profile);
 }
+function redirectLegacyInlineLogin(){
+  if(safeRoute)return;
+  const sheet=document.getElementById('adminLogin');
+  if(!sheet)return;
+  const user=auth.currentUser;
+  const alreadyAdmin=!!user&&!user.isAnonymous;
+  if(sheet.classList.contains('show')&&!alreadyAdmin){
+    location.assign('./beheer.html?v=296');
+  }
+}
+function watchLegacyInlineLogin(){
+  const sheet=document.getElementById('adminLogin');
+  if(sheet&&!sheet.dataset.snRoute296){
+    sheet.dataset.snRoute296='1';
+    new MutationObserver(redirectLegacyInlineLogin).observe(sheet,{attributes:true,attributeFilter:['class']});
+    redirectLegacyInlineLogin();
+    return;
+  }
+  const ob=new MutationObserver(()=>{
+    const found=document.getElementById('adminLogin');
+    if(found){ob.disconnect();watchLegacyInlineLogin();}
+  });
+  if(document.body)ob.observe(document.body,{childList:true,subtree:true});
+}
 run();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchLegacyInlineLogin,{once:true});
+else watchLegacyInlineLogin();
 window.SnazzleAdminRouteV296={open:run};
