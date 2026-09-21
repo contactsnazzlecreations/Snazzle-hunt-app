@@ -82,7 +82,7 @@ await safeImport('./snazzle-ar-collection-bridge-v125.js');
 await safeImport('./snazzle-ar-premium-test-v297.js');
 await safeImport('./snazzle-special-findings-v294.js');
 
-function syncArPriority(){window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show');}
+function syncArPriority(){window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show,#snPremiumArGuide.show,#snPremiumArOverlay.show,#snPremiumArResult.show');}
 const arPriorityObserver=new MutationObserver(syncArPriority);if(document.body)arPriorityObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});syncArPriority();
 
 await Promise.all([
