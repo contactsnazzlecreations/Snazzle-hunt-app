@@ -1,4 +1,4 @@
-// Snazzle AR Collection Bridge v293
+// Snazzle AR Collection Bridge v297
 // Koppelt AR-vondsten aan de persoonlijke digitale collectie zonder het openbare hunt-klassement te beïnvloeden.
 // Bestaande lokale AR-vondsten worden automatisch gemigreerd naar het eigen user-document en blijven lokaal als fallback beschikbaar.
 
@@ -44,7 +44,8 @@ function canonical(item){
     lon:Number(world.lon??item?.lon),
     placeName:String(item?.placeName||world.placeName||'').slice(0,80),
     caughtAt,
-    edition:String(item?.edition||'Snazzle AR').slice(0,60)
+    edition:String(item?.edition||'Snazzle AR').slice(0,60),
+    imageUrl:String(item?.imageUrl||world.imageUrl||'').slice(0,2000)
   };
 }
 function mergedItems(){
@@ -67,6 +68,7 @@ function scoutSvg(){
 function svgUrl(svg){return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;}
 function visualFor(item){
   const world=worldMap.get(String(item.id||''))||{};
+  if(item?.imageUrl)return item.imageUrl;
   if(world.imageUrl)return world.imageUrl;
   try{
     if(item.id==='AR-001'){
