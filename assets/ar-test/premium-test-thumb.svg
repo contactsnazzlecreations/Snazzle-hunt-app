@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#13274f"/><stop offset="1" stop-color="#5b2d91"/></linearGradient><radialGradient id="glow"><stop stop-color="#fff7a5" stop-opacity=".9"/><stop offset="1" stop-color="#fff7a5" stop-opacity="0"/></radialGradient></defs>
+<rect width="800" height="800" rx="90" fill="url(#g)"/><circle cx="400" cy="390" r="300" fill="url(#glow)" opacity=".45"/>
+<g stroke="#4b351a" stroke-width="18" stroke-linejoin="round">
+<ellipse cx="350" cy="485" rx="225" ry="155" fill="#ffd84a"/><circle cx="535" cy="315" r="115" fill="#ffe15f"/>
+<path d="M625 305 770 360 625 420Z" fill="#ff972f"/><circle cx="570" cy="283" r="18" fill="#171d25" stroke="none"/>
+<path d="M277 450q75-83 154-3-34 108-132 117z" fill="#f4be28"/>
+</g>
+<g fill="#fff"><circle cx="577" cy="276" r="6"/><circle cx="650" cy="150" r="8"/><circle cx="705" cy="205" r="5"/><circle cx="128" cy="170" r="7"/></g>
+<text x="400" y="700" text-anchor="middle" font-family="Arial,sans-serif" font-size="52" font-weight="900" fill="#fff">PREMIUM AR PROEF</text>
+</svg>
