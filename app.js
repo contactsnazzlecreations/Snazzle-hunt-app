@@ -1,4 +1,4 @@
-// Snazzle Hunt v296 — betrouwbare beheerlogin en blijvende vondsten.
+// Snazzle Hunt v297 — Premium AR proef, betrouwbare beheerlogin en blijvende vondsten.
 // Eerst een vaste laadlaag; daaronder bouwt de app rustig op en verschijnt pas wanneer de home klaar is.
 
 window.__snazzleBootStartedAt=window.__snazzleBootStartedAt||performance.now();
@@ -34,7 +34,7 @@ function releaseStableBoot(){
 }
 function preloadCriticalAssets(){
   const moduleHrefs=[
-    './app-runtime-v245.js?v=296',
+    './app-runtime-v245.js?v=297',
     './snazzle-runtime-stability-v71.js?fresh=20260918-v289-shop-link',
     './snazzle-image-stability-v72.js?fresh=20260918-v289-shop-link',
     './snazzle-leaflet-isolation-v190.js?fresh=20260918-v289-shop-link',
@@ -70,7 +70,7 @@ async function optionalImport(path,label){
     // Gebruik exact dezelfde runtime-URL als de centrale loader. Zo wordt een module
     // niet opnieuw uitgevoerd alleen omdat er een andere querystring aan hing.
     if(typeof window.__snazzleImport==='function')return await window.__snazzleImport(path);
-    return await import(`${path}${path.includes('?')?'&':'?'}v=296`);
+    return await import(`${path}${path.includes('?')?'&':'?'}v=297`);
   }catch(err){console.error(`${label||path} kon niet laden`,err);return null;}
 }
 async function pacedImports(entries){
@@ -83,7 +83,7 @@ async function pacedImports(entries){
 
 // Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
 // kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
-await import('./app-runtime-v245.js?v=296');
+await import('./app-runtime-v245.js?v=297');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
