@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Snazzle Premium AR proefkaart</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#071b13;color:#fff}
+body{display:grid;place-items:center;padding:18px}.wrap{width:min(760px,100%);text-align:center}.badge{display:inline-block;background:#ffd64e;color:#33230f;border-radius:999px;padding:8px 12px;font-weight:1000;font-size:12px;margin-bottom:12px}
+h1{margin:0 0 8px;font-size:clamp(25px,7vw,42px)}p{margin:0 auto 16px;max-width:640px;line-height:1.45;color:#e9f4ec;font-weight:700}
+.card{background:#fff;border:8px solid #f1cf64;border-radius:24px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.45)}img{display:block;width:100%;height:auto;border-radius:12px}
+.note{margin-top:14px;padding:12px;border-radius:14px;background:#123524;color:#ecffd8;font-size:13px;font-weight:800}
+</style>
+</head>
+<body>
+<main class="wrap"><span class="badge">SNAZZLE · TECHNISCHE PROEF</span><h1>Premium AR proefkaart</h1>
+<p>Laat deze kaart op een tweede telefoon, tablet of laptop zien. Start daarna op de zoektelefoon de Premium AR proef en richt de camera op de volledige afbeelding.</p>
+<div class="card"><img id="target" alt="AR proefkaart"></div>
+<div class="note">Houd de kaart stil, goed verlicht en volledig in beeld. Zodra hij herkend wordt verschijnt de bewegende 3D-eend.</div>
+</main>
+<script>
+(async function(){
+  try{
+    const raw=(await (await fetch('./assets/ar-test/card.png.b64?v=297',{cache:'force-cache'})).text()).replace(/\s+/g,'');
+    const bin=atob(raw),bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    document.getElementById('target').src=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));
+  }catch(e){document.querySelector('.note').textContent='Proefkaart kon niet worden geladen. Vernieuw deze pagina.';}
+})();
+</script>
+</body></html>
