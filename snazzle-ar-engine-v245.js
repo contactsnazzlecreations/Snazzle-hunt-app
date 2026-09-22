@@ -8,6 +8,11 @@ const auth=getAuth();
 const db=getFirestore();
 const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1');
 const DEFAULT_MAX_RADIUS_KM=25;
+const START_GOOD_ACCURACY_M=25;
+const REVEAL_MAX_ACCURACY_M=20;
+const GPS_SAMPLE_WINDOW_MS=7000;
+const MIN_STABLE_SAMPLES=3;
+const MAX_STABILITY_SPREAD_M=16;
 const $=s=>document.querySelector(s);
 const toRad=d=>d*Math.PI/180;
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -24,6 +29,7 @@ let armed=false;
 let revealed=false;
 let sessionToken=0;
 let lifecycleInstalled=false;
+let gpsSamples=[];
 let originalDuckHtml='';
 let originalResultHtml='';
 const arImageCache=new Map();
@@ -93,19 +99,41 @@ function requestPosition(options){
 async function getStartPosition(){
   let quick=null;
   try{
-    quick=await requestPosition({enableHighAccuracy:false,timeout:4500,maximumAge:8000});
+    quick=await requestPosition({enableHighAccuracy:false,timeout:3500,maximumAge:3000});
   }catch(err){
     if(err?.code===1)throw new Error('Locatietoestemming is geweigerd. Geef Snazzle toegang tot je locatie.');
   }
   const quickAccuracy=Number(quick?.coords?.accuracy??Infinity);
-  if(quick&&quickAccuracy<=50)return quick;
+  if(quick&&quickAccuracy<=START_GOOD_ACCURACY_M)return quick;
   try{
-    return await requestPosition({enableHighAccuracy:true,timeout:5500,maximumAge:0});
+    const precise=await requestPosition({enableHighAccuracy:true,timeout:9000,maximumAge:0});
+    const preciseAccuracy=Number(precise?.coords?.accuracy??Infinity);
+    return quick&&quickAccuracy<preciseAccuracy?quick:precise;
   }catch(err){
     if(quick)return quick;
     const msg=err?.code===1?'Locatietoestemming is geweigerd. Geef Snazzle toegang tot je locatie.':err?.code===3?'GPS reageert te langzaam. Controleer of locatie aan staat.':'Je locatie kon niet worden bepaald.';
     throw new Error(msg);
   }
+}
+
+function resetGpsSamples(){gpsSamples=[];}
+function stabilizedFix(pos){
+  const lat=Number(pos?.coords?.latitude),lon=Number(pos?.coords?.longitude),accuracy=Math.max(0,Number(pos?.coords?.accuracy??Infinity));
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+  const now=Date.now();
+  gpsSamples.push({lat,lon,accuracy,at:now});
+  gpsSamples=gpsSamples.filter(s=>now-s.at<=GPS_SAMPLE_WINDOW_MS).slice(-10);
+  const usable=gpsSamples.filter(s=>Number.isFinite(s.accuracy)&&s.accuracy<=35);
+  if(!usable.length)return{lat,lon,accuracy,samples:1,spread:Infinity,rawAccuracy:accuracy};
+  let sumW=0,sumLat=0,sumLon=0;
+  for(const s of usable){
+    const w=1/Math.pow(Math.max(4,s.accuracy),2);
+    sumW+=w;sumLat+=s.lat*w;sumLon+=s.lon*w;
+  }
+  const fixed={lat:sumLat/sumW,lon:sumLon/sumW};
+  const spread=usable.reduce((m,s)=>Math.max(m,dist(fixed,s)),0);
+  const bestAccuracy=Math.min(...usable.map(s=>s.accuracy));
+  return{...fixed,accuracy:Math.max(bestAccuracy,spread),samples:usable.length,spread,rawAccuracy:accuracy};
 }
 
 function timedCamera(constraints,ms=7500){
@@ -197,29 +225,37 @@ function stopSession({showIntro=false}={}){
   if(watchId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(watchId);watchId=null;}
   $('#snArOverlay')?.classList.remove('show');
   setVisible(false);resetPlacementVisual();
-  target=null;armed=false;revealed=false;starting=false;
+  target=null;armed=false;revealed=false;starting=false;resetGpsSamples();
   window.__snazzleArPriority=false;
   if(showIntro)$('#snArIntro')?.classList.add('show');
 }
 
 function updatePosition(pos,token=sessionToken){
   if(token!==sessionToken||!target)return;
-  const here=point(pos);
+  const fix=stabilizedFix(pos);if(!fix)return;
+  const here={lat:fix.lat,lon:fix.lon};
   const remaining=dist(here,{lat:Number(target.lat),lon:Number(target.lon)});
   const baseRadius=Math.max(4,Number(target.radius||7));
-  const accuracy=Math.max(0,Number(pos.coords.accuracy||0));
-  const accuracyOk=accuracy<=60;
-  const enterRadius=baseRadius+Math.min(5,accuracy*.18);
-  const leaveRadius=baseRadius+8;
-  const shouldReveal=revealed?remaining<=leaveRadius:(accuracyOk&&remaining<=enterRadius);
+  const accuracy=Math.max(0,Number(fix.accuracy||Infinity));
+  const accuracyOk=accuracy<=REVEAL_MAX_ACCURACY_M;
+  const samplesOk=fix.samples>=MIN_STABLE_SAMPLES;
+  const stabilityOk=fix.spread<=MAX_STABILITY_SPREAD_M;
+  const enterRadius=baseRadius+1.5;
+  const leaveRadius=baseRadius+5;
+  const shouldReveal=revealed
+    ? accuracy<=30&&remaining<=leaveRadius
+    : accuracyOk&&samplesOk&&stabilityOk&&remaining<=enterRadius;
   setVisible(shouldReveal);
   const hud=$('#snArHudText'),box=$('#snArDistance');
   if(shouldReveal){
-    setText(hud,`${target.name||'Snazzle'} gevonden · GPS ±${Math.round(accuracy)} m`);
+    setText(hud,`${target.name||'Snazzle'} gevonden · GPS stabiel ±${Math.round(accuracy)} m`);
     setText(box,isCameraPlacement(target)?'Je bent op de juiste plek ✅ · kijk rond zoals hij geplaatst is':'Je bent op de juiste plek ✅ · tik op de Snazzle');
-  }else if(!accuracyOk&&remaining<Math.max(35,baseRadius*4)){
+  }else if(remaining<Math.max(45,baseRadius*5)&&!samplesOk){
+    setText(hud,`${rarity(target.rarity)} Snazzle-signaal · GPS verfijnen ${Math.min(fix.samples,MIN_STABLE_SAMPLES)}/${MIN_STABLE_SAMPLES}`);
+    setText(box,'Blijf een paar seconden in de buurt zodat GPS de plek nauwkeuriger vastzet… 📍');
+  }else if(remaining<Math.max(45,baseRadius*5)&&(!accuracyOk||!stabilityOk)){
     setText(hud,`${rarity(target.rarity)} Snazzle-signaal · GPS ±${Math.round(accuracy)} m`);
-    setText(box,'GPS is nog te onnauwkeurig. Blijf even buiten staan… 📍');
+    setText(box,'GPS is nog niet nauwkeurig genoeg. Loop rustig verder of wacht even buiten… 📍');
   }else{
     setText(hud,`${rarity(target.rarity)} Snazzle-signaal · ${areaLabel(target.village)} · GPS ±${Math.round(accuracy)} m`);
     setText(box,`Nog ongeveer ${Math.max(0,Math.round(remaining))} meter… 👣`);
@@ -231,7 +267,7 @@ function startWatch(token){
     if(token!==sessionToken)return;
     const box=$('#snArDistance');
     if(box)setText(box,err?.code===1?'Locatietoegang is uitgezet. Geef Snazzle locatietoegang.':'GPS-signaal even kwijt… blijf buiten en wacht kort.');
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:1000});
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
 }
 function caughtList(){try{const x=JSON.parse(localStorage.getItem('snazzleARCollection')||'[]');return Array.isArray(x)?x:[];}catch{return[];}}
 function uncaughtPoints(points){
@@ -243,6 +279,7 @@ async function startAr(e){
   e?.preventDefault?.();e?.stopImmediatePropagation?.();
   if(starting)return;
   const token=++sessionToken;
+  resetGpsSamples();
   starting=true;window.__snazzleArPriority=true;
   const btn=$('#snArStart'),status=$('#snArStatus'),intro=$('#snArIntro'),overlay=$('#snArOverlay');
   const hud=$('#snArHudText'),box=$('#snArDistance'),video=$('#snArCamera');
