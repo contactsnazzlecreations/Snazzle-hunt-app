@@ -7,7 +7,7 @@ import { getFirestore, doc, getDoc, setDoc, deleteDoc, runTransaction } from 'ht
 const auth=getAuth(),db=getFirestore();
 const WORLD_ID='snazzle_ar_world_v1';
 const WORLD_DOC=doc(db,'hunts',WORLD_ID);
-const MAX_QUICK_GPS_ACCURACY=50;
+const MAX_QUICK_GPS_ACCURACY=20;
 const AR_VILLAGES=[
   {value:'Algemeen',label:'🌍 Algemeen / overal'},
   {value:'Montfort',label:'Montfort'},
