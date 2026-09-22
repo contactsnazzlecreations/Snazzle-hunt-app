@@ -1,6 +1,6 @@
-// Snazzle Hunt v297 — Premium AR proef + stabiele beheerlogin en vondstenherstel.
+// Snazzle Hunt v298 — nauwkeurigere AR GPS + stabiele beheerlogin en vondstenherstel.
 
-const runtimeVersion='20260921-v297-premium-ar-proof';
+const runtimeVersion='20260922-v298-ar-gps-precision';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -79,7 +79,6 @@ await safeImport('./snazzle-ar-v80.js');
 await safeImport('./snazzle-zone-button-v176.js');
 await safeImport('./snazzle-ar-engine-v245.js');
 await safeImport('./snazzle-ar-collection-bridge-v125.js');
-await safeImport('./snazzle-ar-premium-test-v297.js');
 await safeImport('./snazzle-special-findings-v294.js');
 
 function syncArPriority(){window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show,#snPremiumArGuide.show,#snPremiumArOverlay.show,#snPremiumArResult.show');}
