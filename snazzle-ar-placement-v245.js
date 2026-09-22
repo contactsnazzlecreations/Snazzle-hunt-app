@@ -12,7 +12,7 @@ const WORLD_DOC=doc(db,'hunts','snazzle_ar_world_v1');
 const MODAL_ID='snArPlacement245';
 const BUTTON_ID='snArPlacementLaunch245';
 const DEFAULT_MAX_RADIUS_KM=25;
-const MAX_GPS_SAVE_ACCURACY=50;
+const MAX_GPS_SAVE_ACCURACY=20;
 const VILLAGE_CENTERS={Montfort:[51.1262,5.9488],Posterholt:[51.1230,6.0310],'Sint Odiliënberg':[51.1430,6.0000]};
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
@@ -130,7 +130,7 @@ async function ensureInteractiveMap(){
   const canvas=$('#sn245MapCanvas');if(!canvas)return null;
   const L=await ensureLeaflet();
   if(!placementMap){
-    placementMap=L.map(canvas,{zoomControl:true,attributionControl:true,preferCanvas:true,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,bounceAtZoomLimits:false}).setView([state.lat,state.lon],17);
+    placementMap=L.map(canvas,{zoomControl:true,attributionControl:true,preferCanvas:true,dragging:true,touchZoom:true,scrollWheelZoom:true,doubleClickZoom:true,boxZoom:false,keyboard:false,bounceAtZoomLimits:false}).setView([state.lat,state.lon],19);
     installPlacementBaseLayer(L,0);
     placementMap.on('movestart',()=>{if(!mapProgrammatic)mapGesture=true;});
     placementMap.on('moveend',()=>{
