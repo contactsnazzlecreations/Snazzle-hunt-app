@@ -1,6 +1,6 @@
-// Snazzle Hunt v300 — Sfeer direct laden + nauwkeurige AR GPS + stabiele beheerlogin.
+// Snazzle Hunt v301 — stabiele Sfeer-knop + nauwkeurige AR GPS + stabiele beheerlogin.
 
-const runtimeVersion='20260926-v300-sfeer-direct';
+const runtimeVersion='20260926-v301-sfeer-stable';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -89,7 +89,7 @@ await Promise.all([
   safeImport('./snazzle-admin-shell-v268.js'),
   safeImport('./snazzle-admin-route-v296.js'),
   safeImport('./snazzle-image-manager-v272.js'),
-  safeImport('./snazzle-sfeer-fix-v299.js?v=299'),
+  safeImport('./snazzle-sfeer-admin-v301.js?v=301'),
   safeImport('./snazzle-ar-admin-display-v84.js'),
   safeImport('./snazzle-village-visibility-v120.js'),
   safeImport('./snazzle-main-menu-v129.js'),
