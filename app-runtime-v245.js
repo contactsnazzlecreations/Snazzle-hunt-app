@@ -1,6 +1,6 @@
-// Snazzle Hunt v303 — werkende Sfeer opslaan/herstellen-knoppen.
+// Snazzle Hunt v304 — centrale Sfeer-instellingen en directe kleurtoepassing.
 
-const runtimeVersion='20260926-v303-sfeer-buttons';
+const runtimeVersion='20260926-v304-sfeer-colors';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -89,7 +89,7 @@ await Promise.all([
   safeImport('./snazzle-admin-shell-v268.js'),
   safeImport('./snazzle-admin-route-v296.js'),
   safeImport('./snazzle-image-manager-v272.js'),
-  safeImport('./snazzle-sfeer-admin-v301.js?v=303'),
+  safeImport('./snazzle-sfeer-admin-v301.js?v=304'),
   safeImport('./snazzle-ar-admin-display-v84.js'),
   safeImport('./snazzle-village-visibility-v120.js'),
   safeImport('./snazzle-main-menu-v129.js'),
