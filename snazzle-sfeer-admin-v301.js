@@ -1,7 +1,7 @@
 // Snazzle v301 — robuuste beheerpagina voor Sfeer & seizoen.
 // De pagina opent direct en is niet afhankelijk van late achtergrondmodules.
 
-const VERSION='301.0.0';
+const VERSION='303.0.0';
 const KEY='snazzleSeasonThemeV38';
 const presets={
   normal:{label:'🌿 Normale Snazzle Jungle',a:'#176c48',b:'#073c31',accent:'#ffd86a'},
@@ -44,7 +44,7 @@ function styles(){
     .sn301-color input{width:100%;height:44px;border:0;background:transparent;padding:0}
     .sn301-preview{margin:13px 0;padding:15px;border-radius:15px;color:#fff;font-weight:950;text-align:center;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
     .sn301-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .sn301-btn{min-height:48px;border:0;border-radius:12px;padding:11px;font-weight:1000}
+    .sn301-btn{min-height:48px;border:0;border-radius:12px;padding:11px;font-weight:1000;position:relative;z-index:8;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent}
     .sn301-save{background:#237455;color:#fff}.sn301-reset{background:#79573e;color:#fff}
     @media(max-width:390px){.sn301-colors,.sn301-row{grid-template-columns:1fr}}
   `;
@@ -70,6 +70,35 @@ function applyPreview(){
   box.style.borderColor=accent;
   box.textContent='Snazzle sfeer · '+($('#sn301Theme')?.selectedOptions?.[0]?.textContent||'Voorbeeld');
 }
+let lastActionAt=0;
+async function applyCurrentSeason(){
+  try{
+    if(!window.SnazzleSeasonV38?.apply)await import('./snazzle-season-theme-v38.js?fresh=20260926-v303');
+    await window.SnazzleSeasonV38?.apply?.();
+  }catch(err){console.warn('Snazzle sfeer toepassen',err);}
+}
+async function saveAction(){
+  const select=$('#sn301Theme'),a=$('#sn301A'),b=$('#sn301B'),accent=$('#sn301Accent');
+  if(!select||!a||!b||!accent)return;
+  save({theme:select.value,a:a.value,b:b.value,accent:accent.value});
+  applyPreview();
+  await applyCurrentSeason();
+  toast('Sfeer opgeslagen ✓');
+}
+async function resetAction(){
+  const select=$('#sn301Theme'),a=$('#sn301A'),b=$('#sn301B'),accent=$('#sn301Accent');
+  if(!select||!a||!b||!accent)return;
+  select.value='normal';a.value=presets.normal.a;b.value=presets.normal.b;accent.value=presets.normal.accent;
+  save({theme:'normal',a:a.value,b:b.value,accent:accent.value});
+  applyPreview();
+  await applyCurrentSeason();
+  toast('Normale Snazzle-sfeer hersteld ✓');
+}
+function runAction(kind){
+  const now=Date.now();if(now-lastActionAt<450)return;lastActionAt=now;
+  if(kind==='save')saveAction();else if(kind==='reset')resetAction();
+}
+
 function build(){
   const shell=ensureShell();if(!shell)return false;
   const mount=$('#sn272SfeerMount',shell.section);if(!mount)return false;
@@ -85,8 +114,8 @@ function build(){
   select.value=presets[st.theme]?st.theme:'normal';a.value=st.a||presets.normal.a;b.value=st.b||presets.normal.b;accent.value=st.accent||presets.normal.accent;
   select.onchange=()=>{const p=presets[select.value]||presets.normal;a.value=p.a;b.value=p.b;accent.value=p.accent;applyPreview();};
   [a,b,accent].forEach(el=>el.oninput=applyPreview);
-  $('#sn301Save',root).onclick=async()=>{save({theme:select.value,a:a.value,b:b.value,accent:accent.value});applyPreview();try{await import('./snazzle-season-theme-v38.js?fresh=20260926-v301');await window.SnazzleSeasonV38?.apply?.();}catch{}toast('Sfeer opgeslagen ✓');};
-  $('#sn301Reset',root).onclick=async()=>{select.value='normal';a.value=presets.normal.a;b.value=presets.normal.b;accent.value=presets.normal.accent;save({theme:'normal',a:a.value,b:b.value,accent:accent.value});applyPreview();try{await import('./snazzle-season-theme-v38.js?fresh=20260926-v301');await window.SnazzleSeasonV38?.apply?.();}catch{}toast('Normale Snazzle-sfeer hersteld');};
+  $('#sn301Save',root).onclick=()=>runAction('save');
+  $('#sn301Reset',root).onclick=()=>runAction('reset');
   applyPreview();
   return true;
 }
@@ -104,6 +133,14 @@ function install(){
     const tab=event.target?.closest?.('#sn272SfeerTab');if(!tab)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation?.();open();
   },true);
+  const actionFromEvent=event=>{
+    const btn=event.target?.closest?.('#sn301Save,#sn301Reset');if(!btn)return;
+    event.preventDefault();event.stopImmediatePropagation?.();event.stopPropagation?.();
+    runAction(btn.id==='sn301Save'?'save':'reset');
+  };
+  if(window.PointerEvent)document.addEventListener('pointerup',actionFromEvent,true);
+  else document.addEventListener('touchend',actionFromEvent,{capture:true,passive:false});
+  document.addEventListener('click',actionFromEvent,true);
   document.addEventListener('snazzle:admin-ui-ready',()=>setTimeout(()=>{ensureShell();build();},60));
   new MutationObserver(()=>{if(!$('#sn272SfeerTab')||!$('#sn272SfeerSection')){ensureShell();build();}}).observe(document.documentElement,{childList:true,subtree:true});
   console.info('Snazzle Sfeer admin '+VERSION+' geladen');
