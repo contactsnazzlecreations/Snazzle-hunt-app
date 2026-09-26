@@ -39,7 +39,7 @@ button{width:100%;min-height:54px;margin-top:16px;border:0;border-radius:15px;ba
     <button id="cancelBtn" type="button" class="secondary">Annuleren</button>
   </section>
   <div id="status" class="status">Vul je beheergegevens in.</div>
-  <a class="back" href="./?v=300">Terug naar Snazzle Hunt</a>
+  <a class="back" href="./?v=301">Terug naar Snazzle Hunt</a>
 </main>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
@@ -106,7 +106,7 @@ function resetLogin(){
 }
 function goAdmin(){
   setStatus('Inloggen gelukt. Beheer wordt geopend…','ok');
-  location.replace('./?veiligbeheer=1&v=300');
+  location.replace('./?veiligbeheer=1&v=301');
 }
 async function sendCode(){
   const result=await withTimeout(requestCode({}),10000,'mfa');
