@@ -88,7 +88,7 @@ await Promise.all([
   safeImport('./snazzle-admin-mfa-v141.js'),
   safeImport('./snazzle-admin-shell-v268.js'),
   safeImport('./snazzle-admin-route-v296.js'),
-  safeImport('./snazzle-image-manager-v272.js'),
+  safeImport('./snazzle-image-manager-v272.js'),\n  safeImport('./snazzle-sfeer-fix-v299.js?v=299'),
   safeImport('./snazzle-ar-admin-display-v84.js'),
   safeImport('./snazzle-village-visibility-v120.js'),
   safeImport('./snazzle-main-menu-v129.js'),
