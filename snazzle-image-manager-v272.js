@@ -377,4 +377,28 @@ function ensureSfeerTab(){
   let tab=$('#sn272SfeerTab'),section=$('#sn272SfeerSection');
   if(!tab){tab=document.createElement('button');tab.type='button';tab.id='sn272SfeerTab';tab.textContent='Sfeer';tabs.appendChild(tab);}
   if(!section){section=document.createElement('section');section.id='sn272SfeerSection';section.className='admin-section';section.innerHTML='<div style="padding:2px 0 10px"><h3 style="margin:0 0 5px">🎨 Sfeer & seizoen</h3><p style="margin:0;font-size:11px;line-height:1.45;color:#6a5338;font-weight:760">Hier staan alleen de kleuren en seizoenssfeer. Afbeeldingen zelf beheer je bij Afbeeldingen.</p></div><div id="sn272SfeerMount"></div>';wrap.appendChild(section);}
-  tab.onclick=()=>{tabs.querySelectorAll('button').forEach(b=>b.classList.remove('on'));sheet.querySelectorAll('.super-only .admin-section').forEach(sec=>sec.classList.remove('on'));tab.classList.add('on');section.classList.add('on');window.SnazzleSfeerAdminV301?.build?.();};
+  tab.onclick=()=>{tabs.querySelectorAll('button').forEach(b=>b.classList.remove('on'));sheet.querySelectorAll('.super-only .admin-section').forEach(sec=>sec.classList.remove('on'));tab.classList.add('on');section.classList.add('on');window.SnazzleSfeerAdminV301?.open?.();};
+}
+function installWatch(){
+  ensureSfeerTab();
+  document.addEventListener('click',e=>{
+    const b=e.target?.closest?.('#adminSheet .tabs button');
+    if(!b)return;
+    const isImages=b.dataset.tab==='imagesAdmin'||/afbeeldingen/i.test(b.textContent||'');
+    if(isImages)setTimeout(()=>{lastRender=0;render();},40);
+  },true);
+  document.addEventListener('snazzle:admin-ui-ready',()=>setTimeout(()=>{if(superAdmin)render();},80));
+  const mo=new MutationObserver(()=>{if(!superAdmin)return;const admin=$('#imagesAdmin');if(admin&&!$('#'+ROOT_ID,admin))setTimeout(()=>{lastRender=0;render();},60);});
+  mo.observe(document.documentElement,{childList:true,subtree:true});
+}
+onAuthStateChanged(auth,async user=>{
+  superAdmin=false;
+  if(user&&!user.isAnonymous){
+    try{const snap=await getDoc(doc(db,'adminUsers',user.uid)),d=snap.data()||{};superAdmin=snap.exists()&&d.active===true&&d.role==='superadmin';}catch{}
+  }
+  const admin=$('#imagesAdmin');
+  if(!superAdmin){admin?.classList.remove('sn272-owned');$('#'+ROOT_ID)?.remove();return;}
+  setTimeout(()=>{ensureSfeerTab();lastRender=0;render();},120);
+});
+style();installWatch();
+window.SnazzleImageManagerV272={render:()=>{lastRender=0;return render();},version:VERSION};
