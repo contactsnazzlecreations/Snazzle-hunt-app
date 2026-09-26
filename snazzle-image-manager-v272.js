@@ -377,28 +377,4 @@ function ensureSfeerTab(){
   let tab=$('#sn272SfeerTab'),section=$('#sn272SfeerSection');
   if(!tab){tab=document.createElement('button');tab.type='button';tab.id='sn272SfeerTab';tab.textContent='Sfeer';tabs.appendChild(tab);}
   if(!section){section=document.createElement('section');section.id='sn272SfeerSection';section.className='admin-section';section.innerHTML='<div style="padding:2px 0 10px"><h3 style="margin:0 0 5px">🎨 Sfeer & seizoen</h3><p style="margin:0;font-size:11px;line-height:1.45;color:#6a5338;font-weight:760">Hier staan alleen de kleuren en seizoenssfeer. Afbeeldingen zelf beheer je bij Afbeeldingen.</p></div><div id="sn272SfeerMount"></div>';wrap.appendChild(section);}
-  tab.onclick=async()=>{tabs.querySelectorAll('button').forEach(b=>b.classList.remove('on'));sheet.querySelectorAll('.super-only .admin-section').forEach(sec=>sec.classList.remove('on'));tab.classList.add('on');section.classList.add('on');document.dispatchEvent(new CustomEvent('snazzle:sfeer-admin-open'));const mount=$('#sn272SfeerMount',section);if(mount&&!$('#v38SeasonAdmin',mount))mount.innerHTML='<div style="padding:12px;border:2px solid #bda76f;border-radius:13px;background:#fffaf0;font-size:12px;font-weight:850">Sfeerinstellingen laden…</div>';try{await import('./snazzle-season-theme-v38.js?fresh=20260926-v300-sfeer');await window.SnazzleSeasonV38?.sync?.();document.dispatchEvent(new CustomEvent('snazzle:sfeer-admin-open'));}catch(err){console.error('Sfeer laden mislukt',err);if(mount&&!$('#v38SeasonAdmin',mount))mount.innerHTML='<div style="padding:12px;border:2px solid #c88974;border-radius:13px;background:#fff0e9;color:#7a3427;font-size:12px;font-weight:850">Sfeerinstellingen konden niet laden. Sluit Beheer en probeer opnieuw.</div>';}};
-}
-function installWatch(){
-  ensureSfeerTab();
-  document.addEventListener('click',e=>{
-    const b=e.target?.closest?.('#adminSheet .tabs button');
-    if(!b)return;
-    const isImages=b.dataset.tab==='imagesAdmin'||/afbeeldingen/i.test(b.textContent||'');
-    if(isImages)setTimeout(()=>{lastRender=0;render();},40);
-  },true);
-  document.addEventListener('snazzle:admin-ui-ready',()=>setTimeout(()=>{if(superAdmin)render();},80));
-  const mo=new MutationObserver(()=>{if(!superAdmin)return;const admin=$('#imagesAdmin');if(admin&&!$('#'+ROOT_ID,admin))setTimeout(()=>{lastRender=0;render();},60);});
-  mo.observe(document.documentElement,{childList:true,subtree:true});
-}
-onAuthStateChanged(auth,async user=>{
-  superAdmin=false;
-  if(user&&!user.isAnonymous){
-    try{const snap=await getDoc(doc(db,'adminUsers',user.uid)),d=snap.data()||{};superAdmin=snap.exists()&&d.active===true&&d.role==='superadmin';}catch{}
-  }
-  const admin=$('#imagesAdmin');
-  if(!superAdmin){admin?.classList.remove('sn272-owned');$('#'+ROOT_ID)?.remove();return;}
-  setTimeout(()=>{ensureSfeerTab();lastRender=0;render();},120);
-});
-style();installWatch();
-window.SnazzleImageManagerV272={render:()=>{lastRender=0;return render();},version:VERSION};
+  tab.onclick=()=>{tabs.querySelectorAll('button').forEach(b=>b.classList.remove('on'));sheet.querySelectorAll('.super-only .admin-section').forEach(sec=>sec.classList.remove('on'));tab.classList.add('on');section.classList.add('on');window.SnazzleSfeerAdminV301?.build?.();};
