@@ -1,8 +1,13 @@
+import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
+import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+
 // Snazzle v301 — robuuste beheerpagina voor Sfeer & seizoen.
 // De pagina opent direct en is niet afhankelijk van late achtergrondmodules.
 
-const VERSION='303.0.0';
+const VERSION='304.0.0';
 const KEY='snazzleSeasonThemeV38';
+const sfeerDb301=getFirestore(getApp());
+const REMOTE_DOC='__snazzle_season_theme_v1';
 const presets={
   normal:{label:'🌿 Normale Snazzle Jungle',a:'#176c48',b:'#073c31',accent:'#ffd86a'},
   christmas:{label:'🎄 Kerst',a:'#0e5b3e',b:'#083026',accent:'#e33e43'},
@@ -20,6 +25,17 @@ function settings(){
   catch{return {theme:'normal',...presets.normal};}
 }
 function save(v){localStorage.setItem(KEY,JSON.stringify(v));}
+async function saveCentral301(v){
+  await setDoc(doc(sfeerDb301,'villages',REMOTE_DOC),{
+    contentType:'snazzleSeasonTheme',
+    active:true,
+    theme:v.theme,
+    a:v.a,
+    b:v.b,
+    accent:v.accent,
+    updatedAt:new Date().toISOString()
+  },{merge:true});
+}
 function toast(text){
   const t=$('#toast');
   if(!t)return;
@@ -73,26 +89,30 @@ function applyPreview(){
 let lastActionAt=0;
 async function applyCurrentSeason(){
   try{
-    if(!window.SnazzleSeasonV38?.apply)await import('./snazzle-season-theme-v38.js?fresh=20260926-v303');
+    if(!window.SnazzleSeasonV38?.apply)await import('./snazzle-season-theme-v38.js?fresh=20260926-v304');
     await window.SnazzleSeasonV38?.apply?.();
   }catch(err){console.warn('Snazzle sfeer toepassen',err);}
 }
 async function saveAction(){
   const select=$('#sn301Theme'),a=$('#sn301A'),b=$('#sn301B'),accent=$('#sn301Accent');
   if(!select||!a||!b||!accent)return;
-  save({theme:select.value,a:a.value,b:b.value,accent:accent.value});
+  const next={theme:select.value,a:a.value,b:b.value,accent:accent.value};
+  save(next);
   applyPreview();
+  try{await saveCentral301(next);}catch(err){console.error('Centrale sfeer opslaan',err);toast('Opslaan online mislukt');return;}
   await applyCurrentSeason();
-  toast('Sfeer opgeslagen ✓');
+  toast('Sfeer opgeslagen voor iedereen ✓');
 }
 async function resetAction(){
   const select=$('#sn301Theme'),a=$('#sn301A'),b=$('#sn301B'),accent=$('#sn301Accent');
   if(!select||!a||!b||!accent)return;
   select.value='normal';a.value=presets.normal.a;b.value=presets.normal.b;accent.value=presets.normal.accent;
-  save({theme:'normal',a:a.value,b:b.value,accent:accent.value});
+  const next={theme:'normal',a:a.value,b:b.value,accent:accent.value};
+  save(next);
   applyPreview();
+  try{await saveCentral301(next);}catch(err){console.error('Centrale sfeer herstellen',err);toast('Herstellen online mislukt');return;}
   await applyCurrentSeason();
-  toast('Normale Snazzle-sfeer hersteld ✓');
+  toast('Normale Snazzle-sfeer hersteld voor iedereen ✓');
 }
 function runAction(kind){
   const now=Date.now();if(now-lastActionAt<450)return;lastActionAt=now;
