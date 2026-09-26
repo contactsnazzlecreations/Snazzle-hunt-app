@@ -1,9 +1,14 @@
+import { getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js';
+
 // Snazzle Hunt v38 — seizoenssfeer voor de hoofdpagina.
 // Presets wijzigen alleen presentatie; bestaande functies, hunts en menu's blijven intact.
 
 const V38SEASON='38.3.0';
 const qs38=(s,r=document)=>r.querySelector(s);
 const SEASON_KEY38='snazzleSeasonThemeV38';
+const REMOTE_SEASON_DOC38='__snazzle_season_theme_v1';
+const seasonDb38=getFirestore(getApp());
 const DBSEASON38='snazzleVisualAssetsV28';
 const STORESEASON38='assets';
 let dbSeason38Promise=null;
@@ -13,6 +18,21 @@ const presets38={normal:{label:'🌿 Normale Snazzle Jungle',a:'#176c48',b:'#073
 const seasonAssetSlots38=[{key:'seasonBackdropImage',label:'🖼️ Seizoensachtergrond app',hint:'Een sfeerbeeld over de app-achtergrond. Wordt subtiel weergegeven zodat tekst leesbaar blijft.'},{key:'seasonTopImage',label:'🎀 Seizoensafbeelding bovenaan',hint:'Optionele decoratie achter het Snazzle-logo en de menuknop.'},{key:'seasonHuntImage',label:'🧭 Seizoensafbeelding avonturenvak',hint:'Optionele seizoensafbeelding voor het grote avonturenvak op Home.'}];
 function seasonSettings38(){try{return {theme:'normal',a:presets38.normal.a,b:presets38.normal.b,accent:presets38.normal.accent,...JSON.parse(localStorage.getItem(SEASON_KEY38)||'{}')};}catch{return {theme:'normal',a:presets38.normal.a,b:presets38.normal.b,accent:presets38.normal.accent};}}
 function saveSeasonSettings38(s){localStorage.setItem(SEASON_KEY38,JSON.stringify(s));}
+async function loadRemoteSeason38(){
+  try{
+    const snap=await getDoc(doc(seasonDb38,'villages',REMOTE_SEASON_DOC38));
+    if(!snap.exists())return null;
+    const d=snap.data()||{};
+    const theme=presets38[d.theme]?d.theme:'normal';
+    const p=presets38[theme]||presets38.normal;
+    const next={theme,a:String(d.a||p.a),b:String(d.b||p.b),accent:String(d.accent||p.accent)};
+    saveSeasonSettings38(next);
+    return next;
+  }catch(err){
+    console.warn('Centrale Snazzle-sfeer lezen',err);
+    return null;
+  }
+}
 function dbSeason38(){if(dbSeason38Promise)return dbSeason38Promise;dbSeason38Promise=new Promise((resolve,reject)=>{const r=indexedDB.open(DBSEASON38,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORESEASON38))r.result.createObjectStore(STORESEASON38);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error||new Error('Beeldopslag kon niet openen'));});return dbSeason38Promise;}
 async function getSeasonAsset38(key){if(cacheSeason38.has(key))return cacheSeason38.get(key)||'';try{const db=await dbSeason38();const v=await new Promise((resolve,reject)=>{const tx=db.transaction(STORESEASON38,'readonly');const r=tx.objectStore(STORESEASON38).get(key);r.onsuccess=()=>resolve(r.result||'');r.onerror=()=>reject(r.error);});cacheSeason38.set(key,v||'');return v||'';}catch(e){console.warn('Seizoensbeeld lezen',e);return '';}}
 async function setSeasonAsset38(key,value){const db=await dbSeason38();await new Promise((resolve,reject)=>{const tx=db.transaction(STORESEASON38,'readwrite');tx.objectStore(STORESEASON38).put(value,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});cacheSeason38.set(key,value||'');}
@@ -33,5 +53,6 @@ function observeSeason38(){new MutationObserver(m=>{if(m.some(x=>x.type==='child
 document.addEventListener('snazzle:sfeer-admin-open',()=>queueSeason38());
 document.addEventListener('snazzle:visual-assets-updated',()=>{cacheSeason38.clear();queueSeason38();});
 document.addEventListener('snazzle:visual-asset-changed',event=>{const key=String(event.detail?.key||'');if(key.startsWith('season')){cacheSeason38.delete(key);queueSeason38();}});
-async function initSeason38(){if(window.__snazzleSeasonV38)return;window.__snazzleSeasonV38=true;await syncSeason38();observeSeason38();console.info(`Snazzle seizoen ${V38SEASON} geladen`);}
-window.SnazzleSeasonV38={apply:applySeason38,build:buildSeasonAdmin38,sync:syncSeason38,version:V38SEASON};\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSeason38,{once:true});else initSeason38();
+async function initSeason38(){if(window.__snazzleSeasonV38)return;window.__snazzleSeasonV38=true;await loadRemoteSeason38();await syncSeason38();observeSeason38();console.info(`Snazzle seizoen ${V38SEASON} geladen`);}
+window.SnazzleSeasonV38={apply:applySeason38,build:buildSeasonAdmin38,sync:syncSeason38,reloadRemote:async()=>{await loadRemoteSeason38();return applySeason38();},version:V38SEASON};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSeason38,{once:true});else initSeason38();
