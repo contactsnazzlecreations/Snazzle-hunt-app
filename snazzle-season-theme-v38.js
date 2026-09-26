@@ -34,4 +34,4 @@ document.addEventListener('snazzle:sfeer-admin-open',()=>queueSeason38());
 document.addEventListener('snazzle:visual-assets-updated',()=>{cacheSeason38.clear();queueSeason38();});
 document.addEventListener('snazzle:visual-asset-changed',event=>{const key=String(event.detail?.key||'');if(key.startsWith('season')){cacheSeason38.delete(key);queueSeason38();}});
 async function initSeason38(){if(window.__snazzleSeasonV38)return;window.__snazzleSeasonV38=true;await syncSeason38();observeSeason38();console.info(`Snazzle seizoen ${V38SEASON} geladen`);}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSeason38,{once:true});else initSeason38();
+window.SnazzleSeasonV38={apply:applySeason38,build:buildSeasonAdmin38,sync:syncSeason38,version:V38SEASON};\nif(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSeason38,{once:true});else initSeason38();
