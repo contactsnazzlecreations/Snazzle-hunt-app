@@ -1,6 +1,6 @@
-// Snazzle Hunt v301 — stabiele Sfeer-knop + nauwkeurige AR GPS + stabiele beheerlogin.
+// Snazzle Hunt v302 — herstelde beheerbundle + stabiele Sfeer-knop.
 
-const runtimeVersion='20260926-v301-sfeer-stable';
+const runtimeVersion='20260926-v302-sfeer-restored';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
