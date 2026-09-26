@@ -1,6 +1,6 @@
-// Snazzle Hunt v298 — nauwkeurigere AR GPS + stabiele beheerlogin en vondstenherstel.
+// Snazzle Hunt v300 — Sfeer direct laden + nauwkeurige AR GPS + stabiele beheerlogin.
 
-const runtimeVersion='20260922-v298-ar-gps-precision';
+const runtimeVersion='20260926-v300-sfeer-direct';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
