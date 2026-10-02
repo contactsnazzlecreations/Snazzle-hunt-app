@@ -62,6 +62,13 @@ jobs:
           set -euo pipefail
           SA_JSON="${FIREBASE_SERVICE_ACCOUNT_SNAZZLE_HUNT:-${FIREBASE_SERVICE_ACCOUNT:-}}"
 
+          if [ -n "$SA_JSON" ]; then
+            SA_EMAIL="$(node -e 'try { const j=JSON.parse(process.argv[1]); process.stdout.write(String(j.client_email || "")); } catch (_) {}' "$SA_JSON")"
+            if [ -n "$SA_EMAIL" ]; then
+              echo "Firebase deploy service account: $SA_EMAIL"
+            fi
+          fi
+
           deploy_with_auth() {
             target="$1"
             service_error=0
@@ -78,6 +85,7 @@ jobs:
               service_error=1
               echo "Service-account deployment failed; checking Firebase token fallback..." >&2
               unset GOOGLE_APPLICATION_CREDENTIALS
+              unset GOOGLE_GHA_CREDS_PATH || true
             fi
 
             if [ -n "${FIREBASE_TOKEN:-}" ]; then
@@ -91,7 +99,7 @@ jobs:
             else
               echo 'Geen Firebase deployment credential gevonden.' >&2
             fi
-            echo 'Configureer FIREBASE_TOKEN of geef het service-account Service Usage Admin voor Cloud Functions/Build/Artifact Registry.' >&2
+            echo 'Geef het getoonde service-account minimaal Service Usage Admin zodat vereiste Google Cloud APIs kunnen worden ingeschakeld, of configureer FIREBASE_TOKEN.' >&2
             exit 1
           }
 
@@ -108,3 +116,4 @@ jobs:
 # Cards v234: validate and deploy permanent 48-card progress backend
 # Release v305 backend redeploy: 2026-10-02 secure Hunt claim, MFA and Sfeer readiness
 # Release v305 auth fallback: service account first, Firebase token second
+# Release v305 diagnostics: print deploy service-account email and clear residual Google credentials before token fallback
