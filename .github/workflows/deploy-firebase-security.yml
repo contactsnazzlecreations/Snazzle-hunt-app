@@ -90,3 +90,4 @@ jobs:
 # Security hardening v141: MFA, meetup privacy and strict photo validation
 # Safety order v141: Functions must succeed before stricter Firestore rules are published
 # Cards v234: validate and deploy permanent 48-card progress backend
+# Release v305 backend redeploy: 2026-10-02 secure Hunt claim, MFA and Sfeer readiness
