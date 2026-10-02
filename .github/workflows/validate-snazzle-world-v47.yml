@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           node --check snazzle-world-hub-v47.js
-          for f in app.js app-runtime-v245.js app-core.js snazzle-admin-mfa-v141.js snazzle-admin-shell-v268.js snazzle-ar-admin-display-v84.js snazzle-ar-admin-v245.js snazzle-ar-engine-v245.js snazzle-ar-placement-v245.js; do
+          for f in app.js app-runtime-v245.js app-core.js snazzle-admin-mfa-v141.js snazzle-admin-shell-v268.js snazzle-ar-admin-display-v84.js snazzle-ar-admin-v245.js snazzle-ar-engine-v245.js snazzle-ar-placement-v245.js snazzle-hunt-code-v2.js snazzle-sfeer-admin-v301.js snazzle-season-theme-v38.js; do
             cp "$f" "/tmp/$(basename "$f" .js).mjs"
             node --check "/tmp/$(basename "$f" .js).mjs"
           done
@@ -52,12 +52,15 @@ jobs:
           grep -q "snazzle-ar-admin-guard-v85.js" snazzle-ar-admin-display-v84.js
           grep -q "snazzle-ar-stats-v113.js" snazzle-ar-admin-display-v84.js
 
-      - name: Check AR v246 stability invariants
+      - name: Check current AR stability invariants
         shell: bash
         run: |
           grep -q "sessionToken" snazzle-ar-engine-v245.js
           grep -q "uncaughtPoints" snazzle-ar-engine-v245.js
-          grep -q "maximumAge:8000" snazzle-ar-engine-v245.js
+          grep -q "maximumAge:0" snazzle-ar-engine-v245.js
+          grep -q "MIN_STABLE_SAMPLES=3" snazzle-ar-engine-v245.js
+          grep -q "MAX_STABILITY_SPREAD_M=16" snazzle-ar-engine-v245.js
+          grep -q "REVEAL_MAX_ACCURACY_M=20" snazzle-ar-engine-v245.js
           grep -q "cameraToken" snazzle-ar-placement-v245.js
           grep -q "validatePlacementSource" snazzle-ar-placement-v245.js
           grep -q "MAX_GPS_SAVE_ACCURACY=50" snazzle-ar-placement-v245.js
@@ -103,3 +106,23 @@ jobs:
           grep -Eq "snazzle-zones\.html\?v=[0-9]+" snazzle-ar-engine-v245.js
           grep -q "playsinline" snazzle-ar-v80.js
           grep -Eq 'src="./app\.js\?v=[0-9]+"' index.html
+
+      - name: Check v305 release-critical flows
+        shell: bash
+        run: |
+          ! grep -q "batch.set(doc(db,'findings'" app-core.js
+          grep -q "Beveiligde vindcode wordt geopend" app-core.js
+          grep -q "await safeImport('./snazzle-hunt-code-v2.js')" app-runtime-v245.js
+          grep -q "verifyHuntCode" snazzle-hunt-code-v2.js
+          grep -q "HUNT_HINT_DELAY_MS=60\*60\*1000" app-core.js
+          grep -q "HUNT_HINT_DISTANCE_M=200" app-core.js
+          grep -q "https://www.snazzle.nl/shop/" app.js
+          grep -q "https://www.snazzle.nl/shop/" app-core.js
+          grep -q "const VERSION='305.0.0'" snazzle-sfeer-admin-v301.js
+          grep -q "Sfeer opgeslagen voor iedereen" snazzle-sfeer-admin-v301.js
+          grep -q "Normale Snazzle-sfeer hersteld voor iedereen" snazzle-sfeer-admin-v301.js
+          grep -q '"start_url": "./?v=305"' manifest.json
+          grep -Eq 'src="./app\.js\?v=305"' index.html
+          node --check functions/bootstrap.js
+          node --check functions/hunt-codes.js
+          node --check functions/admin-mfa.js
