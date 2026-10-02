@@ -1,0 +1,48 @@
+name: Release cleanup v305
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-cleanup-v305.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply v305 release cleanup
+        run: python .github/scripts/release_cleanup_v305.py
+
+      - name: Verify patched files before commit
+        shell: bash
+        run: |
+          cp app.js /tmp/app.mjs && node --check /tmp/app.mjs
+          for f in app-runtime-v245.js app-core.js snazzle-hunt-code-v2.js snazzle-sfeer-admin-v301.js snazzle-season-theme-v38.js; do
+            cp "$f" "/tmp/$(basename "$f" .js).mjs"
+            node --check "/tmp/$(basename "$f" .js).mjs"
+          done
+          ! grep -q "batch.set(doc(db,'findings'" app-core.js
+          grep -q "await safeImport('./snazzle-hunt-code-v2.js')" app-runtime-v245.js
+          grep -q "maximumAge:0" snazzle-ar-engine-v245.js
+          grep -q '"start_url": "./?v=305"' manifest.json
+
+      - name: Commit release-ready v305
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-core.js app-runtime-v245.js app.js index.html manifest.json snazzle-sfeer-admin-v301.js functions/bootstrap.js .github/workflows/validate-snazzle-world-v47.yml
+          git commit -m "Prepare Snazzle v305 for release testing"
+          git push
