@@ -1,0 +1,40 @@
+name: Backend smoke v305
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/backend-smoke-v305.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe live Firebase callable endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe() {
+            name="$1"
+            url="https://europe-west1-snazzle-hunt.cloudfunctions.net/$name"
+            status=$(curl --max-time 20 -sS -o "/tmp/${name}.json" -w "%{http_code}" \
+              -X POST -H 'Content-Type: application/json' --data '{"data":{}}' "$url")
+            echo "=== $name -> HTTP $status ==="
+            cat "/tmp/${name}.json" || true
+            echo
+            if [ "$status" = "404" ] || [ "$status" = "000" ] || [ "$status" -ge 500 ]; then
+              echo "Endpoint $name is not healthy/reachable" >&2
+              exit 1
+            fi
+          }
+
+          # An unauthenticated 400/401/403 is expected and proves the callable is deployed.
+          probe verifyHuntCode
+          probe getHuntCodeState
+          probe requestAdminLoginCode
+          probe verifyAdminLoginCode
