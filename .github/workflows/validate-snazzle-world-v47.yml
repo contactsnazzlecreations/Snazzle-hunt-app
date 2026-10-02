@@ -63,10 +63,10 @@ jobs:
           grep -q "REVEAL_MAX_ACCURACY_M=20" snazzle-ar-engine-v245.js
           grep -q "cameraToken" snazzle-ar-placement-v245.js
           grep -q "validatePlacementSource" snazzle-ar-placement-v245.js
-          grep -q "MAX_GPS_SAVE_ACCURACY=50" snazzle-ar-placement-v245.js
+          grep -q "MAX_GPS_SAVE_ACCURACY=20" snazzle-ar-placement-v245.js
           grep -q "runTransaction" snazzle-ar-admin-v245.js
           grep -q "mutateWorld" snazzle-ar-admin-v245.js
-          grep -q "MAX_QUICK_GPS_ACCURACY=50" snazzle-ar-admin-v245.js
+          grep -q "MAX_QUICK_GPS_ACCURACY=20" snazzle-ar-admin-v245.js
           grep -q "mode:'camera-composed'" snazzle-ar-placement-v245.js
           grep -q "mode:'map-only'" snazzle-ar-placement-v245.js
           grep -q "L.map" snazzle-ar-placement-v245.js
