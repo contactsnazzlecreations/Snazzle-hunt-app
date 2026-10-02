@@ -4,7 +4,7 @@ import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/12
 // Snazzle v301 — robuuste beheerpagina voor Sfeer & seizoen.
 // De pagina opent direct en is niet afhankelijk van late achtergrondmodules.
 
-const VERSION='304.0.0';
+const VERSION='305.0.0';
 const KEY='snazzleSeasonThemeV38';
 const sfeerDb301=getFirestore(getApp());
 const REMOTE_DOC='__snazzle_season_theme_v1';
@@ -89,7 +89,7 @@ function applyPreview(){
 let lastActionAt=0;
 async function applyCurrentSeason(){
   try{
-    if(!window.SnazzleSeasonV38?.apply)await import('./snazzle-season-theme-v38.js?fresh=20260926-v304');
+    if(!window.SnazzleSeasonV38?.apply)await import('./snazzle-season-theme-v38.js?fresh=20261002-v305');
     await window.SnazzleSeasonV38?.apply?.();
   }catch(err){console.warn('Snazzle sfeer toepassen',err);}
 }
@@ -99,7 +99,7 @@ async function saveAction(){
   const next={theme:select.value,a:a.value,b:b.value,accent:accent.value};
   save(next);
   applyPreview();
-  try{await saveCentral301(next);}catch(err){console.error('Centrale sfeer opslaan',err);toast('Opslaan online mislukt');return;}
+  try{await saveCentral301(next);}catch(err){console.error('Centrale sfeer opslaan',err);const denied=String(err?.code||'').includes('permission-denied');toast(denied?'Log opnieuw beveiligd in bij Beheer en probeer nogmaals':'Opslaan online mislukt');return;}
   await applyCurrentSeason();
   toast('Sfeer opgeslagen voor iedereen ✓');
 }
@@ -110,7 +110,7 @@ async function resetAction(){
   const next={theme:'normal',a:a.value,b:b.value,accent:accent.value};
   save(next);
   applyPreview();
-  try{await saveCentral301(next);}catch(err){console.error('Centrale sfeer herstellen',err);toast('Herstellen online mislukt');return;}
+  try{await saveCentral301(next);}catch(err){console.error('Centrale sfeer herstellen',err);const denied=String(err?.code||'').includes('permission-denied');toast(denied?'Log opnieuw beveiligd in bij Beheer en probeer nogmaals':'Herstellen online mislukt');return;}
   await applyCurrentSeason();
   toast('Normale Snazzle-sfeer hersteld voor iedereen ✓');
 }

@@ -968,19 +968,26 @@ async function markFound(){
   const h=activeHunt(); if(!h || !currentUser) return;
   if(findings.some(f=>f.huntId===h.id)) return toast('Deze hunt staat al bij je vondsten');
   if(!proofPhoto) return toast('Maak eerst een foto');
-  const now=new Date().toISOString();
-  const item={userId:currentUser.uid,nickname:userName()||'Snazzle-speler',huntId:h.id,title:h.title,village:h.village,photoData:proofPhoto,dateLabel:new Date().toLocaleDateString('nl-NL'),createdAt:now};
-  try {
-    const batch=writeBatch(db);
-    batch.set(doc(db,'findings',h.id),item);
-    batch.update(doc(db,'hunts',h.id),{found:true,foundAt:now,foundByUserId:currentUser.uid,foundByNickname:item.nickname});
-    await batch.commit();
-    findings.unshift({id:h.id,...item});
-    saveCachedFindings(findings);
-    proofPhoto=''; resetProof(); renderFindings();
-    toast(h.foundMessage||'Gevonden! 🏆');
+
+  // De app schrijft een gewone Hunt-vondst nooit meer rechtstreeks naar Firestore.
+  // Alleen de beveiligde foto + geheime vindcode-flow mag een Hunt afsluiten.
+  const btn=$('#foundBtn');
+  if(btn?.dataset.codeVerification==='1'){
+    btn.click();
+    return;
   }
-  catch(e){ console.error(e); toast('Vondst kon niet worden bevestigd'); }
+
+  toast('🔐 Beveiligde vindcode wordt geopend…');
+  try{
+    if(typeof window.__snazzleImport==='function') await window.__snazzleImport('./snazzle-hunt-code-v2.js');
+    else await import('./snazzle-hunt-code-v2.js?v=305');
+    await new Promise(resolve=>setTimeout(resolve,0));
+    if(btn?.dataset.codeVerification==='1'){
+      btn.click();
+      return;
+    }
+  }catch(e){ console.error('Beveiligde vondstmodule laden',e); }
+  toast('Beveiligde vondstcontrole kon niet openen. Controleer internet en probeer opnieuw.');
 }
 
 // UI bindings
@@ -990,7 +997,7 @@ $('#saveName').onclick=async()=>{ const n=$('#nameInput').value.trim().slice(0,2
 $('#profileBtn').onclick=$('#navProfile').onclick=()=>openSheet('profileSheet');
 $('#findsBtn').onclick=()=>{ renderFindings(); openSheet('findsSheet'); };
 $('#navFriends').onclick=async()=>{ await touchPublicProfile(); renderFriends(); openSheet('friendsSheet'); };
-$('#navShop').onclick=()=>openSheet('shopSheet');
+$('#navShop').onclick=e=>{ e?.preventDefault?.(); location.assign('https://www.snazzle.nl/shop/'); };
 $('#bigStart').onclick=$('#navHunt').onclick=()=>{ if(activeHunt()) openSheet('huntSheet'); else { renderVillagePage(selectedVillage); openSheet('villageSheet'); } };
 $('#startBtn').onclick=joinActiveHunt;
 $('#proofBtn').onclick=()=>$('#proofInput').click();

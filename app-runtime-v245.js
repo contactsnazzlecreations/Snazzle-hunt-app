@@ -1,6 +1,6 @@
 // Snazzle Hunt v304 — centrale Sfeer-instellingen en directe kleurtoepassing.
 
-const runtimeVersion='20260926-v304-sfeer-colors';
+const runtimeVersion='20261002-v305-release-ready';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -80,6 +80,7 @@ await safeImport('./snazzle-zone-button-v176.js');
 await safeImport('./snazzle-ar-engine-v245.js');
 await safeImport('./snazzle-ar-collection-bridge-v125.js');
 await safeImport('./snazzle-special-findings-v294.js');
+await safeImport('./snazzle-hunt-code-v2.js');
 
 function syncArPriority(){window.__snazzleArPriority=!!document.querySelector('#snArIntro.show,#snArOverlay.show,#snArResult.show,#snPremiumArGuide.show,#snPremiumArOverlay.show,#snPremiumArResult.show');}
 const arPriorityObserver=new MutationObserver(syncArPriority);if(document.body)arPriorityObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});syncArPriority();
@@ -89,7 +90,7 @@ await Promise.all([
   safeImport('./snazzle-admin-shell-v268.js'),
   safeImport('./snazzle-admin-route-v296.js'),
   safeImport('./snazzle-image-manager-v272.js'),
-  safeImport('./snazzle-sfeer-admin-v301.js?v=304'),
+  safeImport('./snazzle-sfeer-admin-v301.js?v=305'),
   safeImport('./snazzle-ar-admin-display-v84.js'),
   safeImport('./snazzle-village-visibility-v120.js'),
   safeImport('./snazzle-main-menu-v129.js'),
