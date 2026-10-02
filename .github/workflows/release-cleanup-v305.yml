@@ -37,12 +37,15 @@ jobs:
       - name: Commit release-ready v305
         shell: bash
         run: |
+          # The patcher also prepares the validator, but Actions tokens are not allowed
+          # to update workflow files. That validator is updated separately via GitHub.
+          git checkout -- .github/workflows/validate-snazzle-world-v47.yml
           if git diff --quiet; then
             echo "No changes needed"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app-core.js app-runtime-v245.js app.js index.html manifest.json snazzle-sfeer-admin-v301.js functions/bootstrap.js .github/workflows/validate-snazzle-world-v47.yml
+          git add app-core.js app-runtime-v245.js app.js index.html manifest.json snazzle-sfeer-admin-v301.js functions/bootstrap.js
           git commit -m "Prepare Snazzle v305 for release testing"
           git push
