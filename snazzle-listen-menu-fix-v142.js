@@ -1,7 +1,7 @@
 // Snazzle v157 — eenvoudige Luisterverhalen-opener zonder globale click/pointer intercepts.
 // De zichtbare menuknop wordt in v157 rechtstreeks gekoppeld; dit bestand levert alleen de opener.
 
-const VERSION='157.0.0';
+const VERSION='158.0.0';
 
 function closeQuickMenuHard(){
   try{document.getElementById('quickMenuClose')?.click();}catch{}
@@ -34,7 +34,7 @@ function forceOpenSheet(){
 }
 
 function refreshStories(){
-  try{window.SnazzleListenListFixV150?.refresh?.();}catch(err){console.warn('Luisterverhalenlijst vernieuwen',err);}
+  try{window.SnazzleListenListFixV150?.adopt?.();}catch(err){console.warn('Luisterverhalenlijst koppelen',err);}
 }
 
 function openListenStories(){
