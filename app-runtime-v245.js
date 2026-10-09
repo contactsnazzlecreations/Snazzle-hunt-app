@@ -1,6 +1,6 @@
-// Snazzle Hunt v306 — stabilisatie testflow, dorp-sync en media.
+// Snazzle Hunt v307 — luisterverhalen zonder dubbele laadstatus.
 
-const runtimeVersion='20261009-v306-stabilization';
+const runtimeVersion='20261009-v307-listen-fix';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
