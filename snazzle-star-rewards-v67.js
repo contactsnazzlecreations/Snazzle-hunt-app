@@ -128,7 +128,7 @@ async function openMagic67(){const overlay=await ensureOverlay67();overlay.class
 function closeMagic67(){const overlay=q67('#snMagicStarOverlay');if(!overlay)return;overlay.classList.remove('show');overlay.setAttribute('aria-hidden','true');setTimeout(()=>starButton67?.focus?.({preventScroll:true}),40);}
 function bindStar67(){
   q67('#snStarFallback')?.remove();q67('#snStarRewardsOverlay')?.remove();
-  const star=q67('#v37CodeStar');if(!star)return false;
+  const star=q67('#v37CodeStar')||q67('.magic-hotspot')||q67('.extra-magic-hotspot');if(!star)return false;
   if(star.dataset.magicStar67==='1'){starButton67=star;return true;}
   star.dataset.magicStar67='1';starButton67=star;star.setAttribute('aria-label','Open de magische Snazzle-ster');star.title='Magische Snazzle-ster';
   star.onclick=e=>{e.preventDefault();e.stopPropagation();openMagic67();};
@@ -229,6 +229,7 @@ function queueAdmin67(){
 }
 function init67(){
   if(window.__snazzleMagicStarV67)return;window.__snazzleMagicStarV67=true;
+  window.SnazzleMagicStarV67={open:openMagic67,close:closeMagic67,bind:bindStar67,version:MAGIC_STAR_VERSION};
   ensureStyles67();bindStar67();ensureAdmin67();
   const obs=new MutationObserver(queueAdmin67);obs.observe(document.body,{childList:true,subtree:true});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&q67('#snMagicStarOverlay')?.classList.contains('show'))closeMagic67();});
