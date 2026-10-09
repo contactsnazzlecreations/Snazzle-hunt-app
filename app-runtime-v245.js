@@ -1,6 +1,6 @@
-// Snazzle Hunt v304 — centrale Sfeer-instellingen en directe kleurtoepassing.
+// Snazzle Hunt v306 — stabilisatie testflow, dorp-sync en media.
 
-const runtimeVersion='20261002-v305-release-ready';
+const runtimeVersion='20261009-v306-stabilization';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -66,6 +66,7 @@ const earlyNewsCardBgPromise=safeImport('./snazzle-news-card-bg-v49.js');
 void earlyVisualSyncPromise;void earlyBiebPromise;void earlyNewsCardBgPromise;
 
 await safeImport('./snazzle-adventure-ui-v28.js');
+await safeImport('./snazzle-star-rewards-v67.js');
 await safeImport('./snazzle-clean-home-v31.js?v=287');
 await safeImport('./snazzle-home-card-backgrounds-v75.js');
 for(let i=0;i<50;i++){
