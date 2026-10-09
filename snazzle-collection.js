@@ -17,7 +17,7 @@ const db = app ? getFirestore(app) : null;
 let currentUser = null;
 let allHunts = [];
 let selectedYear = new Date().getFullYear();
-let selectedVillage = 'all';
+let selectedVillage = String(localStorage.getItem('snazzleVillage')||'').trim() || 'all';
 let firstSnapshotReady = false;
 
 const milestoneRewards = [
@@ -197,6 +197,8 @@ function closeQuickMenuCollection(){
 }
 function openCollection(){
   closeQuickMenuCollection();
+  const appVillage=String(localStorage.getItem('snazzleVillage')||'').trim();
+  if(appVillage)selectedVillage=appVillage;
   ensureCollectionUI(); renderCollection();
   const sheet=$c('#collectionSheet'); sheet.classList.add('show'); sheet.querySelector('.panel').scrollTop=0;
 }
@@ -213,8 +215,9 @@ function renderControls(){
   if(!years.includes(selectedYear)) selectedYear=years[0];
   yearSel.innerHTML=years.map(y=>`<option value="${y}"${y===selectedYear?' selected':''}>${y}</option>`).join('');
   const villageSel=$c('#collectionVillage');
-  const villages=villagesForYear(selectedYear);
-  if(selectedVillage!=='all' && !villages.includes(selectedVillage)) selectedVillage='all';
+  const appVillage=String(localStorage.getItem('snazzleVillage')||'').trim();
+  const villages=[...new Set([...villagesForYear(selectedYear),appVillage].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'nl'));
+  if(selectedVillage!=='all' && !villages.includes(selectedVillage)) selectedVillage=appVillage||'all';
   villageSel.innerHTML='<option value="all">🌍 Algemeen</option>'+villages.map(v=>`<option value="${escC(v)}"${v===selectedVillage?' selected':''}>📍 ${escC(v)}</option>`).join('');
 }
 function renderHero(){
@@ -328,6 +331,12 @@ function initCollection(){
   injectCollectionStyles(); ensureCollectionUI(); ensureHomeEntry(); injectMenuButton();
   const observer=new MutationObserver(()=>{ensureHomeEntry();injectMenuButton();});
   observer.observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('snazzle:village-changed',event=>{
+    const village=String(event.detail?.village||'').trim();
+    if(!village)return;
+    selectedVillage=village;
+    if($c('#collectionSheet')?.classList.contains('show'))renderCollection();
+  });
   initData();
 }
 
