@@ -42,6 +42,7 @@ const PLAYER_UID_BEFORE_ADMIN_KEY='snazzlePlayerUidBeforeAdmin';
 let findings = loadCachedFindings();
 let publicProfiles = [];
 let selectedVillage = localStorage.getItem('snazzleVillage') || 'Montfort';
+const QA_MODE = new URLSearchParams(location.search).get('qa') === '1';
 let proofPhoto = '';
 let currentUser = null;
 let adminProfile = null;
@@ -161,7 +162,23 @@ function statusOf(h){
   return 'ended';
 }
 function liveForVillage(v){ return hunts.filter(h=>h.village===v && statusOf(h)==='live').sort((a,b)=>new Date(b.start||0)-new Date(a.start||0)); }
-function activeHunt(){ return liveForVillage(selectedVillage)[0] || null; }
+function qaDemoHunt(v=selectedVillage){
+  return {
+    id:'qa-demo-'+slug(v),
+    title:'Snazzle testhunt',
+    village:v,
+    description:'Testmodus: doorloop zoeken, foto maken en gevonden zonder een echte hunt te publiceren.',
+    rule:'Alleen voor testen',
+    hint:'Dit is een lokale testhunt.',
+    foundMessage:'Test geslaagd! De testvondst is alleen op dit toestel opgeslagen.',
+    imageUrl:'',
+    start:'',
+    end:'',
+    mode:'live',
+    qaOnly:true
+  };
+}
+function activeHunt(){ return liveForVillage(selectedVillage)[0] || (QA_MODE ? qaDemoHunt(selectedVillage) : null); }
 
 // Extra hint: pas vrij na 60 minuten zoeken EN minimaal 200 meter echte GPS-beweging.
 // Voortgang blijft op dit toestel bewaard per hunt. Kleine GPS-drift en onrealistische sprongen tellen niet mee.
@@ -295,6 +312,8 @@ function applyName(){
   $('#nameInput').value=n;
 }
 function renderLocalImages(){
+  // Centrale beeldmodules kunnen localStorage later bijwerken; lees daarom steeds de actuele waarden opnieuw in.
+  localSettings=loadLocalSettings();
   setImg($('#profileLogo'), $('#logoFallback'), localSettings.profileImage);
   renderDuckLogoFallback();
   setImg($('#profilePreview'), $('#profilePreviewFallback'), localSettings.profileImage);
@@ -317,7 +336,7 @@ function renderVillages(){
   const box=$('#villages'); box.innerHTML='';
   villages.forEach(v=>{
     const b=document.createElement('button'); b.className='village'+(v===selectedVillage?' active':''); b.textContent='📍 '+v;
-    b.onclick=()=>{ selectedVillage=v; localStorage.setItem('snazzleVillage',v); renderAll(); renderVillagePage(v); openSheet('villageSheet'); };
+    b.onclick=()=>{ selectedVillage=v; localStorage.setItem('snazzleVillage',v); document.dispatchEvent(new CustomEvent('snazzle:village-changed',{detail:{village:v}})); renderAll(); renderVillagePage(v); openSheet('villageSheet'); };
     box.appendChild(b);
   });
   $('#chosenVillageLabel').textContent='📍 '+selectedVillage;
@@ -329,7 +348,7 @@ function renderVillagePage(v){
   const list=$('#villageHunts'); list.innerHTML='';
   if(!live.length) list.innerHTML='<div class="listitem"><strong>Binnenkort meer avontuur 🌿</strong><span>Kom later nog eens kijken.</span></div>';
   live.forEach(h=>{ const d=document.createElement('div'); d.className='listitem'; d.innerHTML=`<strong>🔎 ${esc(h.title)}</strong><span>${esc(h.description||'')}</span>`; list.appendChild(d); });
-  $('#useVillageBtn').onclick=()=>{ selectedVillage=v; localStorage.setItem('snazzleVillage',v); closeSheet('villageSheet'); renderAll(); document.querySelector('.hunt').scrollIntoView({behavior:'smooth',block:'start'}); };
+  $('#useVillageBtn').onclick=()=>{ selectedVillage=v; localStorage.setItem('snazzleVillage',v); document.dispatchEvent(new CustomEvent('snazzle:village-changed',{detail:{village:v}})); closeSheet('villageSheet'); renderAll(); document.querySelector('.hunt').scrollIntoView({behavior:'smooth',block:'start'}); };
 }
 function renderActive(){
   const h=activeHunt();
@@ -475,7 +494,7 @@ function ensureEventPosterViewer(){
     card.setAttribute('tabindex','0');
     card.setAttribute('aria-label','Actie of evenement poster openen');
     const openPoster=()=>{
-      const src=localSettings.homeImage2 || $('#homeImg2')?.getAttribute('src') || '';
+      const src=loadLocalSettings().homeImage2 || $('#homeImg2')?.currentSrc || $('#homeImg2')?.getAttribute('src') || '';
       if(!src) return toast('Er is nog geen actie- of evenementposter geplaatst');
       $('#eventPosterImage').src=src;
       overlay.classList.add('show');
@@ -490,7 +509,7 @@ function ensureEventPosterViewer(){
 function openEventPoster(){
   ensureEventPosterViewer();
   const image=$('#homeImg2');
-  const src=(image && (image.currentSrc || image.getAttribute('src'))) || localSettings.homeImage2 || '';
+  const src=(image && (image.currentSrc || image.getAttribute('src'))) || loadLocalSettings().homeImage2 || '';
   if(!src) return toast('Er is nog geen actie- of evenementposter geplaatst');
   const poster=$('#eventPosterImage');
   const overlay=$('#eventPosterOverlay');
@@ -709,6 +728,13 @@ async function joinActiveHunt(){
   const h=activeHunt();
   if(!h || !currentUser) return toast('Er is nu geen actieve hunt');
   if(h.found===true) return toast('Deze Snazzle is al gevonden');
+  if(h.qaOnly){
+    ensureHuntHintProgress(h);
+    syncHuntHintTracking(null);
+    renderActive();
+    openSheet('huntSheet');
+    return toast('🧪 Testhunt actief — niets wordt centraal opgeslagen.');
+  }
   await requestHuntNotificationPermission();
   if(!joinedHunts.includes(h.id)){
     joinedHunts=[...joinedHunts,h.id];
@@ -968,6 +994,32 @@ async function markFound(){
   const h=activeHunt(); if(!h || !currentUser) return;
   if(findings.some(f=>f.huntId===h.id)) return toast('Deze hunt staat al bij je vondsten');
   if(!proofPhoto) return toast('Maak eerst een foto');
+
+  if(h.qaOnly){
+    const now=new Date().toISOString();
+    const item={
+      id:h.id,
+      huntId:h.id,
+      userId:currentUser?.uid||'qa-local',
+      nickname:userName()||'Testspeler',
+      title:h.title,
+      village:h.village,
+      photoData:proofPhoto,
+      dateLabel:new Date().toLocaleDateString('nl-NL'),
+      createdAt:now,
+      qaOnly:true,
+      verifiedByCode:false
+    };
+    findings=mergeFindings([item],findings);
+    saveCachedFindings(findings);
+    renderFindings();
+    proofPhoto='';
+    const preview=$('#proofPreview'); if(preview)preview.style.display='none';
+    updateFoundButton();
+    closeSheet('huntSheet');
+    toast('✅ Testvondst afgerond — alleen lokaal opgeslagen.');
+    return;
+  }
 
   // De app schrijft een gewone Hunt-vondst nooit meer rechtstreeks naar Firestore.
   // Alleen de beveiligde foto + geheime vindcode-flow mag een Hunt afsluiten.
