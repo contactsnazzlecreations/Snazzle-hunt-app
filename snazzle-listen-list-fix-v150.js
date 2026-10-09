@@ -11,7 +11,7 @@ const PROJECT_ID='snazzle-hunt';
 const API_KEY='AIzaSyB4iVfasVJgRMJ5GcdkG3ZU136H9FdmAy4';
 const COLLECTION='villages';
 const TYPE='snazzleAudioStory';
-const VERSION='162.0.0';
+const VERSION='163.0.0';
 const RUN_QUERY_URL=`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery?key=${encodeURIComponent(API_KEY)}`;
 
 let stories=[];
@@ -59,9 +59,22 @@ function decodeDocument(doc){
   return out;
 }
 
+function adoptSdkStories(){
+  const fallback=Array.isArray(window.__snazzleListenFallbackItems)?window.__snazzleListenFallbackItems:[];
+  if(!fallback.length)return false;
+  stories=fallback.slice();
+  loaded=true;
+  loading=false;
+  lastError='';
+  lastLoadedAt=Date.now();
+  window.__snazzleListenStories162=new Map(stories.map(item=>[item.id,item]));
+  return true;
+}
+
 function render(){
   const {sheet,grid,empty}=getEls();
   if(!sheet||!grid||!empty)return;
+  if(!loaded)adoptSdkStories();
   grid.innerHTML='';
 
   if(loading&&!loaded){
@@ -169,6 +182,7 @@ async function queryStoriesViaHttps(forceToken=false){
 }
 
 async function refresh(force=false){
+  if(adoptSdkStories()){render();return;}
   if(loading&&!force)return;
   if(!force&&loaded&&Date.now()-lastLoadedAt<60000){render();return;}
   loading=true;
@@ -221,7 +235,10 @@ function observeOpen(){
 onAuthStateChanged(auth,user=>{
   if(user&&!loaded&&!loading)refresh(false);
 });
+document.addEventListener('snazzle:listen-fallback-ready',()=>{
+  if(adoptSdkStories())render();
+});
 
 observeOpen();
 console.info(`Snazzle luisterverhalen HTTPS-loader ${VERSION} geladen`);
-window.SnazzleListenListFixV150={refresh:()=>refresh(true),version:VERSION};
+window.SnazzleListenListFixV150={refresh:(force=false)=>refresh(force),adopt:()=>{const ok=adoptSdkStories();if(ok)render();return ok;},version:VERSION};
