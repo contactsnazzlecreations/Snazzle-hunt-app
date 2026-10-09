@@ -107,7 +107,7 @@ jobs:
           grep -q "playsinline" snazzle-ar-v80.js
           grep -Eq 'src="./app\.js\?v=[0-9]+"' index.html
 
-      - name: Check v306 release-critical flows
+      - name: Check v307 release-critical flows
         shell: bash
         run: |
           ! grep -q "batch.set(doc(db,'findings'" app-core.js
@@ -121,14 +121,17 @@ jobs:
           grep -q "const VERSION='305.0.0'" snazzle-sfeer-admin-v301.js
           grep -q "Sfeer opgeslagen voor iedereen" snazzle-sfeer-admin-v301.js
           grep -q "Normale Snazzle-sfeer hersteld voor iedereen" snazzle-sfeer-admin-v301.js
-          grep -q '"start_url": "./?v=306"' manifest.json
-          grep -Eq 'src="./app\.js\?v=306"' index.html
+          grep -q '"start_url": "./?v=307"' manifest.json
+          grep -Eq 'src="./app\.js\?v=307"' index.html
           grep -q "const QA_MODE = new URLSearchParams(location.search).get('qa') === '1'" app-core.js
           grep -q "snazzle:village-changed" app-core.js
           grep -q "snazzle:village-changed" snazzle-collection.js
           grep -q "window.SnazzleMagicStarV67={open:openMagic67" snazzle-star-rewards-v67.js
           grep -q "timeoutMs=8000" snazzle-listen-list-fix-v150.js
           grep -q "__snazzleListenFallbackItems" snazzle-listen-stories-v63.js
+          grep -q "snazzle:listen-fallback-ready" snazzle-listen-stories-v63.js
+          grep -q "function adoptSdkStories" snazzle-listen-list-fix-v150.js
+          grep -q "SnazzleListenListFixV150?.adopt" snazzle-listen-menu-fix-v142.js
           grep -q "QA_MODE_V2" snazzle-hunt-code-v2.js
           node --check functions/bootstrap.js
           node --check functions/hunt-codes.js
