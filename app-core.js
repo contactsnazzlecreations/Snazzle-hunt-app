@@ -493,13 +493,7 @@ function ensureEventPosterViewer(){
     card.setAttribute('role','button');
     card.setAttribute('tabindex','0');
     card.setAttribute('aria-label','Actie of evenement poster openen');
-    const openPoster=()=>{
-      const src=loadLocalSettings().homeImage2 || $('#homeImg2')?.currentSrc || $('#homeImg2')?.getAttribute('src') || '';
-      if(!src) return toast('Er is nog geen actie- of evenementposter geplaatst');
-      $('#eventPosterImage').src=src;
-      overlay.classList.add('show');
-      overlay.setAttribute('aria-hidden','false');
-    };
+    const openPoster=()=>openEventPoster();
     card.onclick=openPoster;
     card.onkeydown=e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openPoster(); } };
   }
@@ -514,11 +508,17 @@ function openEventPoster(){
   const poster=$('#eventPosterImage');
   const overlay=$('#eventPosterOverlay');
   if(!poster || !overlay) return;
+  poster.onload=()=>{
+    overlay.classList.add('show');
+    overlay.setAttribute('aria-hidden','false');
+    document.documentElement.style.overflow='hidden';
+    document.body.style.overflow='hidden';
+  };
+  poster.onerror=()=>{
+    poster.removeAttribute('src');
+    toast('Posterafbeelding kon niet worden geladen. Kies de poster opnieuw in Beheer.');
+  };
   poster.src=src;
-  overlay.classList.add('show');
-  overlay.setAttribute('aria-hidden','false');
-  document.documentElement.style.overflow='hidden';
-  document.body.style.overflow='hidden';
 }
 
 function closeEventPoster(){
