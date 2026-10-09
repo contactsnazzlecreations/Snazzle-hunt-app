@@ -283,7 +283,7 @@ async function startAr(e){
   starting=true;window.__snazzleArPriority=true;
   const btn=$('#snArStart'),status=$('#snArStatus'),intro=$('#snArIntro'),overlay=$('#snArOverlay');
   const hud=$('#snArHudText'),box=$('#snArDistance'),video=$('#snArCamera');
-  if(btn)btn.disabled=true;
+  if(btn){btn.dataset.defaultLabel=btn.dataset.defaultLabel||btn.textContent||'Start AR';btn.disabled=true;}
   intro?.classList.remove('show');overlay?.classList.add('show');setVisible(false);
   setText(hud,'📷 Camera openen…');setText(box,'📍 Locatie en Snazzle-punten bepalen…');
   try{
@@ -308,11 +308,16 @@ async function startAr(e){
     setText(hud,`${rarity(target.rarity)} Snazzle-signaal · ${areaLabel(target.village)}`);
     setText(box,`Dichtstbijzijnde nieuwe Snazzle: nog ongeveer ${Math.round(nearestMeters)} meter… 👣`);
     startWatch(token);updatePosition(pos,token);
+    if(btn?.dataset.defaultLabel)btn.textContent=btn.dataset.defaultLabel;
   }catch(err){
     if(err?.message!=='ar-session-cancelled')console.error('Snazzle AR v245 start',err);
     if(token===sessionToken){
       stopSession({showIntro:true});
-      if(err?.message!=='ar-session-cancelled')setText(status,'⚠️ '+(err?.message||'AR kon niet starten.'));
+      if(err?.message!=='ar-session-cancelled'){
+        const message=String(err?.message||'AR kon niet starten.');
+        setText(status,'⚠️ '+message);
+        if(/Locatietoestemming|Locatietoegang/i.test(message)&&btn)btn.textContent='📍 Locatie toestaan & opnieuw proberen';
+      }
     }
   }finally{
     if(token===sessionToken){starting=false;if(btn)btn.disabled=false;}
