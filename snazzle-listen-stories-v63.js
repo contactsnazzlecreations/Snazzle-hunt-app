@@ -260,7 +260,7 @@ async function removeItem(id){
   catch(e){console.error(e);alert('Verwijderen lukte niet.');}
 }
 
-function startListener(){if(unsubscribe)return;unsubscribe=onSnapshot(query(collection(db,COLLECTION),where('contentType','==',TYPE)),snap=>{items=snap.docs.map(d=>({id:d.id,...d.data()}));renderStories();renderAdmin();},e=>console.warn('Snazzle luisterverhalen laden',e));}
+function startListener(){if(unsubscribe)return;unsubscribe=onSnapshot(query(collection(db,COLLECTION),where('contentType','==',TYPE)),snap=>{items=snap.docs.map(d=>({id:d.id,...d.data()}));window.__snazzleListenFallbackItems=items.slice();renderStories();renderAdmin();},e=>console.warn('Snazzle luisterverhalen laden',e));}
 async function resolveRole(user){isSuperAdmin=false;if(!user||user.isAnonymous)return;try{const s=await getDoc(doc(db,'adminUsers',user.uid));isSuperAdmin=s.exists()&&s.data()?.active===true&&s.data()?.role==='superadmin';}catch(e){console.warn('Snazzle luister beheerrol',e);}}
 function observeMounts(){let queued=false;new MutationObserver(()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;installMenuButton();ensureAdminUI();});}).observe(document.body,{childList:true,subtree:true});}
 
