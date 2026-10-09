@@ -117,7 +117,7 @@ async function ensureSignedIn(){
   }
 }
 
-async function fetchWithTimeout(url,options={},timeoutMs=18000){
+async function fetchWithTimeout(url,options={},timeoutMs=8000){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
@@ -181,8 +181,16 @@ async function refresh(force=false){
     render();
   }catch(err){
     console.error('Snazzle luisterverhalen v162 HTTPS laden',err);
-    lastError=err?.message||'De verhalen konden niet worden opgehaald.';
-    loaded=false;
+    const fallback=Array.isArray(window.__snazzleListenFallbackItems)?window.__snazzleListenFallbackItems:[];
+    if(fallback.length){
+      stories=fallback.slice();
+      loaded=true;
+      lastLoadedAt=Date.now();
+      lastError='';
+    }else{
+      lastError=err?.message||'De verhalen konden niet worden opgehaald.';
+      loaded=false;
+    }
     render();
   }finally{
     loading=false;
