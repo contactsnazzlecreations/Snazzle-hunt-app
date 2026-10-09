@@ -96,7 +96,7 @@ function toast28(text){
 }
 function villageName28(text){return String(text||'').replace(/^\s*📍\s*/,'').trim();}
 function villageSlug28(text){return String(text||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
-function currentVillage28(){return villageName28(q28('#chosenVillageLabel')?.textContent)||'Kies een dorp';}
+function currentVillage28(){return villageName28(localStorage.getItem('snazzleVillage'))||villageName28(q28('#chosenVillageLabel')?.textContent)||'Kies een dorp';}
 function finds28(){
   const box=q28('#findsList');if(!box)return 0;const rows=qa28('.listitem',box);
   return rows.length===1&&/nog niets gevonden/i.test(rows[0].textContent||'')?0:rows.length;
@@ -230,8 +230,9 @@ function sparkle28(x,y){
 }
 function triggerMagic28(x=innerWidth/2,y=innerHeight/2){
   sparkle28(x,y);if(navigator.vibrate)navigator.vibrate(22);
+  if(window.SnazzleMagicStarV67?.open){window.SnazzleMagicStarV67.open();return;}
   const visitor=q28('#snazzleVisitor');if(visitor){visitor.click();return;}
-  const star=q28('.magic-hotspot');if(star){star.click();return;}
+  const star=q28('.magic-hotspot,#v37CodeStar');if(star){star.click();return;}
   toast28('✨ Je hebt een geheime Snazzle ontdekt!');
 }
 async function secretButton28(b){const src=await getAsset28('secretCharacter');const html=src?`<img src="${src}" alt="Geheime Snazzle">`:'<span class="secret-emoji">🦆</span>';if(b.innerHTML!==html)b.innerHTML=html;}
@@ -260,7 +261,7 @@ async function syncUi28(){
 function queueUi28(){
   if(ui28Queued)return;ui28Queued=true;setTimeout(async()=>{ui28Queued=false;try{await syncUi28();}catch(e){console.warn('Snazzle UI v28',e);}},120);
 }
-function observeUi28(){new MutationObserver(queueUi28).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{if(e.target.closest?.('.village,#foundBtn,#saveNameBtn'))setTimeout(updatePassport28,80);});}
+function observeUi28(){new MutationObserver(queueUi28).observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{if(e.target.closest?.('.village,#foundBtn,#saveNameBtn'))setTimeout(updatePassport28,80);});document.addEventListener('snazzle:village-changed',()=>{updatePassport28();queueUi28();});}
 async function initUi28(){
   if(window.__snazzleUi28)return;window.__snazzleUi28=true;ensureTheme28();ensureAmbient28();await syncUi28();observeUi28();scheduleSecrets28();
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){queueUi28();scheduleSecrets28();}});
