@@ -138,7 +138,28 @@ function renderList(){
 async function togglePoint(id){if(!superAdmin)return;try{await mutateWorld(current=>current.map(p=>p.id===id?{...p,active:!p.active,updatedAt:new Date().toISOString()}:p));window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});}catch(err){const s=$('#snArAdminStatus85');if(s)s.textContent='⚠️ '+friendlyError(err);}}
 async function deletePoint(id){if(!superAdmin||!confirm('Deze AR Snazzle definitief van deze plek verwijderen?'))return;try{const point=points.find(p=>p.id===id);await mutateWorld(current=>current.filter(p=>p.id!==id));if(point?.imageDocId){try{await deleteDoc(doc(db,'snazzleArImages',String(point.imageDocId)));arImageCache.delete(String(point.imageDocId));}catch{}}window.SnazzleArEngineV245?.reload?.(true).catch?.(()=>{});}catch(err){const s=$('#snArAdminStatus85');if(s)s.textContent='⚠️ '+friendlyError(err);}}
 
-onAuthStateChanged(auth,async user=>{adminUid=user?.uid||'';superAdmin=false;if(user){try{const snap=await getDoc(doc(db,'adminUsers',user.uid)),p=snap.exists()?snap.data():null;superAdmin=!!(p?.active===true&&p?.role==='superadmin');}catch{}}watchInstall();applyVisibility();if(superAdmin)refreshWorld();});
+let authCheckVersion=0;
+onAuthStateChanged(auth,async user=>{
+  const checkVersion=++authCheckVersion;
+  adminUid=user?.uid||'';
+  superAdmin=false;
+  // Verberg beheermogelijkheden onmiddellijk bij wisselen of uitloggen.
+  watchInstall();
+  applyVisibility();
+  if(!user){points=[];renderList();return;}
+  let authorized=false;
+  try{
+    const snap=await getDoc(doc(db,'adminUsers',user.uid));
+    const profile=snap.exists()?snap.data():null;
+    authorized=profile?.active===true&&profile?.role==='superadmin';
+  }catch(err){console.warn('Snazzle AR beheerrechten konden niet worden gecontroleerd',err);}
+  // Een verouderde netwerkreactie mag na uitloggen nooit beheerrechten herstellen.
+  if(checkVersion!==authCheckVersion||auth.currentUser?.uid!==user.uid)return;
+  superAdmin=authorized;
+  applyVisibility();
+  if(superAdmin)refreshWorld();
+  else{points=[];renderList();}
+});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchInstall,{once:true});else watchInstall();
 window.SnazzleArAdminV245={refresh:refreshWorld,worldId:WORLD_ID,populateVillages};
 // Compatibiliteit voor modules die nog het historische object gebruiken, zonder de oude implementatie te laden.
