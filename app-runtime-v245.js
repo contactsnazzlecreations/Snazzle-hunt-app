@@ -1,6 +1,6 @@
 // Snazzle Hunt v307 — luisterverhalen zonder dubbele laadstatus.
 
-const runtimeVersion='20261010-v310-news-drafts';
+const runtimeVersion='20261010-v311-news-daily';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
