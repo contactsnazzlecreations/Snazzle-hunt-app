@@ -99,7 +99,15 @@ function dailyCards(){
   const outside = pick(OUTSIDE_TIPS,3);
   const fun = pick(FUN_FACTS,4);
   const date = todayKey();
+  const snazzleTips = [
+    ['Welkom bij Snazzle Nieuws!','Hier ontdek je Snazzle-avonturen, leuke weetjes en tips om samen buiten op pad te gaan.'],
+    ['Een Snazzle Hunt begint met goed kijken','Neem de tijd, ontdek je omgeving en maak van het zoeken een gezellig buitenavontuur.'],
+    ['Samen buiten spelen is het leukste','Snazzle brengt gezinnen en kinderen in beweging met kleine avonturen in hun eigen omgeving.'],
+    ['Zes dorpen, samen op avontuur','Montfort, Melick, Herkenbosch, Posterholt, Sint Odiliënberg en Vlodrop: overal valt iets te ontdekken.']
+  ];
+  const snazzleTip=pick(snazzleTips,5);
   return [
+    {id:`daily-snazzle-${date}`,contentType:NEWS_KIND,source:'daily',category:'snazzle',type:'card',title:snazzleTip[0],body:snazzleTip[1],published:true,publishedAt:date,updatedAt:date},
     {id:`daily-local-${date}`,contentType:NEWS_KIND,source:'daily',category:'roerdalen',type:'card',title:local[0],body:local[1],published:true,publishedAt:date,updatedAt:date},
     {id:`daily-duck-${date}`,contentType:NEWS_KIND,source:'daily',category:'eenden',type:'card',title:duck[0],body:duck[1],published:true,publishedAt:date,updatedAt:date},
     {id:`daily-outside-${date}`,contentType:NEWS_KIND,source:'daily',category:'buiten',type:'card',title:outside[0],body:outside[1],published:true,publishedAt:date,updatedAt:date},
@@ -202,6 +210,8 @@ function buildReader(){
 }
 
 function openNews(){
+  activeFilter='all';
+  renderFilters();
   renderNews();
   const overlay = $('#snNewsOverlay');
   if(!overlay) return;
