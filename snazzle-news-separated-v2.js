@@ -12,7 +12,7 @@
  #snNewsLaunch .sn-news-copy-v2 strong{display:block!important;font-size:22px!important;line-height:1.12!important;color:#264a34!important;text-shadow:none!important;letter-spacing:0!important}
  #snNewsLaunch .sn-news-copy-v2 small{display:block!important;font-size:12px!important;line-height:1.3!important;margin-top:5px!important;color:#526557!important;font-weight:650!important;text-shadow:none!important;overflow-wrap:anywhere!important}
  #snNewsLaunch .sn-news-arrow-v2{position:absolute!important;right:13px!important;bottom:28px!important;z-index:5!important;display:grid!important;place-items:center!important;width:32px!important;height:32px!important;border-radius:50%!important;background:#357e48!important;color:white!important;font-size:26px!important;line-height:1!important}
- #snNewsLaunch>.sn-news-custom-bg-v49,#snNewsLaunch>.sn-news-custom-shade-v49,#snNewsLaunch>.sn-news-launch-icon,#snNewsLaunch>.sn-news-launch-arrow{display:none!important}
+#snNewsLaunch{background-image:none!important;background-color:#fff8e8!important;background-size:auto!important} \n #snNewsLaunch>.sn-news-custom-bg-v49,#snNewsLaunch>.sn-news-custom-shade-v49,#snNewsLaunch>.sn-news-launch-icon,#snNewsLaunch>.sn-news-launch-arrow{display:none!important}
  @media(max-width:350px){#snNewsLaunch .sn-news-copy-v2 strong{font-size:19px!important}#snNewsLaunch .sn-news-copy-v2 small{font-size:11px!important}}
  `;
  document.head.appendChild(style);
@@ -28,6 +28,11 @@
    const arrow=document.createElement('span');arrow.className='sn-news-arrow-v2';arrow.textContent='›';arrow.setAttribute('aria-hidden','true');
    button.append(picture,copy,arrow);
   }
+  // Verwijder uitsluitend de oude presentatiespans; laat de afbeelding voor synchronisatie staan.
+  [...button.children].forEach(node=>{
+    if(node.matches?.('.sn-news-launch-icon,.sn-news-launch-arrow'))node.remove();
+    else if(node.tagName==='SPAN' && !node.matches('.sn-news-picture-v2,.sn-news-copy-v2,.sn-news-arrow-v2,.sn-news-custom-shade-v49'))node.remove();
+  });
   const target=button.querySelector('.sn-news-picture-v2 img');
   const original=button.querySelector(':scope > .sn-news-custom-bg-v49');
   if(original?.getAttribute('src') && target.getAttribute('src')!==original.getAttribute('src'))target.src=original.src;
