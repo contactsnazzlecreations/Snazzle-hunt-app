@@ -34,7 +34,7 @@ function releaseStableBoot(){
 }
 function preloadCriticalAssets(){
   const moduleHrefs=[
-    './app-runtime-v245.js?v=310',
+    './app-runtime-v245.js?v=311',
     './snazzle-runtime-stability-v71.js?fresh=20260918-v289-shop-link',
     './snazzle-image-stability-v72.js?fresh=20260918-v289-shop-link',
     './snazzle-leaflet-isolation-v190.js?fresh=20260918-v289-shop-link',
@@ -83,7 +83,7 @@ async function pacedImports(entries){
 
 // Kritieke route: de echte app eerst. Het laadscherm verdwijnt al zodra de home klaar is;
 // kaart-, AR- en beheermodules mogen daarna op de achtergrond verder laden.
-await import('./app-runtime-v245.js?v=310');
+await import('./app-runtime-v245.js?v=311');
 window.__snazzleAppInteractive=true;
 document.dispatchEvent(new CustomEvent('snazzle:interactive'));
 
