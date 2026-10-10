@@ -1,0 +1,80 @@
+/* Snazzle Nieuws — rustige, mobielvriendelijke startkaart.
+   Behoudt bestaande klikactie en de beheerafbeelding (newsCard). */
+.home-card.sn-news-launch-card{
+  height:236px!important;
+  min-height:236px!important;
+  border-radius:22px!important;
+  background:#fff7e7!important;
+  border:3px solid #edc96e!important;
+  overflow:hidden!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:flex-end!important;
+  gap:0!important;
+  padding:0!important;
+  height:100%!important;
+  background:linear-gradient(135deg,#e2efd5,#d4e6ce) top / 100% 62% no-repeat,#fff8e9!important;
+  color:#263b2d!important;
+  text-align:left!important;
+  isolation:isolate!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch>.sn-news-custom-bg-v49{
+  position:absolute!important;
+  top:0!important;left:0!important;right:0!important;bottom:auto!important;
+  height:62%!important;width:100%!important;
+  object-fit:cover!important;object-position:center!important;
+  border-radius:0!important;z-index:0!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch>.sn-news-custom-shade-v49{
+  display:none!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch>.sn-news-launch-icon{
+  display:none!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch>span:has(>strong){
+  display:block!important;
+  width:100%!important;
+  flex:0 0 38%!important;
+  padding:13px 54px 12px 16px!important;
+  background:#fff8e9!important;
+  color:#24462e!important;
+  position:relative!important;z-index:3!important;
+  box-sizing:border-box!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch strong{
+  font-size:clamp(19px,5vw,23px)!important;
+  line-height:1.15!important;
+  color:#254b31!important;
+  text-shadow:none!important;
+  letter-spacing:0!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch small{
+  display:block!important;
+  font-size:12px!important;
+  line-height:1.35!important;
+  margin-top:5px!important;
+  font-weight:650!important;
+  color:#57665a!important;
+  text-shadow:none!important;
+  overflow-wrap:anywhere!important;
+}
+.home-card.sn-news-launch-card .sn-news-launch>.sn-news-launch-arrow{
+  position:absolute!important;
+  right:13px!important;
+  bottom:23px!important;
+  z-index:4!important;
+  display:grid!important;
+  place-items:center!important;
+  width:32px!important;height:32px!important;
+  border-radius:50%!important;
+  background:#317b47!important;color:#fff!important;
+  font-size:26px!important;
+  line-height:1!important;
+}
+@media(max-width:360px){
+  .home-card.sn-news-launch-card .sn-news-launch>span:has(>strong){padding:10px 44px 10px 12px!important}
+  .home-card.sn-news-launch-card .sn-news-launch small{font-size:11px!important}
+}
