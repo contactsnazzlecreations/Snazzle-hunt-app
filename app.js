@@ -35,18 +35,18 @@ function releaseStableBoot(){
 function preloadCriticalAssets(){
   const moduleHrefs=[
     './app-runtime-v245.js?v=307',
-    './snazzle-runtime-stability-v71.js?fresh=20260918-v289-shop-link',
-    './snazzle-image-stability-v72.js?fresh=20260918-v289-shop-link',
-    './snazzle-leaflet-isolation-v190.js?fresh=20260918-v289-shop-link',
-    './app-core.js?fresh=20260918-v289-shop-link',
-    './snazzle-core-performance-v248.js?fresh=20260918-v289-shop-link',
-    './snazzle-adventure-ui-v28.js?fresh=20260918-v289-shop-link',
+    './snazzle-runtime-stability-v71.js?fresh=20261009-v307-listen-fix',
+    './snazzle-image-stability-v72.js?fresh=20261009-v307-listen-fix',
+    './snazzle-leaflet-isolation-v190.js?fresh=20261009-v307-listen-fix',
+    './app-core.js?fresh=20261009-v307-listen-fix',
+    './snazzle-core-performance-v248.js?fresh=20261009-v307-listen-fix',
+    './snazzle-adventure-ui-v28.js?fresh=20261009-v307-listen-fix',
     './snazzle-clean-home-v31.js?v=294',
     './snazzle-home-card-backgrounds-v75.js?v=294'
-    ,'./snazzle-central-visuals-v54.js?fresh=20260918-v289-shop-link'
-    ,'./snazzle-bieb-v73.js?fresh=20260918-v289-shop-link'
-    ,'./snazzle-news-card-bg-v49.js?fresh=20260918-v289-shop-link'
-    ,'./snazzle-image-manager-v272.js?fresh=20260918-v289-shop-link'
+    ,'./snazzle-central-visuals-v54.js?fresh=20261009-v307-listen-fix'
+    ,'./snazzle-bieb-v73.js?fresh=20261009-v307-listen-fix'
+    ,'./snazzle-news-card-bg-v49.js?fresh=20261009-v307-listen-fix'
+    ,'./snazzle-image-manager-v272.js?fresh=20261009-v307-listen-fix'
   ];
   moduleHrefs.forEach(href=>{
     if(document.head.querySelector(`link[rel="modulepreload"][href="${href}"]`))return;
