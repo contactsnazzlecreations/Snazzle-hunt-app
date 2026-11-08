@@ -59,7 +59,8 @@ function preloadCriticalAssets(){
 }
 
 installStableBoot();
-preloadCriticalAssets();
+// Vermijd het vooraf ophalen van niet-kritieke modules: de runtime laadt ze wanneer nodig.
+// De bestaande kritieke modulepreloads in index.html blijven intact.
 document.addEventListener('snazzle:home-ui-ready',releaseStableBoot,{once:true});
 document.addEventListener('snazzle:interactive',releaseStableBoot,{once:true});
 // Veiligheidsnet: bij een onverwachte netwerkfout blijft niemand op een laadscherm vastzitten.

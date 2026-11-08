@@ -67,8 +67,9 @@ void earlyVisualSyncPromise;void earlyBiebPromise;void earlyNewsCardBgPromise;
 
 await safeImport('./snazzle-adventure-ui-v28.js');
 await safeImport('./snazzle-star-rewards-v67.js');
-await safeImport('./snazzle-clean-home-v31.js?v=287');
-await safeImport('./snazzle-home-card-backgrounds-v75.js');
+// Hergebruik exact de module-URL uit index.html; andere querystrings voeren dezelfde module dubbel uit.
+await import('./snazzle-clean-home-v31.js?v=294');
+await import('./snazzle-home-card-backgrounds-v75.js?v=294');
 for(let i=0;i<50;i++){
   const passport=document.getElementById('snazzlePassport'),heroCopy=document.querySelector('.v31-hero-copy'),adventureCss=document.getElementById('snazzleAdventureThemeV28'),cleanCss=document.getElementById('snazzleCleanHomeV31');
   if(passport&&heroCopy&&adventureCss?.sheet&&cleanCss?.sheet)break;await sleep(30);
