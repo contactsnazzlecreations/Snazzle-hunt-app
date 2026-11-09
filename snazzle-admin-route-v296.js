@@ -20,7 +20,7 @@ async function waitForAdminUi(){
   if(document.getElementById('adminSheet')&&document.getElementById('adminRole'))return true;
   try{
     await Promise.race([
-      window.__snazzleAdminUiReady||Promise.resolve(false),
+      window.__snazzleAdminUiReady||sleep(6500).then(()=>false),
       sleep(6500)
     ]);
   }catch{}
