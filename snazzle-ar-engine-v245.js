@@ -35,7 +35,7 @@ let originalResultHtml='';
 const arImageCache=new Map();
 
 function setText(el,text){if(el&&el.textContent!==text)el.textContent=text;}
-function activePoints(points){return(Array.isArray(points)?points:[]).filter(p=>p&&p.active!==false&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon)));}
+function activePoints(points){return(Array.isArray(points)?points:[]).filter(p=>{if(!p||p.active===false||p.lat==null||p.lon==null||p.lat===''||p.lon==='')return false;const lat=Number(p.lat),lon=Number(p.lon);return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180;});}
 async function resolveArImage(point){
   if(!point||point.imageUrl||!point.imageDocId)return point;
   const id=String(point.imageDocId);
