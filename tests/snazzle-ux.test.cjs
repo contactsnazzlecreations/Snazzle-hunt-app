@@ -90,12 +90,13 @@ test('late profile and world modules preserve a completed local choice',async()=
   assert.equal(w.localStorage.getItem('snazzleCardWorldPreference'),'wild');
   assert.ok(!w.document.querySelector('#onboarding').classList.contains('show'));w.close();
 });
-test('collection has an accessible progress meter and a starting point for empty collections',async()=>{
+test('collection keeps its original summary and friendly empty message',async()=>{
   const dom=await setup({snazzleWelcomeCompleteV1:'1'},false),w=dom.window;
   w.document.body.insertAdjacentHTML('beforeend','<div id="collectionSheet"><div class="collection-panel"><div id="collectionCards"></div></div></div>');
   w.eval(`(()=>{${source('snazzle-card-system-v2.js')}})()`);
-  assert.equal(w.document.querySelector('#snCardMeter').value,0);
-  assert.ok(w.document.querySelector('#snCollectionProgress [data-demo-open]'));w.close();
+  assert.equal(w.document.querySelector('#sc2SummaryCount').textContent,'0/0');
+  assert.match(w.document.querySelector('#sc2SummaryText').textContent,/Nieuwe kaarten komen eraan/);
+  assert.equal(w.document.querySelector('#snCollectionProgress'),null);w.close();
 });
 test('the code verification module keeps the no-hunt explanation reachable',async()=>{
   const dom=await setup({snazzleWelcomeCompleteV1:'1'}),w=dom.window;

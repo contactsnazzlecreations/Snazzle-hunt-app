@@ -1,6 +1,6 @@
 // Snazzle Hunt v307 — luisterverhalen zonder dubbele laadstatus.
 
-const runtimeVersion='20261115-v312-ux';
+const runtimeVersion='20261115-v313-original-look';
 const fresh=path=>`${path}${path.includes('?')?'&':'?'}fresh=${encodeURIComponent(runtimeVersion)}`;
 window.__snazzleRuntimeVersion=runtimeVersion;
 window.__snazzleFresh=fresh;
@@ -68,7 +68,7 @@ void earlyVisualSyncPromise;void earlyBiebPromise;void earlyNewsCardBgPromise;
 await safeImport('./snazzle-adventure-ui-v28.js');
 await safeImport('./snazzle-star-rewards-v67.js');
 // Hergebruik exact de module-URL uit index.html; andere querystrings voeren dezelfde module dubbel uit.
-await import('./snazzle-clean-home-v31.js?v=312');
+await import('./snazzle-clean-home-v31.js?v=313');
 await import('./snazzle-home-card-backgrounds-v75.js?v=294');
 for(let i=0;i<50;i++){
   const passport=document.getElementById('snazzlePassport'),heroCopy=document.querySelector('.v31-hero-copy'),adventureCss=document.getElementById('snazzleAdventureThemeV28'),cleanCss=document.getElementById('snazzleCleanHomeV31');

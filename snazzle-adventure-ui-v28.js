@@ -107,7 +107,7 @@ function ensurePassport28(){
   let p=q28('#snazzlePassport');
   if(!p){
     p=document.createElement('section');p.id='snazzlePassport';p.className='snazzle-passport';
-    p.innerHTML='<img class="sn-passport-duck" src="./snazzle-icon-192.png" alt="Snazzle speurder"><div class="passport-kicker">Mijn Snazzle paspoort</div><div class="passport-welcome-slot"></div><div class="passport-stats"><div class="passport-stat"><strong id="passportFinds">0</strong><small>Snazzles gevonden</small></div><div class="passport-stat"><strong id="passportVillage">—</strong><small>gekozen dorp</small></div><div class="passport-stat"><strong>Speurder</strong><small>klaar voor avontuur</small></div></div>';
+    p.innerHTML='<div class="passport-kicker">Mijn Snazzle paspoort</div><div class="passport-welcome-slot"></div><div class="passport-stats"><div class="passport-stat"><strong id="passportFinds">0</strong><small>Snazzles gevonden</small></div><div class="passport-stat"><strong id="passportVillage">—</strong><small>gekozen dorp</small></div><div class="passport-stat"><strong>Speurder</strong><small>klaar voor avontuur</small></div></div>';
     top.insertAdjacentElement('afterend',p);
   }
   const slot=q28('.passport-welcome-slot',p);if(slot&&welcome.parentElement!==slot)slot.appendChild(welcome);
