@@ -366,7 +366,7 @@ function renderActive(){
     $('#huntDescription').textContent='In '+selectedVillage+' rusten de Snazzles nog even uit. Probeer alvast onze oefenhunt: zo weet je precies hoe zoeken en een vondstfoto maken werkt!';
     $('#hintBox').classList.remove('show');
     $('#proofBox').style.display='none';
-    setImg($('#huntImg'),$('#huntPlaceholder'),'./snazzle-icon-512.png');
+    setImg($('#huntImg'),$('#huntPlaceholder'),''); $('#huntPlaceholder').textContent='Binnenkort weer op avontuur in '+selectedVillage;
     $('#startBtn').disabled=false; $('#startBtn').textContent='Probeer de oefenhunt';
     $('#foundBtn').disabled=false; $('#foundBtn').textContent='Bekijk mijn dorp'; syncHuntHintTracking(null); return;
   }
@@ -397,7 +397,7 @@ function updateFoundButton(){
 function renderFindings(){
   saveCachedFindings(findings);
   const list=$('#findsList'); list.innerHTML='';
-  if(!findings.length){ list.innerHTML='<div class="listitem sn-empty"><img class="sn-mascot" src="./snazzle-icon-192.png" alt="Snazzle speurder"><strong>Je eerste avontuur wacht op je!</strong><span>Ga samen op zoek naar een Snazzle. Je vondst en foto krijgen hier een eigen plek.</span><button class="save" data-demo-open>Oefen alvast met een vondst</button></div>'; return; }
+  if(!findings.length){ list.innerHTML='<div class="listitem sn-empty"><strong>Je eerste avontuur wacht op je!</strong><span>Ga samen op zoek naar een Snazzle. Je vondst en foto krijgen hier een eigen plek.</span><button class="save" data-demo-open>Oefen alvast met een vondst</button></div>'; return; }
   findings.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).forEach(f=>{
     const d=document.createElement('div'); d.className='listitem';
     d.innerHTML=`<strong>🏆 ${esc(f.title)}</strong><span>📍 ${esc(f.village)} · ${esc(f.dateLabel||'')}</span>${f.photoData?`<img src="${f.photoData}" alt="Vondstfoto">`:''}`;
