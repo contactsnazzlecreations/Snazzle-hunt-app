@@ -122,7 +122,7 @@ jobs:
           grep -q "Sfeer opgeslagen voor iedereen" snazzle-sfeer-admin-v301.js
           grep -q "Normale Snazzle-sfeer hersteld voor iedereen" snazzle-sfeer-admin-v301.js
           grep -q '"start_url": "./?v=307"' manifest.json
-          grep -Eq 'src="./app\.js\?v=307"' index.html
+          grep -Eq 'src="./app\.js\?v=[0-9]+"' index.html
           grep -q "const QA_MODE = new URLSearchParams(location.search).get('qa') === '1'" app-core.js
           grep -q "snazzle:village-changed" app-core.js
           grep -q "snazzle:village-changed" snazzle-collection.js
@@ -136,3 +136,8 @@ jobs:
           node --check functions/bootstrap.js
           node --check functions/hunt-codes.js
           node --check functions/admin-mfa.js
+
+      - name: Check welcome, practice and AR regression flows
+        run: |
+          npm ci --prefix tests --ignore-scripts
+          npm test --prefix tests
