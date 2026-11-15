@@ -1,3 +1,4 @@
+import { profileStorage } from './snazzle-welcome.js';
 // Snazzle Card Worlds v78 — profielkeuze WILD / SPARK / MIX en wereldgerichte kaartbeloningen.
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -21,7 +22,7 @@ let pendingWorldByNumber=new Map();
 let applying=false;
 
 function storedPreference(){
-  const v=localStorage.getItem(LOCAL_KEY);
+  const v=profileStorage.getItem(LOCAL_KEY);
   return VALID.includes(v)?v:null;
 }
 function preference(){ return storedPreference()||'mix'; }
@@ -87,7 +88,7 @@ function cardByNumber(number){
 
 async function setPreference(value,{sync=true,announce=true}={}){
   if(!VALID.includes(value)) return;
-  localStorage.setItem(LOCAL_KEY,value);
+  profileStorage.setItem(LOCAL_KEY,value);
   paintChoices();
   applyCardWorlds();
   window.dispatchEvent(new CustomEvent('snazzle-card-world-change',{detail:{preference:value}}));
@@ -221,7 +222,7 @@ function setAdminWorldFromEditor(){
 }
 function patchLocalCardWorld(number,world){
   try{
-    const list=JSON.parse(localStorage.getItem(CARD_LOCAL_KEY)||'[]');
+    const list=JSON.parse(profileStorage.getItem(CARD_LOCAL_KEY)||'[]');
     if(!Array.isArray(list)) return;
     let changed=false;
     const next=list.map(c=>{
@@ -230,7 +231,7 @@ function patchLocalCardWorld(number,world){
       changed=true;
       return {...c,world};
     });
-    if(changed) localStorage.setItem(CARD_LOCAL_KEY,JSON.stringify(next));
+    if(changed) profileStorage.setItem(CARD_LOCAL_KEY,JSON.stringify(next));
   }catch(e){ console.warn('Local card world patch',e); }
 }
 async function flushPendingWorlds(){
@@ -315,7 +316,7 @@ async function loadProfilePreference(u){
     const snap=await getDoc(doc(db,'users',u.uid));
     const remote=snap.exists()?snap.data().cardWorldPreference:null;
     const local=storedPreference();
-    if(VALID.includes(remote)) await setPreference(remote,{sync:false,announce:false});
+    if(!local && VALID.includes(remote)) await setPreference(remote,{sync:false,announce:false});
     else if(local) await setPreference(local,{sync:true,announce:false});
     else { paintChoices(); applyCardWorlds(); }
   }catch(e){ console.warn('Card world profile read',e); }

@@ -1,3 +1,4 @@
+import { profileStorage, onboardingComplete, finishWelcome } from './snazzle-welcome.js';
 import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import {
   getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword,
@@ -41,9 +42,10 @@ const FINDINGS_CACHE_KEY='snazzleHuntFindingsV296';
 const PLAYER_UID_BEFORE_ADMIN_KEY='snazzlePlayerUidBeforeAdmin';
 let findings = loadCachedFindings();
 let publicProfiles = [];
-let selectedVillage = localStorage.getItem('snazzleVillage') || 'Montfort';
+let selectedVillage = profileStorage.getItem('snazzleVillage') || 'Montfort';
 const QA_MODE = new URLSearchParams(location.search).get('qa') === '1';
 let proofPhoto = '';
+let proofHuntId = null;
 let currentUser = null;
 let adminProfile = null;
 let listenersStarted = false;
@@ -97,12 +99,13 @@ function rememberPlayerBeforeAdmin(user=currentUser){
   }catch{}
   saveCachedFindings(findings);
 }
-function userName(){ return (localStorage.getItem('snazzleName') || '').trim(); }
-function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c])); }
+function userName(){ return (profileStorage.getItem('snazzleName') || '').trim(); }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function slug(s){ return String(s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(window.__toast); window.__toast=setTimeout(()=>t.classList.remove('show'),2600); }
-function openSheet(id){ $('#'+id)?.classList.add('show'); }
-function closeSheet(id){ $('#'+id)?.classList.remove('show'); }
+function setNav(id='navHome'){$$('.bottom [id]').forEach(el=>{if(el.id===id)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});}
+function openSheet(id){ $('#'+id)?.classList.add('show');setNav(({friendsSheet:'navFriends',profileSheet:'navProfile',villageSheet:'navHunt',huntSheet:'navHunt'})[id]||'navHome'); }
+function closeSheet(id){ $('#'+id)?.classList.remove('show');if(!document.querySelector('.sheet.show'))setNav(); }
 function setImg(img, fallback, src){
   if(!img) return;
   if(src){ img.src=src; img.style.display='block'; if(fallback) fallback.style.display='none'; }
@@ -332,11 +335,11 @@ function renderLocalImages(){
 function renderVillages(){
   if(!villages.length) villages=[...fallbackVillages];
   if(!villages.includes(selectedVillage)) selectedVillage=villages[0];
-  localStorage.setItem('snazzleVillage',selectedVillage);
+  profileStorage.setItem('snazzleVillage',selectedVillage);
   const box=$('#villages'); box.innerHTML='';
   villages.forEach(v=>{
     const b=document.createElement('button'); b.className='village'+(v===selectedVillage?' active':''); b.textContent='📍 '+v;
-    b.onclick=()=>{ selectedVillage=v; localStorage.setItem('snazzleVillage',v); document.dispatchEvent(new CustomEvent('snazzle:village-changed',{detail:{village:v}})); renderAll(); renderVillagePage(v); openSheet('villageSheet'); };
+    b.onclick=()=>{ selectedVillage=v; profileStorage.setItem('snazzleVillage',v); document.dispatchEvent(new CustomEvent('snazzle:village-changed',{detail:{village:v}})); renderAll(); renderVillagePage(v); openSheet('villageSheet'); };
     box.appendChild(b);
   });
   $('#chosenVillageLabel').textContent='📍 '+selectedVillage;
@@ -346,24 +349,26 @@ function renderVillagePage(v){
   $('#villageSheetTitle').textContent='📍 '+v;
   $('#villageSheetText').textContent=live.length ? `${live.length===1?'Er is':'Er zijn'} nu ${live.length} actieve hunt${live.length===1?'':'s'} in ${v}.` : planned.length ? `Er is nu geen live hunt in ${v}, maar er staat wel een hunt ingepland.` : `Er is op dit moment geen actieve hunt in ${v}.`;
   const list=$('#villageHunts'); list.innerHTML='';
-  if(!live.length) list.innerHTML='<div class="listitem"><strong>Binnenkort meer avontuur 🌿</strong><span>Kom later nog eens kijken.</span></div>';
+  if(!live.length) list.innerHTML='<div class="listitem"><strong>Het volgende avontuur komt eraan!</strong><span>Oefen alvast met zoeken en foto’s maken. Deze oefenhunt heeft geen echte verstopplek of prijzen.</span><button class="save" data-demo-open>Probeer de oefenhunt</button></div>';
+  planned.forEach(h=>{const d=document.createElement('div');d.className='listitem';d.innerHTML=`<strong>Binnenkort: ${esc(h.title)}</strong><span>${esc(h.description||'Een nieuw avontuur staat klaar.')}</span>`;list.appendChild(d);});
   live.forEach(h=>{ const d=document.createElement('div'); d.className='listitem'; d.innerHTML=`<strong>🔎 ${esc(h.title)}</strong><span>${esc(h.description||'')}</span>`; list.appendChild(d); });
-  $('#useVillageBtn').onclick=()=>{ selectedVillage=v; localStorage.setItem('snazzleVillage',v); document.dispatchEvent(new CustomEvent('snazzle:village-changed',{detail:{village:v}})); closeSheet('villageSheet'); renderAll(); document.querySelector('.hunt').scrollIntoView({behavior:'smooth',block:'start'}); };
+  $('#useVillageBtn').onclick=()=>{ selectedVillage=v; profileStorage.setItem('snazzleVillage',v); document.dispatchEvent(new CustomEvent('snazzle:village-changed',{detail:{village:v}})); closeSheet('villageSheet'); renderAll(); document.querySelector('.hunt').scrollIntoView({behavior:'smooth',block:'start'}); };
 }
 function renderActive(){
   const h=activeHunt();
+  if(proofHuntId!==(h?.id||null)){proofHuntId=h?.id||null;resetProof();}
   $('#startSubtitle').textContent='Bekijk de hunt in '+selectedVillage;
   if(!h){
-    $('#activeStatus').textContent='Geen hunt in '+selectedVillage;
+    $('#activeStatus').textContent='Het volgende avontuur komt eraan';
     $('#huntTitle').textContent='Binnenkort in '+selectedVillage;
     $('#huntVillage').textContent='📍 '+selectedVillage;
     $('#huntRule').textContent=''; $('#huntRule').style.display='none';
-    $('#huntDescription').textContent='Op dit moment is hier geen actieve Snazzle Hunt.';
+    $('#huntDescription').textContent='In '+selectedVillage+' rusten de Snazzles nog even uit. Probeer alvast onze oefenhunt: zo weet je precies hoe zoeken en een vondstfoto maken werkt!';
     $('#hintBox').classList.remove('show');
     $('#proofBox').style.display='none';
-    setImg($('#huntImg'),$('#huntPlaceholder'),''); $('#huntPlaceholder').textContent='Geen actieve hunt in '+selectedVillage;
-    $('#startBtn').disabled=true; $('#startBtn').textContent='Geen hunt';
-    $('#foundBtn').disabled=true; $('#foundBtn').textContent='Geen hunt'; syncHuntHintTracking(null); return;
+    setImg($('#huntImg'),$('#huntPlaceholder'),'./snazzle-icon-512.png');
+    $('#startBtn').disabled=false; $('#startBtn').textContent='Probeer de oefenhunt';
+    $('#foundBtn').disabled=false; $('#foundBtn').textContent='Bekijk mijn dorp'; syncHuntHintTracking(null); return;
   }
   $('#proofBox').style.display='block';
   $('#activeStatus').textContent='Actief in '+selectedVillage;
@@ -392,7 +397,7 @@ function updateFoundButton(){
 function renderFindings(){
   saveCachedFindings(findings);
   const list=$('#findsList'); list.innerHTML='';
-  if(!findings.length){ list.innerHTML='<div class="listitem"><strong>Nog niets gevonden</strong></div>'; return; }
+  if(!findings.length){ list.innerHTML='<div class="listitem sn-empty"><img class="sn-mascot" src="./snazzle-icon-192.png" alt="Snazzle speurder"><strong>Je eerste avontuur wacht op je!</strong><span>Ga samen op zoek naar een Snazzle. Je vondst en foto krijgen hier een eigen plek.</span><button class="save" data-demo-open>Oefen alvast met een vondst</button></div>'; return; }
   findings.slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).forEach(f=>{
     const d=document.createElement('div'); d.className='listitem';
     d.innerHTML=`<strong>🏆 ${esc(f.title)}</strong><span>📍 ${esc(f.village)} · ${esc(f.dateLabel||'')}</span>${f.photoData?`<img src="${f.photoData}" alt="Vondstfoto">`:''}`;
@@ -439,7 +444,7 @@ function renderFriends(){
   summary.innerHTML=`<span class="dot"></span><span>${active.length} Snazzler${active.length===1?'':'s'} nu actief</span>`;
   list.innerHTML='';
   if(!active.length){
-    list.innerHTML='<div class="friend-empty">🌿 Er is op dit moment nog niemand zichtbaar als actief.<br>Kom straks nog eens kijken!</div>';
+    list.innerHTML='<div class="friend-empty">Samen op avontuur!<br>Hier verschijnen actieve Snazzlers met alleen hun nickname. Je ziet geen exacte locatie of adres. Op dit moment is er niemand zichtbaar; neem ondertussen je gezin mee op pad.</div>';
     return;
   }
   active.forEach(p=>{
@@ -817,7 +822,7 @@ function startCentralListeners(){
     ensureFriendsUI();
     const summary=$('#friendsSummary'), list=$('#friendsList');
     if(summary) summary.innerHTML='<span>👥 Vriendenlijst nog niet gekoppeld</span>';
-    if(list) list.innerHTML='<div class="friend-empty">De app is klaar, maar Firebase moet de vriendenlijst nog toestemming geven.</div>';
+    if(list) list.innerHTML='<div class="friend-empty">De vriendenlijst kan nu niet laden. Probeer het later opnieuw. Je kunt gewoon verder zoeken.</div>';
   });
 }
 async function ensureAuth(){
@@ -848,7 +853,7 @@ async function refreshAdminProfile(){
   try { const s=await getDoc(doc(db,'adminUsers',currentUser.uid)); if(s.exists() && s.data().active===true) adminProfile={uid:currentUser.uid,...s.data()}; }
   catch(e){ console.warn(e); }
 }
-function checkOnboarding(){ if(!userName() && (!adminProfile || currentUser?.isAnonymous)) $('#onboarding').classList.add('show'); else $('#onboarding').classList.remove('show'); }
+function checkOnboarding(){ if(!onboardingComplete() && (!adminProfile || currentUser?.isAnonymous)) $('#onboarding').classList.add('show'); else $('#onboarding').classList.remove('show'); }
 
 async function seedCentralIfEmpty(){
   if(adminProfile?.role!=='superadmin') return;
@@ -1044,17 +1049,55 @@ async function markFound(){
 
 // UI bindings
 $$('[data-close]').forEach(b=>b.onclick=()=>closeSheet(b.dataset.close));
-$('#finishOnboarding').onclick=async()=>{ const n=$('#firstNameInput').value.trim().slice(0,20); if(n.length<2) return toast('Vul een voornaam of nickname in'); localStorage.setItem('snazzleName',n); $('#onboarding').classList.remove('show'); applyName(); await syncNickname(); renderFriends(); };
-$('#saveName').onclick=async()=>{ const n=$('#nameInput').value.trim().slice(0,20); if(n.length<2) return toast('Vul minimaal 2 tekens in'); localStorage.setItem('snazzleName',n); await syncNickname(); closeSheet('profileSheet'); renderAll(); };
+$('#finishOnboarding').onclick=()=>{
+  const n=$('#firstNameInput').value.trim().slice(0,20);
+  if(n.length<2) return toast('Vul minimaal 2 tekens in of kies Later invullen');
+  finishWelcome(n);
+  applyName();
+  void syncNickname().catch(()=>toast('Je kunt al spelen. Je profiel wordt later gesynchroniseerd.'));
+  renderFriends();
+};
+$('#skipOnboarding').onclick=()=>{finishWelcome();applyName();};
+$('#firstNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('#finishOnboarding').click();});
+$('#saveName').onclick=()=>{
+  const n=$('#nameInput').value.trim().slice(0,20);
+  if(n.length<2) return toast('Vul minimaal 2 tekens in');
+  finishWelcome(n); closeSheet('profileSheet'); renderAll();
+  void syncNickname().catch(()=>toast('Naam op dit toestel opgeslagen. Synchroniseren lukt later.'));
+};
 $('#profileBtn').onclick=$('#navProfile').onclick=()=>openSheet('profileSheet');
 $('#findsBtn').onclick=()=>{ renderFindings(); openSheet('findsSheet'); };
-$('#navFriends').onclick=async()=>{ await touchPublicProfile(); renderFriends(); openSheet('friendsSheet'); };
+$('#navFriends').onclick=()=>{renderFriends();openSheet('friendsSheet');void touchPublicProfile();};
 $('#navShop').onclick=e=>{ e?.preventDefault?.(); location.assign('https://www.snazzle.nl/shop/'); };
 $('#bigStart').onclick=$('#navHunt').onclick=()=>{ if(activeHunt()) openSheet('huntSheet'); else { renderVillagePage(selectedVillage); openSheet('villageSheet'); } };
-$('#startBtn').onclick=joinActiveHunt;
+$('#startBtn').onclick=()=>{if(activeHunt())joinActiveHunt();else document.dispatchEvent(new CustomEvent('snazzle:demo-open'));};
+setNav();
+$('#navHome').onclick=()=>{setNav();$$('.sheet.show').forEach(el=>el.classList.remove('show'));window.scrollTo({top:0,behavior:'smooth'});};
+$('#previewHuntBtn').onclick=()=>{
+  let preview=$('#snAdminPreview');
+  if(!preview){preview=document.createElement('div');preview.id='snAdminPreview';preview.className='sheet';preview.innerHTML='<div class="panel"><button class="close" aria-label="Voorbeeld sluiten">×</button><p>VOORBEELD · NOG NIET GEPUBLICEERD</p><h2></h2><img alt="Hunt-afbeelding" style="width:100%;max-height:250px;object-fit:contain"><p data-preview-copy></p><p data-preview-rule></p><p data-preview-hint></p></div>';document.body.append(preview);preview.querySelector('.close').onclick=()=>preview.classList.remove('show');}
+  preview.querySelector('h2').textContent=$('#huntTitleEdit').value||'Nieuwe hunt';
+  preview.querySelector('[data-preview-copy]').textContent=$('#huntDescEdit').value;
+  preview.querySelector('[data-preview-rule]').textContent='Regel: '+($('#huntRuleEdit').value||'één Snazzle per gezin');
+  preview.querySelector('[data-preview-hint]').textContent='Hint (na vrijspelen): '+($('#huntHintEdit').value||'Nog geen hint ingesteld');
+  const image=preview.querySelector('img');image.src=editingHuntImage||'./snazzle-icon-512.png';preview.classList.add('show');
+};
+$('#huntPhotoNext').onclick=()=>{closeSheet('huntSheet');$('#proofBox').scrollIntoView({behavior:'smooth',block:'center'});};
 $('#proofBtn').onclick=()=>$('#proofInput').click();
-$('#proofInput').onchange=async e=>{ try{ proofPhoto=await compressFile(e.target.files[0],520,.6); $('#proofImg').src=proofPhoto; $('#proofPreview').style.display='block'; updateFoundButton(); toast('Foto toegevoegd ✅'); } catch(err){ toast(err.message); } };
-$('#foundBtn').onclick=markFound;
+let photoRevision=0;
+$('#proofInput').onchange=async e=>{
+  const file=e.target.files?.[0]; if(!file)return;
+  const huntId=activeHunt()?.id, revision=++photoRevision;
+  const button=$('#proofBtn');button.disabled=true;button.textContent='Foto verwerken…';
+  try{
+    const photo=await compressFile(file,720,.72);
+    if(revision!==photoRevision||activeHunt()?.id!==huntId)return;
+    proofPhoto=photo;$('#proofImg').src=photo;$('#proofPreview').style.display='block';
+    updateFoundButton();toast('Foto klaar. Bevestig nu je vondst met de vindcode.');
+  }catch(err){toast(err.message);}
+  finally{e.target.value='';button.disabled=false;button.textContent='Foto maken of kiezen';}
+};
+$('#foundBtn').onclick=()=>{if(activeHunt())markFound();else{renderVillagePage(selectedVillage);openSheet('villageSheet');}};
 $('#adminBtn').onclick=()=>{ if(adminProfile) openSheet('adminSheet'); else location.assign('./beheer.html?v=296'); };
 $('#adminLoginBtn').onclick=adminLogin; $('#adminLogoutBtn').onclick=adminLogout;
 $('#newHuntBtn').onclick=()=>openHuntEditor(null); $('#cancelHuntEditor').onclick=()=>$('#huntEditor').style.display='none'; $('#saveHuntBtn').onclick=saveHunt;
@@ -1066,8 +1109,10 @@ $('#saveVillageLimitedBtn').onclick=saveVillageLimited;
 $$('[data-remove-local-image]').forEach(b=>b.onclick=()=>{ localSettings[b.dataset.removeLocalImage]=''; localStorage.setItem('snazzleSettings',JSON.stringify(localSettings)); renderLocalImages(); toast('Afbeelding verwijderd'); });
 $$('[data-tab]').forEach(b=>b.onclick=()=>{ $$('[data-tab]').forEach(x=>x.classList.remove('on')); $$('.admin-section').forEach(x=>x.classList.remove('on')); b.classList.add('on'); $('#'+b.dataset.tab).classList.add('on'); });
 
+document.addEventListener('snazzle:hunt-claimed',async()=>{await loadOwnFindings();resetProof();renderAll();});
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') touchPublicProfile(); });
 setInterval(()=>{ renderActive(); renderFriends(); },30000);
 setInterval(()=>{ if(document.visibilityState==='visible') touchPublicProfile(); },180000);
+checkOnboarding();
 renderAll();
 ensureAuth();
