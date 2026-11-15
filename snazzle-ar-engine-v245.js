@@ -287,23 +287,26 @@ async function startAr(e){
   intro?.classList.remove('show');overlay?.classList.add('show');setVisible(false);
   setText(hud,'📷 Camera openen…');setText(box,'📍 Locatie en Snazzle-punten bepalen…');
   try{
-    const cameraTask=openCamera().then(s=>{
-      if(token!==sessionToken){stopTracks(s);throw new Error('ar-session-cancelled');}
-      stream=s;
-      if(video){video.srcObject=s;video.play().catch(()=>{});}
-      setText(hud,'✅ Camera klaar · locatie bepalen…');
-      return s;
-    });
-    const [cam,pos,points]=await Promise.all([cameraTask,getStartPosition(),loadWorld(true)]);
-    void cam;
+    // Check availability and range before asking for camera access.
+    setText(hud,'Snazzle-punten laden…');
+    const points=await loadWorld(true);
     if(token!==sessionToken)throw new Error('ar-session-cancelled');
-    if(!points.length)throw new Error('Er staan nu geen actieve AR Snazzles op de kaart.');
+    if(!points.length)throw new Error('De Snazzles rusten even uit: er zijn nu geen actieve AR Snazzles. Probeer de oefenhunt of bekijk later de zones.');
     const candidates=uncaughtPoints(points);
-    if(!candidates.length)throw new Error('Je hebt alle actieve AR Snazzles al gevangen. Nieuwe Snazzles verschijnen automatisch zodra ze worden geplaatst.');
+    if(!candidates.length)throw new Error('Je hebt alle actieve AR Snazzles al gevangen. Nieuwe Snazzles verschijnen zodra ze worden geplaatst.');
+    setText(hud,'Je locatie bepalen…');
+    const pos=await getStartPosition();
+    if(token!==sessionToken)throw new Error('ar-session-cancelled');
     const here=point(pos);
     const sorted=candidates.slice().sort((a,b)=>dist(here,a)-dist(here,b));
     const nearest=sorted[0],nearestMeters=dist(here,nearest);
-    if(nearestMeters>maxRadiusKm*1000)throw new Error(`Geen nog niet gevangen Snazzle binnen ${radiusLabel()}. Bekijk de Snazzle-zones op de kaart.`);
+    if(nearestMeters>maxRadiusKm*1000)throw new Error(`Geen nieuwe Snazzle binnen ${radiusLabel()}. Bekijk de zones of probeer de oefenhunt.`);
+    setText(hud,'Camera openen…');
+    const camera=await openCamera();
+    if(token!==sessionToken){stopTracks(camera);throw new Error('ar-session-cancelled');}
+    stream=camera;
+    if(video){video.srcObject=stream;await video.play();}
+    if(token!==sessionToken)throw new Error('ar-session-cancelled');
     target=nearest;setTargetVisual();
     setText(hud,`${rarity(target.rarity)} Snazzle-signaal · ${areaLabel(target.village)}`);
     setText(box,`Dichtstbijzijnde nieuwe Snazzle: nog ongeveer ${Math.round(nearestMeters)} meter… 👣`);
@@ -332,7 +335,7 @@ function catchSnazzle(e){
   armed=false;
   if(!list.some(x=>String(x.id)===String(caught.id))){
     list.push({id:caught.id,number:caught.number||'—',name:caught.name||'Snazzle',rarity:caught.rarity||'COMMON',village:areaLabel(caught.village),lat:Number(caught.lat),lon:Number(caught.lon),placeName:String(caught.placeName||''),caughtAt:new Date().toISOString(),edition:'Snazzle AR'});
-    localStorage.setItem('snazzleARCollection',JSON.stringify(list));
+    try{localStorage.setItem('snazzleARCollection',JSON.stringify(list));}catch{armed=true;setText($('#snArDistance'),'Je vondst kon niet worden bewaard. Maak opslagruimte vrij en tik opnieuw op het eendje.');return;}
   }
   try{navigator.vibrate?.([80,50,120]);}catch{}
   stopSession();
@@ -364,6 +367,19 @@ function ensureIntroClose(){
     b.addEventListener('click',()=>{stopSession();$('#snArIntro')?.classList.remove('show');});
   }
 }
+function ensureInstructions(){
+  const panel=$('#snArIntro .sn-ar-panel');
+  if(!panel||$('#snArHelp'))return;
+  const instructions=document.createElement('ol');instructions.id='snArHelp';instructions.className='sn-ar-help';
+  instructions.innerHTML='<li>Bekijk eerst de zones en ga naar een veilige plek buiten.</li><li>Tik op zoeken en geef toestemming voor je locatie en camera.</li><li>Volg de afstand. Blijf dichtbij even stilstaan tot GPS stabiel is.</li><li>Tik op het eendje zodra het verschijnt. Kijk tijdens het lopen naar de weg.</li>';
+  $('#snArStart')?.before(instructions);
+  const status=$('#snArStatus');status?.setAttribute('role','status');status?.setAttribute('aria-live','polite');
+  for(const [label,eventName] of [['Geen AR? Maak een fotonotitie','snazzle:manual-photo'],['Probeer eerst de oefenhunt','snazzle:demo-open']]){
+    const button=document.createElement('button');button.type='button';button.className='sn-ar-manual';button.textContent=label;
+    button.onclick=()=>{stopSession();$('#snArIntro')?.classList.remove('show');document.dispatchEvent(new CustomEvent(eventName));};
+    panel.append(button);
+  }
+}
 function ensureZoneLink(){
   const existing=$('#snArZoneNativeOpen');
   if(existing){existing.href='./snazzle-zones.html?v=287';existing.textContent='🗺️ Bekijk alle Snazzle-zones';return;}
@@ -373,7 +389,7 @@ function ensureZoneLink(){
 async function refreshIntro(){
   const status=$('#snArStatus');
   setText($('#snArLaunch .sn-ar-copy small'),'Zoek geplaatste Snazzles met camera en GPS');
-  setText($('#snArIntro p:not(.sn-ar-privacy)'),`Bekijk eventueel eerst de Snazzle-zones. Daarna kiest AR automatisch de dichtstbijzijnde nog niet gevangen Snazzle binnen maximaal ${radiusLabel()}.`);
+  setText($('#snArIntro p:not(.sn-ar-privacy)'),`Ga samen naar buiten. De app zoekt de dichtstbijzijnde nieuwe Snazzle binnen ${radiusLabel()}. Dit is een cameraweergave met GPS: de plek kan per telefoon enkele meters afwijken.`);
   setText($('#snArStart'),'Zoek dichtstbijzijnde AR Snazzle');
   try{
     const points=await loadWorld();
@@ -400,7 +416,7 @@ function repair(){
   bindControl('#snArStart',startAr);bindControl('#snArCatchDuck',catchSnazzle);
   if($('#snArCatchHint'))bindControl('#snArCatchHint',catchSnazzle);
   bindControl('#snArClose',e=>{e.preventDefault();e.stopImmediatePropagation();stopSession();});
-  ensureIntroClose();ensureZoneLink();bindShellHooks();
+  ensureIntroClose();ensureZoneLink();ensureInstructions();bindShellHooks();
   if(!lifecycleInstalled){
     lifecycleInstalled=true;
     window.addEventListener('pagehide',()=>stopSession());

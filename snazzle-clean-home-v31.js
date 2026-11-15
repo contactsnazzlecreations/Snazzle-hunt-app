@@ -137,7 +137,7 @@ function wrapVillages31(){
 }
 function navButtons31(){
   const bottom=q31('.bottom');if(!bottom)return [];
-  return qa31('button',bottom).slice(0,5);
+  return qa31('button,a',bottom).slice(0,5);
 }
 async function applyNav31(){
   const keys=['navHome','navHunt','navFriends','navShop','navProfile'];

@@ -1,3 +1,4 @@
+import { onboardingComplete } from './snazzle-welcome.js';
 import './snazzle-card-draft-link-v107.js';
 import './snazzle-card-thumb-crop-fix-v200.js';
 
@@ -94,6 +95,7 @@ function installPrompt(){
 }
 
 function maybeInstall(){
+  if(onboardingComplete()) return;
   if(currentPreference()) return;
   if(!hasExistingProfile()) return;
   if(onboardingVisible()) return;

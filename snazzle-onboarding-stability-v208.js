@@ -1,3 +1,4 @@
+import { onboardingComplete, profileStorage } from './snazzle-welcome.js';
 // Snazzle Onboarding Stability v208 — voorkomt vastlopen op MIX en herstelt profielgegevens na lokale opslagproblemen.
 import { getApps, getApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
@@ -15,10 +16,10 @@ const auth=app?getAuth(app):null;
 const db=app?getFirestore(app):null;
 
 function readLocal(key){
-  try{return localStorage.getItem(key)||'';}catch{return '';}
+  try{return profileStorage.getItem(key)||'';}catch{return '';}
 }
 function writeLocal(key,value){
-  try{localStorage.setItem(key,value);}catch{}
+  try{profileStorage.setItem(key,value);}catch{}
 }
 function readCookie(name){
   try{
@@ -57,7 +58,7 @@ function applyNameToUi(name){
   if(first && !cleanName(first.value)) first.value=name;
   if(profile) profile.value=name;
   if(welcome) welcome.textContent=`Welkom, ${name}!`;
-  document.getElementById('onboarding')?.classList.remove('show');
+  if(onboardingComplete()) document.getElementById('onboarding')?.classList.remove('show');
 }
 
 function restoreFromCookie(){
@@ -89,7 +90,7 @@ function persistVisibleProfile(){
 document.addEventListener('click',event=>{
   const button=event.target?.closest?.('button');
   if(!button)return;
-  if(button.id==='finishOnboarding'||button.id==='saveName') persistVisibleProfile();
+  if(button.id==='saveName') persistVisibleProfile();
 },true);
 
 document.addEventListener('snazzle-card-world-change',event=>{
